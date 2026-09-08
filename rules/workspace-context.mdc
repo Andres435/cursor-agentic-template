@@ -1,0 +1,14 @@
+---
+description: Minimal workspace disambiguation — full map loads via ticket-router on /start-ticket
+alwaysApply: true
+---
+
+# Workspace Context (minimal)
+
+- Repos and dependency order are defined in `profile.json`. Do not guess repo layout.
+- Always resolve paths via `Resolve-TicketRoot.ps1 -Ticket <id> -Json` rather than hardcoding.
+- Search from the **affected repo path**. Wide Grep/Glob from the workspace root can time out on
+  large monorepos.
+
+Full map: load `_shared/workspace-context.md` (included in ticket-router `docSet` for multi-repo
+tickets). Do not load it for single-repo tickets.

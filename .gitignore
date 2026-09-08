@@ -1,0 +1,18 @@
+# Ticket plans (project data — not template content)
+plans/WI*.json
+plans/WI*-*.md
+plans/*-closeout.md
+plans/*-feedback.md
+
+# Local state files
+.active-stack.json
+*.state.json
+.npmrc
+.env.local
+node_modules/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/

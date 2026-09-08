@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .cursor/hooks/session-context.js",
+        "timeout": 10
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node .cursor/hooks/git-commit-ticket.js",
+        "matcher": "git(\\.exe)?\\s+commit\\b",
+        "timeout": 8
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "node .cursor/hooks/ticket-command-nudge.js",
+        "matcher": "start-ticket|complete-task|prep-pr",
+        "timeout": 5
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "node .cursor/hooks/closeout-read-guard.js",
+        "matcher": "Read",
+        "timeout": 3
+      }
+    ],
+    "preCompact": [
+      {
+        "command": "node .cursor/hooks/precompact-nudge.js",
+        "timeout": 3
+      }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "key": "ctrl+alt+d",
+    "command": "git.viewChanges"
+  },
+  {
+    "key": "ctrl+alt+n",
+    "command": "workbench.action.compareEditor.nextChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "ctrl+alt+p",
+    "command": "workbench.action.compareEditor.previousChange",
+    "when": "textCompareEditorVisible"
+  },
+  {
+    "key": "ctrl+alt+n",
+    "command": "editor.action.dirtyDiff.next",
+    "when": "editorTextFocus && !textCompareEditorVisible"
+  },
+  {
+    "key": "ctrl+alt+p",
+    "command": "editor.action.dirtyDiff.previous",
+    "when": "editorTextFocus && !textCompareEditorVisible"
+  },
+  {
+    "key": "ctrl+alt+a",
+    "command": "git.stageSelectedRanges"
+  },
+  {
+    "key": "ctrl+alt+shift+a",
+    "command": "git.unstageSelectedRanges"
+  },
+  {
+    "key": "ctrl+alt+g",
+    "command": "workbench.view.scm"
+  }
+]

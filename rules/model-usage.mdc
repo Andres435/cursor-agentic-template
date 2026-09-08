@@ -1,0 +1,16 @@
+---
+description: Cursor model usage rails — Grok for Plans; Auto/Composer for tasks; Composer 2.5 for subagents
+alwaysApply: true
+---
+
+# Cursor Model Usage (rails)
+
+Stay on **included** Cursor Models. **Other Models** only if the user explicitly directs it.
+
+- **Plans** → **Grok 4.5**. Do not plan on Auto/Composer when Grok is available.
+- **Tasks** → honor Work Plan `[low]|[med]|[high]`: Auto/Composer; Grok only if `[high]` or stuck.
+- **Subagents** → `composer-2.5-fast`. Never `inherit` a Grok parent. Split oversized slices.
+- **After plan approval** → keep building in this chat (branch mode). `--worktree` or context overflow: new chat `/implement`. Always a new chat for `/complete-task`.
+- Reload `.cursor/plans/<TICKET>-*` instead of re-fetching ticket/CI JSON.
+
+Full policy: [`../_shared/model-usage.md`](../_shared/model-usage.md).

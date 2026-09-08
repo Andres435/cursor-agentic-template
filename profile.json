@@ -1,0 +1,19 @@
+{
+  "id": "customize-me",
+  "displayName": "My project",
+  "ticketSystem": "none",
+  "ticketPrefix": "TICKET-",
+  "layout": "monorepo",
+  "defaultMode": "branch",
+  "worktreeSupported": false,
+  "baseBranchDefault": "main",
+  "repos": [{ "name": "app", "path": ".", "layers": ["app"] }],
+  "dependencyOrder": ["app"],
+  "specialists": ["fullstack"],
+  "adrIndex": null,
+  "integrations": [],
+  "stacks": {
+    "default": "dev",
+    "startCommand": "npm run dev"
+  }
+}
