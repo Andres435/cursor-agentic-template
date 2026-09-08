@@ -93,5 +93,5 @@ Your overlay (`profile.json`, `environments/`, `agents/`, `skills/domain/`) is n
 
 | Project | Repo | Notes |
 |---|---|---|
-| TMO (cursor-agentic-workspace) | internal | ADO, IIS/React stack, multi-repo |
+| TMO (cursor-agentic-workspace) | https://github.com/Andres435/cursor-agentic-workspace | ADO, IIS/React stack, multi-repo |
 | _(your project here)_ | — | — |
