@@ -4,16 +4,31 @@
 /**
  * Smoke tests for hooks/session-context.js
  *
- * Tests packet shape when no PowerShell is available (Resolve-TicketRoot will fail),
- * profile injection, and when no ticket is detected. Does NOT require a live TmoPro checkout.
- * Run: node hooks/tests/session-context.test.js
+ * Ticket ids come from profile.json ticketPrefix so the same tests pass on TMO
+ * (WI) and the vanilla template (TICKET-). Does NOT require PowerShell or a
+ * product checkout. Run: node hooks/tests/session-context.test.js
  */
 
 const assert = require("assert");
 const { spawnSync } = require("child_process");
+const fs = require("fs");
 const path = require("path");
 
 const HOOK = path.join(__dirname, "..", "session-context.js");
+const PROFILE = path.join(__dirname, "..", "..", "profile.json");
+
+function ticketPrefix() {
+  try {
+    const profile = JSON.parse(fs.readFileSync(PROFILE, "utf8"));
+    return String(profile.ticketPrefix || "WI");
+  } catch {
+    return "WI";
+  }
+}
+
+const PREFIX = ticketPrefix();
+const TICKET_A = PREFIX + "21053";
+const TICKET_B = PREFIX + "99999";
 
 function runHook(inputObj, env = {}) {
   const result = spawnSync(process.execPath, [HOOK], {
@@ -46,7 +61,6 @@ console.log("session-context.js smoke tests");
 test("injects profile fields even when no ticket is detectable", () => {
   const out = runHook({}, { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "" });
   assert.ok(typeof out === "object", "output must be an object");
-  // This repo has profile.json next to hooks/; hook must inject it.
   if (out.additional_context) {
     assert.ok(
       /profileId/.test(out.additional_context),
@@ -62,14 +76,14 @@ test("injects profile fields even when no ticket is detectable", () => {
 
 test("detects ticket from workspace_roots and produces packet shape", () => {
   const out = runHook(
-    { workspace_roots: ["/source/worktrees/WI21053"] },
+    { workspace_roots: ["/source/worktrees/" + TICKET_A] },
     { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "" }
   );
   assert.ok(typeof out === "object", "output must be an object");
   if (out.additional_context) {
     assert.ok(
-      /WI21053/.test(out.additional_context),
-      `additional_context must mention WI21053, got: ${out.additional_context}`
+      out.additional_context.includes(TICKET_A),
+      `additional_context must mention ${TICKET_A}, got: ${out.additional_context}`
     );
   }
 });
@@ -77,17 +91,23 @@ test("detects ticket from workspace_roots and produces packet shape", () => {
 test("detects ticket from CURSOR_PROJECT_DIR env var", () => {
   const out = runHook(
     {},
-    { CURSOR_PROJECT_DIR: "C:\\source\\worktrees\\WI99999", CLAUDE_PROJECT_DIR: "" }
+    {
+      CURSOR_PROJECT_DIR: "C:\\source\\worktrees\\" + TICKET_B,
+      CLAUDE_PROJECT_DIR: "",
+    }
   );
   assert.ok(typeof out === "object", "output must be an object");
   if (out.additional_context) {
-    assert.ok(/WI99999/.test(out.additional_context), "must mention detected ticket WI99999");
+    assert.ok(
+      out.additional_context.includes(TICKET_B),
+      `must mention detected ticket ${TICKET_B}`
+    );
   }
 });
 
 test("env block has ticket + profile keys when ticket detected", () => {
   const out = runHook(
-    { workspace_roots: ["/source/worktrees/WI21053"] },
+    { workspace_roots: ["/source/worktrees/" + TICKET_A] },
     { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "" }
   );
   if (out.env) {
@@ -95,7 +115,7 @@ test("env block has ticket + profile keys when ticket detected", () => {
     assert.ok("TMO_MODE" in out.env, "env.TMO_MODE missing");
     assert.ok("TMO_ROOT" in out.env, "env.TMO_ROOT missing");
     assert.ok("TMO_PROFILE" in out.env, "env.TMO_PROFILE missing");
-    assert.strictEqual(out.env.TMO_TICKET, "WI21053");
+    assert.strictEqual(out.env.TMO_TICKET, TICKET_A);
   }
 });
 
