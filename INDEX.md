@@ -9,6 +9,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the bottom ta
 | [CUSTOMIZE.md](CUSTOMIZE.md) | Onboarding checklist — start here | customize, profile, setup, first ticket |
 | [TEMPLATE.md](TEMPLATE.md) | Maintainer map: core vs overlay | core, overlay, upgrade, versioning |
 | [README.md](README.md) | What this is; quick start | template, clone, start, overview |
+| [MACHINE-SETUP.md](MACHINE-SETUP.md) | First-time machine bootstrap | setup, extensions, folder layout |
 | [AGENTS.md](AGENTS.md) | Agent index and routing | agents, specialists, routing, manifest |
 | [USER-MANUAL.md](USER-MANUAL.md) | Day-to-day ticket lifecycle | start-ticket, implement, complete-task, prep-pr, chat lifecycle |
 | [profile.json](profile.json) | Project config | repos, ticketSystem, specialists, startCommand |

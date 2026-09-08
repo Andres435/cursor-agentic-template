@@ -1,0 +1,19 @@
+name: Doc budget
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  doc-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert doc budget (warn only)
+        shell: pwsh
+        run: ./scripts/Assert-DocBudget.ps1 -WarnOnly
+      - name: Hook smoke tests
+        run: |
+          node hooks/tests/closeout-guard.test.js
+          node hooks/tests/session-context.test.js
