@@ -53,7 +53,19 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$Key = 'WI' + ($Ticket -replace '(?i)^wi', '')
+# Read ticket prefix from profile.json (default 'WI' for TMO).
+function Get-TicketPrefix {
+    $p = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
+    if (Test-Path -LiteralPath $p) {
+        try { $c = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json
+              if ($c.ticketPrefix) { return [string]$c.ticketPrefix } } catch { }
+    }
+    return 'WI'
+}
+$_prefix = Get-TicketPrefix
+
+$Key = $_prefix + ($Ticket -replace '[^\d]', '')
+if (-not ($Key -match '\d')) { throw "Could not read a work item number from '$Ticket'." }
 $RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $PlansDir = Join-Path $RepoRoot 'plans'
 $ScratchDir = Join-Path $RepoRoot 'tmp\tickets'

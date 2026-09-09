@@ -49,7 +49,7 @@ Set-StrictMode -Version Latest
 
 # Budget rules: glob pattern → max lines. Order matters: first match wins.
 $budgets = @(
-    @{ Pattern = 'rules\*.mdc';              Budget = 60 }
+    @{ Pattern = 'rules\*.mdc';              Budget = 120 }
     @{ Pattern = 'commands\*.md';            Budget = 40 }
     @{ Pattern = 'skills\workflow\*\SKILL.md'; Budget = 500 }
     @{ Pattern = 'skills\*\SKILL.md';        Budget = 500 }

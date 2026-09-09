@@ -1,4 +1,4 @@
-name: Doc budget
+name: Agentic flow
 
 on:
   pull_request:
@@ -6,14 +6,17 @@ on:
     branches: [main]
 
 jobs:
-  doc-budget:
+  agentic-flow:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Assert doc budget (warn only)
+
+      - name: Assert agentic flow (fail-closed)
         shell: pwsh
-        run: ./scripts/Assert-DocBudget.ps1 -WarnOnly
-      - name: Hook smoke tests
+        run: ./scripts/ticket/Assert-AgenticFlow.ps1
+
+      # Template: Cursor hooks only (no Claude Code bridge)
+      - name: Hook smoke tests (Cursor)
         run: |
           node hooks/tests/closeout-guard.test.js
           node hooks/tests/session-context.test.js

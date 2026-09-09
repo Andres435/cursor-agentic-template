@@ -68,8 +68,17 @@ function Get-TermScore {
 $hits = @()
 
 if (Test-Path $IndexPath) {
+    # Read ticket prefix so the row-pattern matches the configured format.
+    $prefixPat = 'WI'
+    $profilePath = Join-Path $RepoRoot 'profile.json'
+    if (Test-Path -LiteralPath $profilePath) {
+        try { $pc = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+              if ($pc.ticketPrefix) { $prefixPat = [string]$pc.ticketPrefix } } catch { }
+    }
+    $rowPattern = "^\|\s*$([regex]::Escape($prefixPat))\d+"
+
     Get-Content -Path $IndexPath | ForEach-Object {
-        if ($_ -notmatch '^\|\s*(WI\d+)') { return }
+        if ($_ -notmatch $rowPattern) { return }
         $score = Get-TermScore $_
         if ($score -le 0) { return }
         $cols = $_.Trim().Trim('|') -split '\|' | ForEach-Object { $_.Trim() }

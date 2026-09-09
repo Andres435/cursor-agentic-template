@@ -118,6 +118,18 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Read ticket prefix from profile.json (default 'WI' for TMO).
+function Get-TicketPrefix {
+    $p = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
+    if (Test-Path -LiteralPath $p) {
+        try { $c = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json
+              if ($c.ticketPrefix) { return [string]$c.ticketPrefix } } catch { }
+    }
+    return 'WI'
+}
+$TICKET_PREFIX = Get-TicketPrefix
+$TICKET_ROW_PATTERN = "^\|\s*$([regex]::Escape($TICKET_PREFIX))\d+"
+
 $RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $PlansDir = Join-Path $RepoRoot 'plans'
 $OutPath  = Join-Path $PlansDir 'ticket-ledger.md'
@@ -160,7 +172,7 @@ if (Test-Path -LiteralPath $OutPath) {
     # codepage for BOM-less files, which silently mangles any non-ASCII cell
     # (em-dash, accented name) into mojibake on the next write-back.
     foreach ($line in (Get-Content -LiteralPath $OutPath -Encoding UTF8)) {
-        if ($line -notmatch '^\|\s*(WI\d+)\s*\|') { continue }
+        if ($line -notmatch $TICKET_ROW_PATTERN) { continue }
         $cells = ($line.Trim() -replace '^\|', '' -replace '\|$', '') -split '\|' | ForEach-Object { $_.Trim() }
         if ($cells.Count -lt $Columns.Count) {
             # Pad a short/legacy row rather than dropping recorded history.
@@ -211,8 +223,9 @@ if ($SeedFromCloseouts) {
     Write-Host "Seeded $seeded row(s) from WI*-closeout.md." -ForegroundColor Cyan
 }
 else {
-    $key = 'WI' + ($Ticket -replace '(?i)^wi', '' -replace '[^\d]', '')
-    if ($key -eq 'WI') { throw "Could not read a work item number from '$Ticket'." }
+    $digits = $Ticket -replace '[^\d]', ''
+    if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
+    $key = $TICKET_PREFIX + $digits
 
     if ($Remove) {
         $gone = @($rows | Where-Object { $_.Ticket -eq $key })
