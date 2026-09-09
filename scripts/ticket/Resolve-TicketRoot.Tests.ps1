@@ -15,14 +15,14 @@
 
 BeforeAll {
     # Load the library under test from the same scripts/ parent directory.
-    $libPath = Join-Path $PSScriptRoot '..' '_ServiceLauncherLib.ps1'
+    $libPath = Join-Path (Join-Path $PSScriptRoot '..') '_ServiceLauncherLib.ps1'
     if (-not (Test-Path $libPath)) {
         throw "Missing _ServiceLauncherLib.ps1 at $libPath — cannot run tests"
     }
     . $libPath
 
     # Fixture path
-    $FixtureDir = Join-Path $PSScriptRoot 'fixtures'
+    $script:FixtureDir = Join-Path $PSScriptRoot 'fixtures'
 
     function Get-CurrentPowerShellHost {
         try {
@@ -71,22 +71,16 @@ Describe 'ConvertTo-LauncherTicketId' {
 }
 
 Describe 'Get-TicketManifest and Get-LauncherManifestValue' {
-    It 'loads manifest-branch.json and reads mode field' {
-        # Copy branch fixture to a temp plans dir and read it back
-        $tmp = Join-Path $TestDrive 'plans'
-        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
-        $src = Join-Path $FixtureDir 'manifest-branch.json'
-        Copy-Item $src (Join-Path $tmp 'WI00001-manifest.json')
-
-        $manifest = Get-TicketManifest -ScriptRoot $PSScriptRoot -Ticket 'WI00001'
-        # If the function resolved to tmp dir, check it; otherwise accept null (no match in real plans)
-        if ($manifest) {
-            Get-LauncherManifestValue -Manifest $manifest -Property 'mode' | Should -Be 'branch'
-        }
+    It 'loads fixture manifest and reads mode field' {
+        $scriptRoot = Join-Path $script:FixtureDir 'dummy'
+        $manifest = Get-TicketManifest -ScriptRoot $scriptRoot -Ticket 'WI00001'
+        $manifest | Should -Not -BeNullOrEmpty
+        Get-LauncherManifestValue -Manifest $manifest -Property 'mode' | Should -Be 'branch'
     }
 
     It 'returns null when manifest file does not exist' {
-        $manifest = Get-TicketManifest -ScriptRoot $PSScriptRoot -Ticket 'WI99999'
+        $scriptRoot = Join-Path $script:FixtureDir 'dummy'
+        $manifest = Get-TicketManifest -ScriptRoot $scriptRoot -Ticket 'WI99999'
         $manifest | Should -BeNullOrEmpty
     }
 
@@ -95,7 +89,7 @@ Describe 'Get-TicketManifest and Get-LauncherManifestValue' {
     }
 
     It 'returns null when property is absent' {
-        $src = Join-Path $FixtureDir 'manifest-branch.json'
+        $src = Join-Path $script:FixtureDir 'manifest-branch.json'
         $m = Get-Content $src -Raw | ConvertFrom-Json
         Get-LauncherManifestValue -Manifest $m -Property 'nonExistentField' | Should -BeNullOrEmpty
     }
@@ -103,25 +97,25 @@ Describe 'Get-TicketManifest and Get-LauncherManifestValue' {
 
 Describe 'Mode-precedence assertions against fixture manifests' {
     It 'manifest-branch.json has mode=branch' {
-        $src = Join-Path $FixtureDir 'manifest-branch.json'
+        $src = Join-Path $script:FixtureDir 'manifest-branch.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json
         Get-LauncherManifestValue -Manifest $m -Property 'mode' | Should -Be 'branch'
     }
 
     It 'manifest-worktree.json has mode=worktree' {
-        $src = Join-Path $FixtureDir 'manifest-worktree.json'
+        $src = Join-Path $script:FixtureDir 'manifest-worktree.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json
         Get-LauncherManifestValue -Manifest $m -Property 'mode' | Should -Be 'worktree'
     }
 
     It 'manifest-branch.json has startedAtUtc' {
-        $src = Join-Path $FixtureDir 'manifest-branch.json'
+        $src = Join-Path $script:FixtureDir 'manifest-branch.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json
         Get-LauncherManifestValue -Manifest $m -Property 'startedAtUtc' | Should -Not -BeNullOrEmpty
     }
 
     It 'manifest-worktree.json has startedAtUtc' {
-        $src = Join-Path $FixtureDir 'manifest-worktree.json'
+        $src = Join-Path $script:FixtureDir 'manifest-worktree.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json
         Get-LauncherManifestValue -Manifest $m -Property 'startedAtUtc' | Should -Not -BeNullOrEmpty
     }
@@ -130,7 +124,7 @@ Describe 'Mode-precedence assertions against fixture manifests' {
         # Given a manifest that says branch, the resolver would pick branch
         # regardless of whether a worktree directory exists.
         # This test validates the rule without calling the full script.
-        $src = Join-Path $FixtureDir 'manifest-branch.json'
+        $src = Join-Path $script:FixtureDir 'manifest-branch.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json
         $manifestMode = Get-LauncherManifestValue -Manifest $m -Property 'mode'
 

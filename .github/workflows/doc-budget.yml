@@ -18,7 +18,7 @@ jobs:
       - name: Resolve-TicketRoot Pester tests
         shell: pwsh
         run: |
-          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0
+          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0 -MaximumVersion 5.99.99
           Invoke-Pester ./scripts/ticket/Resolve-TicketRoot.Tests.ps1 -Output Detailed -CI
 
       - name: Assert-TicketArtifacts fixture checks

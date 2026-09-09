@@ -3,9 +3,15 @@
     Minimal launcher lib for the agentic template (branch-mode, single-repo).
     Provides the same public surface as the TMO _ServiceLauncherLib.ps1 so
     scripts/ticket/*.ps1 dot-sources work without modification.
+
+    Windows PowerShell 5.1 on the work machine; pwsh on GitHub/home.
+    Nested Join-Path only (5.1 accepts one ChildPath). No ?. / ?? operators.
 #>
 
 Set-StrictMode -Version Latest
+
+# Must be assigned before first read: StrictMode Latest throws on unset $script: vars.
+$script:_ticketPrefix = $null
 
 # ---- output helpers -------------------------------------------------------
 function Write-LauncherFail  { param($msg) Write-Host "   [FAIL] $msg" -ForegroundColor Red }
@@ -15,7 +21,7 @@ function Write-LauncherSkip  { param($msg) Write-Host "   [SKIP] $msg" -Foregrou
 # ---- ticket prefix --------------------------------------------------------
 function Get-WorkflowTicketPrefix {
     if ($script:_ticketPrefix) { return $script:_ticketPrefix }
-    $profilePath = Join-Path $PSScriptRoot '..' 'profile.json'
+    $profilePath = Join-Path (Split-Path $PSScriptRoot -Parent) 'profile.json'
     if (Test-Path -LiteralPath $profilePath) {
         try {
             $p = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
@@ -45,20 +51,32 @@ function ConvertTo-LauncherTicketId {
 # ---- repo-root helpers ----------------------------------------------------
 function Get-CanonicalReposRoot {
     param([string]$ReposRoot)
-    return (Resolve-Path -LiteralPath $ReposRoot -ErrorAction SilentlyContinue)?.Path ?? $ReposRoot
+    $resolved = Resolve-Path -LiteralPath $ReposRoot -ErrorAction SilentlyContinue
+    if ($resolved) { return $resolved.Path }
+    return $ReposRoot
 }
 
 function Get-TicketWorktreeRoot {
     param([string]$ReposRoot, [string]$TicketId)
     # Template default layout: no worktrees directory.
-    return Join-Path (Split-Path $ReposRoot -Parent) 'worktrees' $TicketId
+    return (Join-Path (Join-Path (Split-Path $ReposRoot -Parent) 'worktrees') $TicketId)
 }
 
 # ---- manifest helpers -----------------------------------------------------
 function Get-TicketManifest {
     param([string]$ScriptRoot, [string]$Ticket)
-    $planDir = Join-Path (Split-Path (Split-Path $ScriptRoot -Parent) -Parent) 'plans'
-    $path    = Join-Path $planDir "$Ticket-manifest.json"
+    $digits = $Ticket -replace '[^\d]', ''
+    if (-not $digits) { return $null }
+    if ($Ticket -match '^(?<pre>[A-Za-z]+-?)\d') {
+        $ticketId = $Matches['pre'] + $digits
+    } else {
+        $ticketId = ConvertTo-LauncherTicketId -Raw $Ticket
+    }
+    if (-not $ticketId) { return $null }
+    $parent = Split-Path $ScriptRoot -Parent
+    $repoRoot = if ((Split-Path $parent -Leaf) -eq 'scripts') { Split-Path $parent -Parent } else { $parent }
+    $planDir = Join-Path $repoRoot 'plans'
+    $path    = Join-Path $planDir "$ticketId-manifest.json"
     if (-not (Test-Path -LiteralPath $path)) { return $null }
     try { return Get-Content -LiteralPath $path -Raw | ConvertFrom-Json } catch { return $null }
 }

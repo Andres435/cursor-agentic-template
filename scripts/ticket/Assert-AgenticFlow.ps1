@@ -55,7 +55,7 @@ function Get-CurrentPowerShellHost {
 
 # ---- 1. Doc budgets --------------------------------------------------------
 # Delegate to Assert-DocBudget.ps1 so the budget table is single-source.
-$budgetScript = Join-Path $Root 'scripts' 'Assert-DocBudget.ps1'
+$budgetScript = Join-Path (Join-Path $Root 'scripts') 'Assert-DocBudget.ps1'
 if (Test-Path -LiteralPath $budgetScript) {
     $out = & (Get-CurrentPowerShellHost) -NonInteractive -NoProfile -File $budgetScript -Root $Root 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -124,7 +124,7 @@ if (Test-Path -LiteralPath $plansDir) {
 # Match only when a real ticket number (digits) appears — WI<n> is a documentation
 # placeholder and is intentionally allowed in skill descriptions.
 $pathPat = 'source[/\\\\]worktrees[/\\\\]WI\d+'
-foreach ($dir in @((Join-Path $Root 'skills' 'workflow'), (Join-Path $Root 'commands'))) {
+foreach ($dir in @((Join-Path (Join-Path $Root 'skills') 'workflow'), (Join-Path $Root 'commands'))) {
     if (-not (Test-Path -LiteralPath $dir)) { continue }
     Get-ChildItem -LiteralPath $dir -Recurse -Filter '*.md' | ForEach-Object {
         $rel = $_.FullName.Substring($Root.Length + 1)
@@ -136,7 +136,7 @@ foreach ($dir in @((Join-Path $Root 'skills' 'workflow'), (Join-Path $Root 'comm
 }
 
 # ---- 6. Ledger column contract ---------------------------------------------
-$ledgerPath = Join-Path $Root 'plans' 'ticket-ledger.md'
+$ledgerPath = Join-Path (Join-Path $Root 'plans') 'ticket-ledger.md'
 if (Test-Path -LiteralPath $ledgerPath) {
     $hdr = Get-Content -LiteralPath $ledgerPath | Where-Object { $_ -match 'Ticket.*Type.*Closed' } | Select-Object -First 1
     if (-not $hdr) { $hdr = '' }
@@ -194,7 +194,7 @@ if (Test-Path -LiteralPath $profilePath) {
 
 if ($isTemplate) {
     $tmoTerms = @('TmoPro', 'IIS Express', 'Custom.StoryPointsActual')
-    $wfDir = Join-Path $Root 'skills' 'workflow'
+    $wfDir = Join-Path (Join-Path $Root 'skills') 'workflow'
     if (Test-Path -LiteralPath $wfDir) {
         Get-ChildItem -LiteralPath $wfDir -Recurse -Filter '*.md' | ForEach-Object {
             $rel = $_.FullName.Substring($Root.Length + 1)

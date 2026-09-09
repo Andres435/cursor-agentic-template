@@ -78,7 +78,7 @@ if ($Ticket -match '^(?<pre>[A-Za-z]+-?)\d') {
 }
 $RepoRoot = if ($Root) { $Root } else { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
 $PlansDir = Join-Path $RepoRoot 'plans'
-$ScratchDir = Join-Path $RepoRoot 'tmp' 'tickets'
+$ScratchDir = Join-Path (Join-Path $RepoRoot 'tmp') 'tickets'
 
 $missing = [System.Collections.Generic.List[string]]::new()
 $found = [System.Collections.Generic.List[string]]::new()
