@@ -1,0 +1,14 @@
+{
+  "ticket": "WI00002",
+  "mode": "worktree",
+  "workType": "feature",
+  "title": "Fixture: worktree-mode ticket",
+  "adoType": "User Story",
+  "state": "Active",
+  "area": "Workflow",
+  "priority": 2,
+  "affectedRepos": [{ "repo": "app", "local": true }],
+  "startedAtUtc": "2026-09-02T10:00:00Z",
+  "completedAtUtc": "2026-09-02T14:00:00Z",
+  "adrIndex": null
+}

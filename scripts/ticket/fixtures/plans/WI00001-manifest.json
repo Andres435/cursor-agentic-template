@@ -1,0 +1,14 @@
+{
+  "ticket": "WI00001",
+  "mode": "branch",
+  "workType": "feature",
+  "title": "Fixture: CI artifact gate test",
+  "adoType": "User Story",
+  "state": "Active",
+  "area": "Workflow",
+  "priority": 2,
+  "affectedRepos": [{ "repo": "app", "local": true }],
+  "startedAtUtc": "2026-09-01T10:00:00Z",
+  "completedAtUtc": "2026-09-01T14:00:00Z",
+  "adrIndex": null
+}

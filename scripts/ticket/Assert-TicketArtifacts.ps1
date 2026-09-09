@@ -47,6 +47,9 @@ param(
     [ValidateSet('start', 'implement', 'close')]
     [string]$Phase,
 
+    # Override the repo root (for testing against fixtures).
+    [string]$Root,
+
     [switch]$Json
 )
 
@@ -66,7 +69,7 @@ $_prefix = Get-TicketPrefix
 
 $Key = $_prefix + ($Ticket -replace '[^\d]', '')
 if (-not ($Key -match '\d')) { throw "Could not read a work item number from '$Ticket'." }
-$RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$RepoRoot = if ($Root) { $Root } else { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
 $PlansDir = Join-Path $RepoRoot 'plans'
 $ScratchDir = Join-Path $RepoRoot 'tmp\tickets'
 

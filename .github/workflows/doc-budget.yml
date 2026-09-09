@@ -15,6 +15,20 @@ jobs:
         shell: pwsh
         run: ./scripts/ticket/Assert-AgenticFlow.ps1
 
+      - name: Resolve-TicketRoot Pester tests
+        shell: pwsh
+        run: |
+          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0
+          Invoke-Pester ./scripts/ticket/Resolve-TicketRoot.Tests.ps1 -Output Detailed -CI
+
+      - name: Assert-TicketArtifacts fixture checks
+        shell: pwsh
+        run: |
+          $fixture = './scripts/ticket/fixtures'
+          ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase start    -Root $fixture
+          ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase implement -Root $fixture
+          ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase close    -Root $fixture
+
       # Template: Cursor hooks only (no Claude Code bridge)
       - name: Hook smoke tests (Cursor)
         run: |
