@@ -11,6 +11,7 @@ node hooks/tests/session-context.test.js
 |---|---|---|
 | `closeout-guard.test.js` | `closeout-read-guard.js` | Deny closeout dumps, allow other files, degrade on bad JSON |
 | `session-context.test.js` | `session-context.js` | Packet shape, env keys, graceful degrade without PowerShell |
+| `git-push-agentic-flow.test.js` | `git-push-agentic-flow.js` | Allow non-push; git push runs Assert-AgenticFlow (fail-closed) |
 
 Both exit 0 on success, 1 on failure. Safe to run without a configured project or PowerShell;
 `session-context.test.js` stubs the Resolve-TicketRoot path (script not found → graceful degrade).

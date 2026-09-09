@@ -34,6 +34,7 @@ This surfaces doc-budget, command-shim, retired-artifact, and ledger-column fail
 ```
 node hooks/tests/closeout-guard.test.js
 node hooks/tests/session-context.test.js
+node hooks/tests/git-push-agentic-flow.test.js
 ```
 
 Pass if both exit 0. Fail with: `hooks test failed — check node is on PATH and hooks/ is intact`.

@@ -12,6 +12,11 @@
         "command": "node .cursor/hooks/git-commit-ticket.js",
         "matcher": "git(\\.exe)?\\s+commit\\b",
         "timeout": 8
+      },
+      {
+        "command": "node .cursor/hooks/git-push-agentic-flow.js",
+        "matcher": "git(\\.exe)?\\s+push\\b",
+        "timeout": 120
       }
     ],
     "beforeSubmitPrompt": [

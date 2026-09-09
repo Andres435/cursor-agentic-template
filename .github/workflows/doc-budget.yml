@@ -34,3 +34,4 @@ jobs:
         run: |
           node hooks/tests/closeout-guard.test.js
           node hooks/tests/session-context.test.js
+          node hooks/tests/git-push-agentic-flow.test.js

@@ -178,6 +178,9 @@ if (-not (Test-Path -LiteralPath $hooksPath)) {
         if ($hooksText -notmatch 'closeout') {
             Fail "hooks: hooks.json does not define a closeout hook (read-guard)"
         }
+        if ($hooksText -notmatch 'git-push-agentic-flow') {
+            Fail "hooks: hooks.json does not define a git-push agentic-flow gate"
+        }
     } catch {
         Fail "hooks: hooks.json is not valid JSON -- $($_.Exception.Message)"
     }
