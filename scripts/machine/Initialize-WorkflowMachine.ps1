@@ -295,17 +295,10 @@ if (-not $SkipClaudeAdapter) {
 # 4b. Git pre-push runs Assert-AgenticFlow (local repo config only)
 # ---------------------------------------------------------------------------
 Invoke-Phase -Name '4b. Git pre-push hook' -Body {
-    if ($WhatIf) {
-        Write-Host "[WhatIf] Would set core.hooksPath to hooks/git-hooks in $RepoRoot" -ForegroundColor DarkGray
-        return
-    }
-    $hookDir = Join-Path $RepoRoot 'hooks' 'git-hooks'
-    if (-not (Test-Path -LiteralPath (Join-Path $hookDir 'pre-push'))) {
-        throw "Missing $hookDir\pre-push — pull the latest workspace."
-    }
-    git -C $RepoRoot config core.hooksPath 'hooks/git-hooks'
-    if ($LASTEXITCODE -ne 0) { throw "git config core.hooksPath failed" }
-    Write-Host "git push in this repo now runs Assert-AgenticFlow.ps1 (fail-closed)." -ForegroundColor DarkGray
+    $install = Join-Path $here 'Install-GitPushHook.ps1'
+    $hookArgs = @{}
+    if ($WhatIf) { $hookArgs['WhatIf'] = $true }
+    & $install @hookArgs
 }
 
 # ---------------------------------------------------------------------------

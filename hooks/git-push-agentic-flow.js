@@ -9,7 +9,8 @@
  * Git:    hooks/git-hooks/pre-push calls this with --git-hook (exit 1 on fail).
  *
  * Windows work machines use powershell.exe; GitHub/home use pwsh.
- * A missing PowerShell host denies the push (do not fail-open).
+ * When a PowerShell host is present, a failed assert denies the push.
+ * When no host is on PATH, the hook skips (cannot run the .ps1) and CI still runs the same script.
  */
 
 const { spawnSync } = require("child_process");
