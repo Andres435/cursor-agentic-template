@@ -36,11 +36,28 @@ $ErrorActionPreference = 'Stop'
 $violations = [System.Collections.Generic.List[string]]::new()
 function Fail { param([string]$Msg) $violations.Add($Msg) }
 
+# Child scripts call `exit`, so they must run in a subprocess. Reuse *this*
+# process's executable: Windows work machines are powershell.exe (5.1);
+# GitHub ubuntu and some home machines are pwsh. Do not hardcode either name.
+function Get-CurrentPowerShellHost {
+    try {
+        $path = (Get-Process -Id $PID).Path
+        if ($path -and (Test-Path -LiteralPath $path)) { return $path }
+    } catch { }
+    $onWindows = [System.Environment]::OSVersion.Platform -eq 'Win32NT'
+    $names = if ($onWindows) { @('powershell.exe', 'powershell', 'pwsh') } else { @('pwsh') }
+    foreach ($name in $names) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($cmd -and $cmd.Source) { return $cmd.Source }
+    }
+    throw "No PowerShell host found."
+}
+
 # ---- 1. Doc budgets --------------------------------------------------------
 # Delegate to Assert-DocBudget.ps1 so the budget table is single-source.
 $budgetScript = Join-Path $Root 'scripts' 'Assert-DocBudget.ps1'
 if (Test-Path -LiteralPath $budgetScript) {
-    $out = & powershell.exe -NonInteractive -NoProfile -File $budgetScript -Root $Root 2>&1
+    $out = & (Get-CurrentPowerShellHost) -NonInteractive -NoProfile -File $budgetScript -Root $Root 2>&1
     if ($LASTEXITCODE -ne 0) {
         foreach ($line in $out) {
             if ($line -match 'over by') { Fail "doc-budget: $line" }

@@ -47,39 +47,42 @@ param(
 
 Set-StrictMode -Version Latest
 
-# Budget rules: glob pattern → max lines. Order matters: first match wins.
+# Budget rules: directory under Root + filter. Join-Path so Windows (work
+# machine) and Linux (GitHub / some home machines) both resolve files.
 $budgets = @(
-    @{ Pattern = 'rules\*.mdc';              Budget = 120 }
-    @{ Pattern = 'commands\*.md';            Budget = 40 }
-    @{ Pattern = 'skills\workflow\*\SKILL.md'; Budget = 500 }
-    @{ Pattern = 'skills\*\SKILL.md';        Budget = 500 }
-    @{ Pattern = '_shared\*.md';             Budget = 150 }
-    @{ Pattern = 'environments\*.md';        Budget = 120 }
-    @{ Pattern = 'agents\*.md';              Budget = 150 }
+    @{ RelDir = 'rules';        Filter = '*.mdc';    Recurse = $false; Budget = 120 }
+    @{ RelDir = 'commands';     Filter = '*.md';     Recurse = $false; Budget = 40 }
+    @{ RelDir = 'skills';       Filter = 'SKILL.md'; Recurse = $true;  Budget = 500 }
+    @{ RelDir = '_shared';      Filter = '*.md';     Recurse = $false; Budget = 150 }
+    @{ RelDir = 'environments'; Filter = '*.md';     Recurse = $false; Budget = 120 }
+    @{ RelDir = 'agents';       Filter = '*.md';     Recurse = $false; Budget = 150 }
 )
 
 # Docs excluded from budget checks (human docs, the catalog itself, this script's README)
+# Patterns use '/' — compared after normalizing '\' → '/' so Windows and Unix match.
 $excluded = @(
     'INDEX.md', 'README.md', 'USER-MANUAL.md', 'MACHINE-SETUP.md', 'AGENTS.md', 'CLAUDE.md',
     'CUSTOMIZE.md', 'TEMPLATE.md',
-    'AGENTS.md', 'plans\*.md', 'tmp\*', 'scripts\*', 'user\*', 'adapters\*',
-    'environments\README.md', 'commands\README.md', 'scripts\README.md'
+    'plans/*.md', 'tmp/*', 'scripts/*', 'user/*', 'adapters/*',
+    'environments/README.md', 'commands/README.md', 'scripts/README.md'
 )
 
 $violations = [System.Collections.Generic.List[object]]::new()
 $checked    = 0
 
 foreach ($rule in $budgets) {
-    $glob = Join-Path $Root $rule.Pattern
-    $files = @(Get-ChildItem -LiteralPath (Split-Path $glob -Parent) -Filter (Split-Path $glob -Leaf) `
-                             -File -ErrorAction SilentlyContinue)
+    $dir = Join-Path $Root $rule.RelDir
+    if (-not (Test-Path -LiteralPath $dir)) { continue }
+    $gci = @{ LiteralPath = $dir; Filter = $rule.Filter; File = $true; ErrorAction = 'SilentlyContinue' }
+    if ($rule.Recurse) { $gci['Recurse'] = $true }
+    $files = @(Get-ChildItem @gci)
 
     foreach ($file in $files) {
         # Skip excluded docs
-        $relative = $file.FullName.Substring($Root.Length).TrimStart('\', '/')
+        $relative = ($file.FullName.Substring($Root.Length).TrimStart('\', '/') -replace '\\', '/')
         $skip = $false
         foreach ($ex in $excluded) {
-            if ($relative -like $ex) { $skip = $true; break }
+            if ($relative -like $ex -or ([IO.Path]::GetFileName($relative) -eq $ex)) { $skip = $true; break }
         }
         if ($skip) { continue }
 

@@ -67,11 +67,18 @@ function Get-TicketPrefix {
 }
 $_prefix = Get-TicketPrefix
 
-$Key = $_prefix + ($Ticket -replace '[^\d]', '')
-if (-not ($Key -match '\d')) { throw "Could not read a work item number from '$Ticket'." }
+$digits = $Ticket -replace '[^\d]', ''
+if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
+# Honor an explicit prefix on the argument (CI fixtures are WI00001 even when
+# profile.ticketPrefix is TICKET-). Bare digits use the profile prefix.
+if ($Ticket -match '^(?<pre>[A-Za-z]+-?)\d') {
+    $Key = $Matches['pre'] + $digits
+} else {
+    $Key = $_prefix + $digits
+}
 $RepoRoot = if ($Root) { $Root } else { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
 $PlansDir = Join-Path $RepoRoot 'plans'
-$ScratchDir = Join-Path $RepoRoot 'tmp\tickets'
+$ScratchDir = Join-Path $RepoRoot 'tmp' 'tickets'
 
 $missing = [System.Collections.Generic.List[string]]::new()
 $found = [System.Collections.Generic.List[string]]::new()
