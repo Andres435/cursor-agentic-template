@@ -120,7 +120,7 @@ When the user is ready to stop and review the work, they invoke [/complete-task]
 - review readiness
 - confidence scoring
 - calculated hours and converted story points from session timestamps ([session-time-tracking.md](../complete-task/references/session-time-tracking.md))
-- PR title (`WI<number>: <title>`), commit summaries, and ADO field updates (QA notes on ticket; story points on `Custom.StoryPointsActual` after hours conversion — not in PR body)
+- PR title (`WI<number>: <title>`), commit summaries, and work-item field updates (QA notes on ticket; story points after hours conversion — not in PR body)
 - approval package presentation
 - optional approved `prep-pr` execution
 - mandatory [task-retrospective](../complete-task/references/task-retrospective.md) as the final step — always writes one ledger row; writes a `WI<number>-closeout.md` only when the session earned a durable page

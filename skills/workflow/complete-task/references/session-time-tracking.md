@@ -6,7 +6,7 @@ keywords: hours, story points, StoryPointsActual, timestamps, startedAtUtc, reop
 
 # Session Time Tracking
 
-Dev time is computed automatically from session timestamps as **hours**. Show hours to the user in the approval package; write **story points** to ADO (`Custom.StoryPointsActual`) using the conversion table below. Hours/points are ADO-ticket-only — see [ado-ticket-workflow.md § Commit / PR Body Exclusions](ado-ticket-workflow.md#commit--pr-body-exclusions).
+Dev time is computed automatically from session timestamps as **hours**. Show hours to the user in the approval package; write **story points** on the work item using the conversion table below. Hours/points are ticket-field-only — see [ado-ticket-workflow.md § Commit / PR Body Exclusions](ado-ticket-workflow.md#commit--pr-body-exclusions).
 
 Do not ask the user for hours unless the timestamps are missing or the calculation needs manual override.
 
@@ -80,9 +80,9 @@ If only the original segment is open (`completedAtUtc` null), use `[startedAtUtc
 4. **Per-day cap: 8 hours maximum** — for each counted day, compute overlap between the segment interval and that local calendar day, then `min(overlapHours, 8)`.
 5. **Sum** capped daily hours across all segments → `calculatedHours` (one decimal place).
 6. **Display** each segment, `calculatedHours`, and the daily breakdown to the user in the approval package.
-7. **Convert** `calculatedHours` to story points (see table below) and write **only the story-point value** to ADO `Custom.StoryPointsActual`. Never write raw hours to ADO.
+7. **Convert** `calculatedHours` to story points (see table below) and write **only the story-point value** on the work item. Never write raw hours to the tracker.
 
-### Hours → Story Points (ADO `Custom.StoryPointsActual`)
+### Hours → Story Points (work item)
 
 Use the **lowest point value whose range includes** `calculatedHours`. Allowed values: **1, 2, 3, 5, 8, 13** only.
 
@@ -162,4 +162,4 @@ If neither `WI<number>-manifest.json` nor the legacy `WI<number>-session.json` h
 
 - Report that automatic time tracking is unavailable.
 - Do not invent hours.
-- Ask the user for hours **or** story points for ADO. If they supply hours, convert with the table above before writing `Custom.StoryPointsActual`.
+- Ask the user for hours **or** story points. If they supply hours, convert with the table above before writing points on the work item.

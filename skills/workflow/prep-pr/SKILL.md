@@ -74,8 +74,8 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
      - **Bug:** root cause on the ticket (mapped field); QA notes on the ticket
      - **Feature:** QA notes and acceptance-criteria coverage on the ticket
      - **Spike:** outcomes, recommendation, and follow-up work on the ticket
-     - **All types:** convert session or user-supplied **hours** to story points per [session-time-tracking.md](../../../_shared/session-time-tracking.md); write `Custom.StoryPointsActual` on ADO only. Show calculated hours in the approval package.
-     - **User Story / Bug (on approved execute):** set `Custom.StoryPointsActual` from the conversion table; set `Custom.TestedLocally` and `Custom.TicketCompletePerAC` to **`Done`** when the user approved the package and local verification or scoped tests passed. Use `Done` (not `Yes`/`True`). Clear `Custom.Blocker` when the user confirms unblock.
+     - **All types:** convert session or user-supplied **hours** to story points per [session-time-tracking.md](../../../_shared/session-time-tracking.md); write the converted points on the work item only. Show calculated hours in the approval package.
+     - **User Story / Bug (on approved execute):** set actual story points from the conversion table; set `Custom.TestedLocally` and `Custom.TicketCompletePerAC` to **`Done`** when the user approved the package and local verification or scoped tests passed. Use `Done` (not `Yes`/`True`). Clear `Custom.Blocker` when the user confirms unblock.
    - Prefer `wit_work_item_write` (action `update`) for `Custom.TestNotesforQA` and root-cause fields; use `wit_work_item_comment_write` (action `add`) for supplemental context.
    - Run the required-field gate from [../../../_shared/ado-required-fields.md](../../../_shared/ado-required-fields.md) before any State transition.
    - Never fabricate required values. Ask the user only for fields that cannot be derived (dev/QA story points **estimates**) or when session time is unavailable (then ask for hours or story points for actual).
