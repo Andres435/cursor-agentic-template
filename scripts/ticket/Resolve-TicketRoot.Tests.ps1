@@ -4,40 +4,25 @@
     Pester tests for Resolve-TicketRoot mode-precedence logic and related helpers.
 
 .DESCRIPTION
-    Tests the functions from _ServiceLauncherLib.ps1 that underpin Resolve-TicketRoot.ps1:
-    - ConvertTo-LauncherTicketId: normalizes ticket strings with configured prefix
-    - Get-TicketManifest: reads a JSON manifest from plans/
-    - Get-LauncherManifestValue: reads a field from a parsed manifest
-    - Mode precedence: manifest mode > filesystem > default (branch)
-
-    Run with: Invoke-Pester ./scripts/ticket/Resolve-TicketRoot.Tests.ps1 -Output Detailed
+    Pester 5 syntax (GitHub Actions installs 5.x). Run with:
+    Invoke-Pester ./scripts/ticket/Resolve-TicketRoot.Tests.ps1 -Output Detailed
 #>
 
 BeforeAll {
-    # Load the library under test from the same scripts/ parent directory.
     $libPath = Join-Path (Join-Path $PSScriptRoot '..') '_ServiceLauncherLib.ps1'
     if (-not (Test-Path $libPath)) {
-        throw "Missing _ServiceLauncherLib.ps1 at $libPath — cannot run tests"
+        throw "Missing _ServiceLauncherLib.ps1 at $libPath - cannot run tests"
     }
     . $libPath
 
-    # Fixture path
     $script:FixtureDir = Join-Path $PSScriptRoot 'fixtures'
 
-    function Get-CurrentPowerShellHost {
-        try {
-            $path = (Get-Process -Id $PID).Path
-            if ($path -and (Test-Path -LiteralPath $path)) { return $path }
-        } catch { }
-        $onWindows = [System.Environment]::OSVersion.Platform -eq 'Win32NT'
-        $names = if ($onWindows) { @('powershell.exe', 'powershell', 'pwsh') } else { @('pwsh') }
-        foreach ($name in $names) {
-            $cmd = Get-Command $name -ErrorAction SilentlyContinue
-            if ($cmd -and $cmd.Source) { return $cmd.Source }
-        }
-        throw "No PowerShell host found."
+    function Get-PowerShell7Path {
+        $cmd = Get-Command 'pwsh' -ErrorAction SilentlyContinue
+        if ($cmd -and $cmd.Source) { return $cmd.Source }
+        throw "PowerShell 7 (pwsh) is required. See MACHINE-SETUP.md."
     }
-    $script:PwshHost = Get-CurrentPowerShellHost
+    $script:PwshHost = Get-PowerShell7Path
 }
 
 Describe 'ConvertTo-LauncherTicketId' {
@@ -120,51 +105,34 @@ Describe 'Mode-precedence assertions against fixture manifests' {
         Get-LauncherManifestValue -Manifest $m -Property 'startedAtUtc' | Should -Not -BeNullOrEmpty
     }
 
-    It 'mode precedence: manifest mode wins over filesystem default' {
-        # Given a manifest that says branch, the resolver would pick branch
-        # regardless of whether a worktree directory exists.
-        # This test validates the rule without calling the full script.
+    It 'mode precedence: manifest branch wins even if a leftover worktree folder exists' {
         $src = Join-Path $script:FixtureDir 'manifest-branch.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json
         $manifestMode = Get-LauncherManifestValue -Manifest $m -Property 'mode'
-
-        # Simulate: worktreePopulated = true, but manifest said branch
-        $worktreePopulated = $true
-        $mode = if ($manifestMode -and $manifestMode -in @('branch', 'worktree')) {
-            $manifestMode          # manifest wins
-        } elseif ($worktreePopulated) {
-            'worktree'             # filesystem fallback
-        } else {
-            'branch'               # default
-        }
-
-        $mode | Should -Be 'branch'
+        $resolved = Resolve-TicketMode -ManifestMode $manifestMode
+        $resolved.mode | Should -Be 'branch'
+        $resolved.modeSource | Should -Be 'manifest'
     }
 
-    It 'mode precedence: filesystem (populated worktree) beats default when no manifest' {
-        $worktreePopulated = $true
-        $manifestMode = $null
-        $mode = if ($manifestMode -and $manifestMode -in @('branch', 'worktree')) {
-            $manifestMode
-        } elseif ($worktreePopulated) {
-            'worktree'
-        } else {
-            'branch'
-        }
-        $mode | Should -Be 'worktree'
+    It 'mode precedence: leftover populated worktree does not override default branch' {
+        $resolved = Resolve-TicketMode -ManifestMode $null
+        $resolved.mode | Should -Be 'branch'
+        $resolved.modeSource | Should -Be 'default'
     }
 
-    It 'mode precedence: default is branch when no manifest and no worktree' {
-        $worktreePopulated = $false
-        $manifestMode = $null
-        $mode = if ($manifestMode -and $manifestMode -in @('branch', 'worktree')) {
-            $manifestMode
-        } elseif ($worktreePopulated) {
-            'worktree'
-        } else {
-            'branch'
-        }
-        $mode | Should -Be 'branch'
+    It 'mode precedence: default is branch when no manifest' {
+        $resolved = Resolve-TicketMode -ManifestMode ''
+        $resolved.mode | Should -Be 'branch'
+        $resolved.modeSource | Should -Be 'default'
+    }
+
+    It 'mode precedence: manifest worktree still wins so --worktree tickets keep working' {
+        $src = Join-Path $script:FixtureDir 'manifest-worktree.json'
+        $m   = Get-Content $src -Raw | ConvertFrom-Json
+        $manifestMode = Get-LauncherManifestValue -Manifest $m -Property 'mode'
+        $resolved = Resolve-TicketMode -ManifestMode $manifestMode
+        $resolved.mode | Should -Be 'worktree'
+        $resolved.modeSource | Should -Be 'manifest'
     }
 }
 
@@ -172,7 +140,7 @@ Describe 'Assert-TicketArtifacts fixture: start phase' {
     It 'passes for a complete start-phase fixture' {
         $fixtureRoot = Join-Path $PSScriptRoot 'fixtures'
         $script = Join-Path $PSScriptRoot 'Assert-TicketArtifacts.ps1'
-        $result = & $script:PwshHost -NonInteractive -NoProfile -File $script `
+        $null = & $script:PwshHost -NonInteractive -NoProfile -File $script `
             -Ticket 'WI00001' -Phase 'start' -Root $fixtureRoot 2>&1
         $LASTEXITCODE | Should -Be 0
     }
@@ -182,7 +150,7 @@ Describe 'Assert-TicketArtifacts fixture: close phase' {
     It 'passes for a complete close-phase fixture' {
         $fixtureRoot = Join-Path $PSScriptRoot 'fixtures'
         $script = Join-Path $PSScriptRoot 'Assert-TicketArtifacts.ps1'
-        $result = & $script:PwshHost -NonInteractive -NoProfile -File $script `
+        $null = & $script:PwshHost -NonInteractive -NoProfile -File $script `
             -Ticket 'WI00001' -Phase 'close' -Root $fixtureRoot 2>&1
         $LASTEXITCODE | Should -Be 0
     }

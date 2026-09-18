@@ -40,12 +40,25 @@
     Session scorecard axes, 1-5 (5 = excellent). Omit for n/a.
 
 .PARAMETER ContextPct
-    Percent of the context window used at the end of the session. This is the
-    metric the branch-mode/merged-chat rework exists to reduce -- recording it
-    turns "start-ticket costs 40-50%" from an impression into tracked data.
+    Occupancy of the /complete-task chat (ledger Ctx%).
+
+.PARAMETER ContextPctStart
+    Occupancy of the /start-ticket chat (ledger CtxS%). Copied from the manifest
+    ctxPct.start when omitted.
+
+.PARAMETER ContextPctReview
+    Occupancy of the /review-changes chat (ledger CtxR%). Copied from the
+    manifest ctxPct.review when omitted.
 
 .PARAMETER Pr
     PR number or URL, if one was created.
+
+.PARAMETER Root
+    Override the .cursor repo root (tests).
+
+.PARAMETER Rewrite
+    Re-read the ledger, migrate old 11-column rows, and write the current header
+    without changing any ticket's values.
 
 .PARAMETER Remove
     Delete this ticket's row. For a row entered by mistake -- the file itself must
@@ -106,10 +119,23 @@ param(
     [int]$ContextPct,
 
     [Parameter(ParameterSetName = 'Row')]
+    [ValidateRange(0, 100)]
+    [int]$ContextPctStart,
+
+    [Parameter(ParameterSetName = 'Row')]
+    [ValidateRange(0, 100)]
+    [int]$ContextPctReview,
+
+    [Parameter(ParameterSetName = 'Row')]
     [string]$Pr,
 
     [Parameter(ParameterSetName = 'Row')]
     [switch]$Remove,
+
+    [string]$Root,
+
+    [Parameter(ParameterSetName = 'Rewrite')]
+    [switch]$Rewrite,
 
     [Parameter(Mandatory, ParameterSetName = 'Seed')]
     [switch]$SeedFromCloseouts
@@ -130,16 +156,16 @@ function Get-TicketPrefix {
 $TICKET_PREFIX = Get-TicketPrefix
 $TICKET_ROW_PATTERN = "^\|\s*$([regex]::Escape($TICKET_PREFIX))\d+"
 
-$RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$RepoRoot = if ($Root) { $Root } else { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
 $PlansDir = Join-Path $RepoRoot 'plans'
 $OutPath  = Join-Path $PlansDir 'ticket-ledger.md'
 
-$Columns = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'Ctx%', 'PR')
+$Columns = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'CtxS%', 'CtxR%', 'Ctx%', 'PR')
 
 function New-LedgerRow {
     param([string]$Ticket, [string]$Type, [string]$Closed, [string]$Mode,
           [string]$Hours, [string]$Pts, [string]$E, [string]$C, [string]$Tok,
-          [string]$Ctx, [string]$Pr)
+          [string]$CtxS, [string]$CtxR, [string]$Ctx, [string]$Pr)
     [pscustomobject]@{
         Ticket = $Ticket
         Type   = $Type
@@ -150,9 +176,24 @@ function New-LedgerRow {
         E      = $E
         C      = $C
         Tok    = $Tok
+        CtxS   = $CtxS
+        CtxR   = $CtxR
         Ctx    = $Ctx
         PR     = $Pr
     }
+}
+
+function Convert-LedgerCells {
+    param([string[]]$Cells)
+    $c = @($Cells)
+    # Legacy 11-col: Ticket..$tok, Ctx%, PR → insert empty CtxS% CtxR% before Ctx%.
+    if ($c.Count -eq 11) {
+        $c = @($c[0..8]) + @('', '') + @($c[9], $c[10])
+    }
+    elseif ($c.Count -lt $Columns.Count) {
+        $c = @($c) + @('') * ($Columns.Count - $c.Count)
+    }
+    return ,$c
 }
 
 function Get-Blank {
@@ -164,6 +205,25 @@ function Get-Blank {
     return ($s -replace '\|', '\')
 }
 
+function Get-ManifestCtx {
+    param([string]$TicketKey, [string]$Phase)
+    $mfPath = Join-Path $PlansDir "$TicketKey-manifest.json"
+    if (-not (Test-Path -LiteralPath $mfPath)) { return $null }
+    try {
+        $mf = Get-Content -LiteralPath $mfPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $mf) { return $null }
+        if (-not ($mf.PSObject.Properties.Name -contains 'ctxPct')) { return $null }
+        $ctx = $mf.ctxPct
+        if (-not $ctx) { return $null }
+        if (-not ($ctx.PSObject.Properties.Name -contains $Phase)) { return $null }
+        $v = $ctx.$Phase
+        if ($null -eq $v -or [string]::IsNullOrWhiteSpace([string]$v)) { return $null }
+        return [int]$v
+    } catch {
+        return $null
+    }
+}
+
 # ---------------------------------------------------------------- read existing
 $rows = [System.Collections.Generic.List[object]]::new()
 
@@ -173,13 +233,11 @@ if (Test-Path -LiteralPath $OutPath) {
     # (em-dash, accented name) into mojibake on the next write-back.
     foreach ($line in (Get-Content -LiteralPath $OutPath -Encoding UTF8)) {
         if ($line -notmatch $TICKET_ROW_PATTERN) { continue }
-        $cells = ($line.Trim() -replace '^\|', '' -replace '\|$', '') -split '\|' | ForEach-Object { $_.Trim() }
-        if ($cells.Count -lt $Columns.Count) {
-            # Pad a short/legacy row rather than dropping recorded history.
-            $cells = @($cells) + @('') * ($Columns.Count - $cells.Count)
-        }
+        $cells = @(($line.Trim() -replace '^\|', '' -replace '\|$', '') -split '\|' | ForEach-Object { $_.Trim() })
+        $cells = Convert-LedgerCells -Cells $cells
         $rows.Add((New-LedgerRow -Ticket $cells[0] -Type $cells[1] -Closed $cells[2] -Mode $cells[3] `
-            -Hours $cells[4] -Pts $cells[5] -E $cells[6] -C $cells[7] -Tok $cells[8] -Ctx $cells[9] -Pr $cells[10]))
+            -Hours $cells[4] -Pts $cells[5] -E $cells[6] -C $cells[7] -Tok $cells[8] `
+            -CtxS $cells[9] -CtxR $cells[10] -Ctx $cells[11] -Pr $cells[12]))
     }
 }
 
@@ -217,12 +275,12 @@ if ($SeedFromCloseouts) {
         $existing = $rows | Where-Object { $_.Ticket -eq $key } | Select-Object -First 1
         if ($existing) { [void]$rows.Remove($existing) }
         $rows.Add((New-LedgerRow -Ticket $key -Type $ty -Closed $cl -Mode 'worktree' `
-            -Hours '' -Pts '' -E $e -C $c -Tok $k -Ctx '' -Pr ''))
+            -Hours '' -Pts '' -E $e -C $c -Tok $k -CtxS '' -CtxR '' -Ctx '' -Pr ''))
         $seeded++
     }
     Write-Host "Seeded $seeded row(s) from WI*-closeout.md." -ForegroundColor Cyan
 }
-else {
+elseif (-not $Rewrite) {
     $digits = $Ticket -replace '[^\d]', ''
     if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
     $key = $TICKET_PREFIX + $digits
@@ -256,12 +314,17 @@ else {
         [void]$rows.Remove($existing)
     }
 
+    $ctxClose = if ($PSBoundParameters.ContainsKey('ContextPct')) { $ContextPct } else { $null }
+    $ctxS = if ($PSBoundParameters.ContainsKey('ContextPctStart')) { $ContextPctStart } else { Get-ManifestCtx -TicketKey $key -Phase 'start' }
+    $ctxR = if ($PSBoundParameters.ContainsKey('ContextPctReview')) { $ContextPctReview } else { Get-ManifestCtx -TicketKey $key -Phase 'review' }
+
     $rows.Add((New-LedgerRow -Ticket $key -Type (Get-Blank $Type) -Closed $closedDate `
         -Mode $resolvedMode -Hours (Get-Blank $Hours) -Pts (Get-Blank $Points) `
         -E (Get-Blank $(if ($PSBoundParameters.ContainsKey('Efficiency')) { $Efficiency } else { $null })) `
         -C (Get-Blank $(if ($PSBoundParameters.ContainsKey('Contextualization')) { $Contextualization } else { $null })) `
         -Tok (Get-Blank $(if ($PSBoundParameters.ContainsKey('CostTokens')) { $CostTokens } else { $null })) `
-        -Ctx (Get-Blank $(if ($PSBoundParameters.ContainsKey('ContextPct')) { $ContextPct } else { $null })) `
+        -CtxS (Get-Blank $ctxS) -CtxR (Get-Blank $ctxR) `
+        -Ctx (Get-Blank $ctxClose) `
         -Pr (Get-Blank $Pr)))
     }
 }
@@ -274,9 +337,17 @@ function Measure-Axis {
     return [math]::Round((($vals | Measure-Object -Average).Average), 1)
 }
 
+function Measure-Ctx {
+    param([string]$Property)
+    $vals = @($rows | ForEach-Object { $_.$Property } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+    if (-not $vals.Count) { return 'n/a' }
+    return [string]([math]::Round((($vals | Measure-Object -Average).Average), 0)) + '%'
+}
+
 $scoredCount = @($rows | Where-Object { $_.E -match '^\d$' }).Count
-$ctxVals = @($rows | ForEach-Object { $_.Ctx } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
-$avgCtx = if ($ctxVals.Count) { [string]([math]::Round((($ctxVals | Measure-Object -Average).Average), 0)) + '%' } else { 'n/a' }
+$avgCtxS = Measure-Ctx 'CtxS'
+$avgCtxR = Measure-Ctx 'CtxR'
+$avgCtx  = Measure-Ctx 'Ctx'
 
 $sorted = $rows | Sort-Object @{ Expression = { if ($_.Closed) { $_.Closed } else { '0000-00-00' } } }, Ticket
 
@@ -288,17 +359,18 @@ $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine('')
 [void]$sb.AppendLine('This replaces the per-ticket `WI<n>-closeout.md` files. Durable *lessons* live in')
 [void]$sb.AppendLine('[closeout-index.md](closeout-index.md); a full closeout page is written only when a')
-[void]$sb.AppendLine('retrospective earns one. Scorecard scale 1-5 (5 = excellent); `Ctx%` is the share of')
-[void]$sb.AppendLine('the context window used by the end of the session.')
+[void]$sb.AppendLine('retrospective earns one. Scorecard scale 1-5 (5 = excellent). `CtxS%` is the')
+[void]$sb.AppendLine('/start-ticket chat, `CtxR%` is `/review-changes`, `Ctx%` is `/complete-task`.')
+[void]$sb.AppendLine('`/implement` is not recorded. Do not backfill old rows.')
 [void]$sb.AppendLine('')
-[void]$sb.AppendLine('| Tickets | Scored | Avg E | Avg C | Avg $tok | Avg Ctx% |')
-[void]$sb.AppendLine('|---|---|---|---|---|---|')
-[void]$sb.AppendLine("| $($rows.Count) | $scoredCount | $(Measure-Axis 'E') | $(Measure-Axis 'C') | $(Measure-Axis 'Tok') | $avgCtx |")
+[void]$sb.AppendLine('| Tickets | Scored | Avg E | Avg C | Avg $tok | Avg CtxS% | Avg CtxR% | Avg Ctx% |')
+[void]$sb.AppendLine('|---|---|---|---|---|---|---|---|')
+[void]$sb.AppendLine("| $($rows.Count) | $scoredCount | $(Measure-Axis 'E') | $(Measure-Axis 'C') | $(Measure-Axis 'Tok') | $avgCtxS | $avgCtxR | $avgCtx |")
 [void]$sb.AppendLine('')
 [void]$sb.AppendLine('| ' + ($Columns -join ' | ') + ' |')
 [void]$sb.AppendLine('|' + ('---|' * $Columns.Count))
 foreach ($r in $sorted) {
-    [void]$sb.AppendLine("| $($r.Ticket) | $($r.Type) | $($r.Closed) | $($r.Mode) | $($r.Hours) | $($r.Pts) | $($r.E) | $($r.C) | $($r.Tok) | $($r.Ctx) | $($r.PR) |")
+    [void]$sb.AppendLine("| $($r.Ticket) | $($r.Type) | $($r.Closed) | $($r.Mode) | $($r.Hours) | $($r.Pts) | $($r.E) | $($r.C) | $($r.Tok) | $($r.CtxS) | $($r.CtxR) | $($r.Ctx) | $($r.PR) |")
 }
 
 # UTF-8 with NO BOM. Set-Content -Encoding utf8 on PS 5.1 emits a BOM, which then

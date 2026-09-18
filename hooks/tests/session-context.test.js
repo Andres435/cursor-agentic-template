@@ -12,6 +12,7 @@
 const assert = require("assert");
 const { spawnSync } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 const HOOK = path.join(__dirname, "..", "session-context.js");
@@ -127,6 +128,93 @@ test("handles malformed JSON input gracefully", () => {
   });
   const out = JSON.parse(result.stdout || "{}");
   assert.ok(typeof out === "object", "must return valid JSON even on bad input");
+});
+
+// --- nextAction field ---
+
+function withTempPlans(fn) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tmo-test-plans-"));
+  try {
+    fn(dir);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("nextAction is 'start-ticket' when manifest is absent", () => {
+  withTempPlans((dir) => {
+    const out = runHook(
+      { workspace_roots: ["/source/worktrees/" + TICKET_A] },
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+    );
+    if (out.additional_context) {
+      assert.ok(
+        /"nextAction":"start-ticket"/.test(out.additional_context),
+        "expected nextAction start-ticket, got: " + out.additional_context
+      );
+    }
+  });
+});
+
+test("nextAction is 'review-changes (stage first)' when manifest has no reviewReady", () => {
+  withTempPlans((dir) => {
+    fs.writeFileSync(
+      path.join(dir, TICKET_A + "-manifest.json"),
+      JSON.stringify({ mode: "branch", workType: "feature" })
+    );
+    const out = runHook(
+      { workspace_roots: ["/source/worktrees/" + TICKET_A] },
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+    );
+    if (out.additional_context) {
+      assert.ok(
+        /review-changes/.test(out.additional_context),
+        "expected review-changes, got: " + out.additional_context
+      );
+    }
+  });
+});
+
+test("nextAction is 'complete-task' when reviewReady is set but completedAtUtc is null", () => {
+  withTempPlans((dir) => {
+    fs.writeFileSync(
+      path.join(dir, TICKET_A + "-manifest.json"),
+      JSON.stringify({ mode: "branch", reviewReady: "2026-09-17T10:00:00Z", completedAtUtc: null })
+    );
+    const out = runHook(
+      { workspace_roots: ["/source/worktrees/" + TICKET_A] },
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+    );
+    if (out.additional_context) {
+      assert.ok(
+        /"nextAction":"complete-task"/.test(out.additional_context),
+        "expected nextAction complete-task, got: " + out.additional_context
+      );
+    }
+  });
+});
+
+test("nextAction is 'closed' when completedAtUtc is set", () => {
+  withTempPlans((dir) => {
+    fs.writeFileSync(
+      path.join(dir, TICKET_A + "-manifest.json"),
+      JSON.stringify({
+        mode: "branch",
+        reviewReady: "2026-09-17T10:00:00Z",
+        completedAtUtc: "2026-09-17T14:00:00Z",
+      })
+    );
+    const out = runHook(
+      { workspace_roots: ["/source/worktrees/" + TICKET_A] },
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+    );
+    if (out.additional_context) {
+      assert.ok(
+        /"nextAction":"closed"/.test(out.additional_context),
+        "expected nextAction closed, got: " + out.additional_context
+      );
+    }
+  });
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

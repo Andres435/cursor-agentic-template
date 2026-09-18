@@ -21,12 +21,19 @@ process.stdin.on("end", () => {
     }
     if (/start-ticket/i.test(prompt)) {
       bits.push(
-        "Default mode is branch (canonical clones, plan and build in ONE chat); --worktree is the special case. Record mode on the manifest. ticket-router must run Search-CloseoutMemory.ps1 (or grep plans/closeout-index.md) and put at most 8 priorFindings on the manifest. Draft the plan in Plan mode only; do not write the plan file until the user approves in chat, and never trigger Plan mode's native Build action. When revising the draft, re-emit only the section that changed."
+        "Default mode is branch (canonical clones, plan and build in ONE chat); --worktree is the special case. Record mode on the manifest. Fan out one explore-repo subagent and one Search-CloseoutMemory.ps1 run per affected repo in the same batch as branch-setup; parent merges packets (max 8 priorFindings total). Do not Grep from source/repos root. Draft the plan in Plan mode only; do not write the plan file until the user approves in chat, and never trigger Plan mode's native Build action. When revising the draft, re-emit only the section that changed."
       );
     }
     if (/\bimplement\b/i.test(prompt)) {
       bits.push(
-        "Only needed in a FRESH chat -- worktree mode, or resuming branch mode. If you are still in the chat that just approved the plan, keep building there. Run ticket-context-load first (Resolve-TicketRoot for mode/root, then manifest, approved plan, docSet) instead of re-planning. Log any plan-vs-reality change to the plan file's Deviations section. For TmoPro, an Accepted ADR conflict stops for the user, not a silent refinement."
+        "Only needed in a FRESH chat -- worktree mode, or resuming branch mode. If you are still in the chat that just approved the plan, keep building there. Run ticket-context-load first (Resolve-TicketRoot for mode/root, then manifest, approved plan, docSet) instead of re-planning. Append any plan-vs-reality change to the Deviations section of the plan file BEFORE reporting step N/M done. An ADR conflict stops for the user, not a silent refinement."
+      );
+    }
+
+    // rename_chat nudge: Cursor has access to cursor-app-control.rename_chat
+    if (/start-ticket|review-changes|complete-task|\bimplement\b/i.test(prompt)) {
+      bits.push(
+        "Rename this chat to 'WI##### <phase>' using cursor-app-control rename_chat so the user can navigate multiple open tabs."
       );
     }
 

@@ -2,41 +2,51 @@
 
 Day-to-day ticket workflow for humans. Agents: see [AGENTS.md](AGENTS.md).
 
-## Two-chat lifecycle (branch mode — default)
+**First clone:** run `/onboard` and fill [CUSTOMIZE.md](CUSTOMIZE.md). After `profile.json` and
+the env/agent stubs are filled, slash commands run from that config — they do not re-ask for
+repos or start commands.
+
+## Three-chat lifecycle (branch mode — default)
 
 | Chat | What happens |
 |---|---|
-| **Chat 1 `/start-ticket`** | Plan → approve → implement → push (all in one chat) |
-| **Chat 2 `/complete-task`** | Verify → retrospective → ledger row → PR prep |
+| **Chat 1 `/start-ticket`** | Plan → approve → **build in the same chat** |
+| **Chat 2 `/review-changes`** | Staged review; stamps `reviewReady` |
+| **Chat 3 `/complete-task`** | Verify → retrospective → ledger row → PR package |
 
-Worktree mode (opt-in with `--worktree`): three chats — plan, implement, complete. Default is branch mode.
+`/prep-pr` runs after you approve the package. `/implement` is only for worktree mode or a
+start-ticket chat that ran out of context.
+
+Worktree mode (`--worktree`) is opt-in and only if `profile.worktreeSupported` is true.
 
 ## Slash commands
 
 | Command | When |
 |---|---|
-| `/start-ticket TICKET-42 feature` | New work item (feature, bug, spike, refactor) |
-| `/start-ticket TICKET-42 bug --worktree` | New ticket in isolated worktree (optional) |
+| `/onboard` | Fill the blanks (profile, env card, specialist) |
+| `/doctor` | Health check (profile, hooks, gates) |
+| `/start-ticket TICKET-42 feature` | New work (feature, bug, spike, refactor) |
+| `/start-ticket TICKET-42 bug --worktree` | Isolated worktree (optional) |
+| `/implement TICKET-42` | Resume / worktree build |
+| `/review-changes` | Staged review before PR |
 | `/complete-task` | Close a finished ticket (new chat) |
-| `/prep-pr` | Finalize PR and write-back to ticket system |
-| `/review-changes` | Code review before PR |
-| `/review-changes TICKET-42` | Pre-merge review of a branch |
-| `/start-stack TICKET-42` | Start the local dev stack |
-| `/address-pr-comments TICKET-42 PR_NUMBER` | Address reviewer comments |
+| `/prep-pr` | Commit / push / PR / tracker write-back |
+| `/start-stack TICKET-42` | Start `profile.stacks.startCommand` |
+| `/address-pr-comments TICKET-42` | Address reviewer comments |
 
 ## Model selection
 
-- **Plan step** → switch to Grok 4.5 (or Opus in Claude Code) before planning.
-- **Task steps** → Auto / Composer; honor `[low]|[med]|[high]` tags in the Work Plan.
-- **New chat** (`/complete-task`) → Auto is fine; no planning needed.
+- **Plan step** → Grok 4.5 (or Opus in Claude Code).
+- **Task steps** → Auto / Composer; honor `[low]|[med]|[high]` tags.
+- **New closeout chat** → Auto is fine.
 
 ## Done table
 
 | Phase | Artifact | Script gate |
 |---|---|---|
-| Start | `plans/<ticket>-manifest.json`, `plans/<ticket>-<type>-plan.md` | `Assert-TicketArtifacts -Phase start` |
-| Implement | Changes committed + pushed | (per plan steps) |
-| Close | Ledger row, optional closeout | `Assert-TicketArtifacts -Phase close` |
+| Start | `plans/<ticket>-manifest.json`, `plans/<ticket>-<type>-plan.md` (Plan Digest + Engineering Decisions) | `Assert-TicketArtifacts -Phase start` |
+| Review | `reviewReady` + `ctxPct.review` on the manifest | `Set-ReviewReady` / `Set-TicketCtxPct` |
+| Close | Ledger row (`CtxS%` / `CtxR%` / `Ctx%`) | `Assert-TicketArtifacts -Phase close` |
 
 ## Customize this manual
 

@@ -74,12 +74,12 @@ Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, 
 | File | Written by | Purpose |
 |---|---|---|
 | `WI<n>-manifest.json` | [ticket-router](../skills/workflow/ticket-router/SKILL.md) | Classification **and** session state: `mode`, `workType`, `ticket` (title/adoType/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `sonarRepos`, `adrIndex`, `dbChange`, `needsDacpac`, `featureFlag`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, and the session timestamps. Drives what every later chat loads. |
-| `WI<n>-<type>-plan.md` | start-ticket | The approved plan. Opens with a `## Plan Digest` (structure in [ticket-plan-output.md](ticket-plan-output.md)); the `-Phase start` gate checks that heading exists, not just the file. Durable, and the only plan `implement` follows. |
+| `WI<n>-<type>-plan.md` | start-ticket | The approved plan. Opens with `## Plan Digest` and `## Engineering Decisions` (structure in [ticket-plan-output.md](ticket-plan-output.md) and [engineering-decisions.md](engineering-decisions.md)); the `-Phase start` gate checks those headings. Durable, and the only plan `implement` follows. |
 | `WI<n>-feedback.md` | address-pr-comments | Compact PR + Sonar triage packet. Conditional. |
 | `WI<n>-verify.json` | complete-task | Compact `verify-repo` packets. Conditional. |
 | `WI<n>-review.md` | complete-task / review-changes | Compact `review-diff` output. Conditional. |
-| `plans/ticket-ledger.md` | `scripts/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, context %. Shared, append-only. |
-| `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([closeout-search.md](closeout-search.md)). |
+| `plans/ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, `CtxS%` / `CtxR%` / `Ctx%`. Shared, append-only. |
+| `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([../skills/workflow/ticket-router/references/closeout-search.md](../skills/workflow/ticket-router/references/closeout-search.md)). |
 | `WI<n>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](task-retrospective.md)). Not required by any gate. |
 
 Keep these small and durable. Summarize subagent packets into the relevant file; do not paste raw
@@ -90,7 +90,7 @@ JSON into chat.
 `startedAtUtc`, `completedAtUtc`, `reopenedAtUtc`, `reclosedAtUtc`, and `timezone` live **on the
 manifest**. The retired `WI<n>-session.json` is still read as a fallback so tickets started before
 this change can close; nothing writes it any more. Field semantics and the hours math stay in
-[session-time-tracking.md](session-time-tracking.md).
+[../skills/workflow/complete-task/references/session-time-tracking.md](../skills/workflow/complete-task/references/session-time-tracking.md).
 
 ## Handoff between chats
 
@@ -111,13 +111,12 @@ The implementation window loads the manifest, plan, and doc set itself — the p
 pointer, not a copy. Do not inline the Work Plan steps, and do not tell the user to `@` or attach a
 plan file (that starts a review, not a build). Cursor cannot move an agent root onto a folder holding
 several independent git repos, so `move_agent_to_root` fails on every ticket root — this paste is the
-only handoff. See [../environments/worktrees.md](../environments/worktrees.md).
+only handoff. Worktree layout is an overlay blank — fill [../environments/worktrees.md](../environments/worktrees.md) if `profile.worktreeSupported`.
 
 ## Rules
 
 - Write each phase's files **as they are produced**, not batched at the end of the command.
-- The manifest is written immediately after ADO intake, before branch setup or worktree
-  provisioning — it carries `startedAtUtc`, so a lost manifest loses the session clock.
+- The manifest is written immediately after ticket intake, before branch setup — it carries `startedAtUtc`, so a lost manifest loses the session clock.
 - Never overwrite `startedAtUtc` after the first write.
 - One ledger row per ticket; a reopen updates that row in place (re-run `Update-TicketLedger.ps1`).
 - Never hand-edit `plans/ticket-ledger.md` — the script owns its format.

@@ -10,7 +10,7 @@ keywords: closeout search, priorFindings, ticket memory, closeout-index, lessons
 the only surface worth searching. Search it, then keep at most **8** compact lessons on the manifest.
 
 Do **not** read `plans/WI*-closeout.md` files. Those exist only for the rare ticket whose
-retrospective earned a page ([task-retrospective.md](task-retrospective.md)), and the lesson from any
+retrospective earned a page ([task-retrospective.md](../../complete-task/references/task-retrospective.md)), and the lesson from any
 such ticket is already in the index.
 
 ## When

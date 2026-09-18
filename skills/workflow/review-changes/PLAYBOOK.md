@@ -2,11 +2,13 @@
 name: review-changes-skill
 description: Full implementation steps for /review-changes — mode selection, repo scoping via Resolve-TicketRoot, git diff steps, subagent fan-out, and output shape.
 keywords: code review, working tree, pre-merge, staged diff, mode selection, repo scope, subagent fan-out
+disable-model-invocation: true
 ---
 
 # Review Changes — Implementation
 
-Called by the `review-changes` command shim. Do **not** commit or push; this skill is read-only.
+Called by the `review-changes` command shim. Do **not** commit or push. After the verdict, write the
+`reviewReady` stamp and `ctxPct.review` on the manifest (`Set-ReviewReady.ps1`, `Set-TicketCtxPct.ps1`).
 
 ## Mode selection
 
@@ -14,7 +16,8 @@ Parse the user's invocation for an optional **branch token** (e.g. `review-chang
 
 - **No token** → working-tree mode. Diff each repo's **staged** state; unstaged/untracked are context only.
 - **Token present** → pre-merge mode. Strip leading `origin/` if present, `git fetch origin`, then
-  compute: `git merge-base origin/dev origin/<branch>` → `git diff --stat origin/dev...origin/<branch>`.
+  compute: `git merge-base origin/<base> origin/<branch>` → `git diff --stat origin/<base>...origin/<branch>`
+  (`<base>` = `profile.baseBranchDefault`).
   If `origin/<branch>` is missing after fetch, fall back to the local branch (`git diff origin/dev...HEAD`);
   note **pre-merge fallback: local branch (remote missing)**. If no local branch either, stop and report.
 
@@ -28,8 +31,7 @@ Parse the user's invocation for an optional **branch token** (e.g. `review-chang
    .\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket WI<n> -Json
    ```
 
-   Branch mode → canonical clones under `source/repos/<repo>`.  
-   Worktree mode → `source/worktrees/WI<n>/<repo>`.
+   Use each `repos[].path` from that JSON. Never construct a worktree path by hand.
 
 3. Run every `git` command with the working directory set to that resolved path.
 
@@ -44,8 +46,8 @@ For each selected repo (working-tree mode):
 
 Pre-merge mode: diff source is the three-dot range above; otherwise workflow is identical.
 
-When `git blame`/`git log` surfaces historical work item IDs, use the read-only ADO lookup in
-[../../../_shared/ado-ticket-workflow.md](../../../_shared/ado-ticket-workflow.md). Do not write to historical tickets.
+When `git blame`/`git log` surfaces historical ticket IDs, look them up read-only in the project's
+ticket system. Do not write to historical tickets.
 
 ## Optimization — subagent fan-out for multi-repo reviews
 
@@ -62,6 +64,13 @@ Follow [../../../_shared/severity-and-output.md](../../../_shared/severity-and-o
 2. Files changed (count + breakdown)
 3. Modules touched
 4. Findings from **staged** changes only (Blocker first, then Major; Minor/Nit on request)
-5. Notes (unstaged awareness, ADO context) — omit if empty
+5. Notes (unstaged awareness) — omit if empty
 6. Confidence Score — axis: `Change-set understanding`
 7. Verdict: **Ready** | **Ready with fixes** | **Not ready** — one-line rationale
+
+Then stamp the manifest:
+
+```powershell
+.\.cursor\scripts\Set-ReviewReady.ps1 -Ticket <ticket> -Verdict Ready
+.\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase review -Percent <0-100>
+```

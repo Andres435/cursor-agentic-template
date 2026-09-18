@@ -1,7 +1,8 @@
 ---
-name: doctor
+name: doctor-skill
 description: Verify the workspace is correctly set up for agentic workflow — profile, hooks, artifact gate, and stack start command.
 keywords: doctor, health check, setup, profile, hooks, workspace validation
+disable-model-invocation: true
 ---
 
 # /doctor — Workspace Health Check

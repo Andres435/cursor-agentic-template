@@ -19,15 +19,15 @@ Ask for any missing essentials:
 - **Description**: what the feature should do
 - **Acceptance criteria**: conditions that must be met
 
-If the user provides a work item number, use [/start-ticket](../../../../commands/start-ticket.md) before planning. The startup flow owns the shared ADO intake, required-field gate, automatic **Ready for Dev** -> **In Progress** transition, latest `dev` update, `WI<ticketNumber>` branch creation, and then this feature implementation plan.
-
-If ADO blocks the State transition because required fields are empty, report the blocking fields and continue feature planning.
-
-If the user pasted a work item or ticket instead of an ID, extract these details from it and ask for the work item number if the ticket should be fetched or updated in ADO.
+If a ticket id is present, `/start-ticket` owns intake. Do not re-ask profile fields.
 
 ## Pre-Plan Gate (resolve before designing)
 
-Confirm these up front; a wrong assumption here causes rework (WI17113, WI17114, WI17115, WI11422, WI18939):
+Each item is a **decision candidate** for Engineering Decisions
+([../../../../_shared/engineering-decisions.md](../../../../_shared/engineering-decisions.md)).
+An open item stops the plan.
+
+Confirm these up front:
 
 - **External API contract:** when the feature calls an external/vendor API, confirm the exact request/response bodies and types before design.
 - **AC vs description conflict:** when acceptance criteria and description disagree, **lock to the acceptance criteria** and call out the conflict.
@@ -77,8 +77,7 @@ Plan schema/database changes first when needed. Apply datetime conventions for s
 
 Plan DTOs, services, API endpoints, DI registration, decorators, handlers, and validation.
 
-- For new or modified API endpoints, follow [../../../domain/new-api-endpoint/SKILL.md](../../../domain/new-api-endpoint/SKILL.md).
-- For backend conventions, use [../../../../agents/dotnet-specialist.md](../../../../agents/dotnet-specialist.md) and [../../../../rules/dotnet-overlay.mdc](../../../../rules/dotnet-overlay.mdc).
+- Follow the specialist in `profile.specialists` / `agents/` for backend conventions.
 - When `adrIndex` is set, consult the ADR index before choosing a pattern — see
   [../../../../_shared/adr-policy.md](../../../../_shared/adr-policy.md). Cite the ADRs this section follows.
 
@@ -86,13 +85,12 @@ Plan DTOs, services, API endpoints, DI registration, decorators, handlers, and v
 
 Plan components, data hooks, forms, state, and MUI usage.
 
-- For new or modified React features, follow [../../../domain/new-react-feature/SKILL.md](../../../domain/new-react-feature/SKILL.md).
-- For project-specific frontend stack differences (MUI version, zod, zustand, etc.), use [../../../../agents/react-specialist.md](../../../../agents/react-specialist.md).
+- Follow the specialist in `agents/` for frontend conventions.
 
 ### 8. Integration Points
 
 Describe how the feature connects with existing workflows, handlers, legacy code, external APIs, or environment cards. Flag C-Class changes as high risk and require approval.
-When `git blame` or `git log` reveals historical work item IDs while researching existing behavior, use the read-only lookup path in [./ado-ticket-workflow.md](./ado-ticket-workflow.md) for context. Do not write to historical tickets.
+When `git blame` or `git log` reveals historical ticket IDs, look them up read-only. Do not write to historical tickets.
 
 ### 9. Testing Plan
 
@@ -100,7 +98,7 @@ Use [../../../../_shared/test-verification.md](../../../../_shared/test-verifica
 
 ### 10. Verification
 
-- Run SonarQube checks per [../../../../_shared/sonar-verification.md](../../../../_shared/sonar-verification.md).
+- Run the quality gate only when the manifest lists a key for that repo.
 - Review the plan and eventual changes against [../../../../_shared/review-protocol.md](../../../../_shared/review-protocol.md).
 - Note any documentation updates in TmoDocs.
 

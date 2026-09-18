@@ -13,7 +13,7 @@
       commands/*.md      <=  40 lines  (shims only; body lives in skills/)
       _shared/*.md       <= 150 lines  (cross-phase contracts; phase-only docs live in skill references/)
       environments/*.md  <= 120 lines
-      rules/*.mdc        <=  60 lines  (already stubs)
+      rules/*.mdc        <= 120 lines  (stub rules <= 60; triggered convention rules <= 120)
 
     INDEX.md and human docs (USER-MANUAL.md, README.md, MACHINE-SETUP.md) are
     excluded — they grow with the workspace, not with individual tickets.
@@ -52,7 +52,9 @@ Set-StrictMode -Version Latest
 $budgets = @(
     @{ RelDir = 'rules';        Filter = '*.mdc';    Recurse = $false; Budget = 120 }
     @{ RelDir = 'commands';     Filter = '*.md';     Recurse = $false; Budget = 40 }
-    @{ RelDir = 'skills';       Filter = 'SKILL.md'; Recurse = $true;  Budget = 500 }
+    @{ RelDir = 'skills';       Filter = 'SKILL.md';    Recurse = $true;  Budget = 500 }
+    @{ RelDir = 'skills';       Filter = 'PLAYBOOK.md'; Recurse = $true;  Budget = 500 }
+    @{ RelDir = 'playbooks';    Filter = '*.md';       Recurse = $false; Budget = 500 }
     @{ RelDir = '_shared';      Filter = '*.md';     Recurse = $false; Budget = 150 }
     @{ RelDir = 'environments'; Filter = '*.md';     Recurse = $false; Budget = 120 }
     @{ RelDir = 'agents';       Filter = '*.md';     Recurse = $false; Budget = 150 }
@@ -64,7 +66,7 @@ $excluded = @(
     'INDEX.md', 'README.md', 'USER-MANUAL.md', 'MACHINE-SETUP.md', 'AGENTS.md', 'CLAUDE.md',
     'CUSTOMIZE.md', 'TEMPLATE.md',
     'plans/*.md', 'tmp/*', 'scripts/*', 'user/*', 'adapters/*',
-    'environments/README.md', 'commands/README.md', 'scripts/README.md'
+    'environments/README.md', 'commands/_README.md', 'scripts/README.md'
 )
 
 $violations = [System.Collections.Generic.List[object]]::new()
@@ -112,7 +114,7 @@ foreach ($v in ($violations | Sort-Object Over -Descending)) {
     Write-Host ("  {0,-60} {1,4} lines  (budget {2}, over by {3})" -f $v.File, $v.Lines, $v.Budget, $v.Over) -ForegroundColor $color
 }
 Write-Host "  Move over-budget detail to skill references/ or split into slices." -ForegroundColor DarkGray
-Write-Host "  Budgets: SKILL.md <=500, commands/*.md <=40, _shared/*.md <=150, environments/*.md <=120" -ForegroundColor DarkGray
+Write-Host "  Budgets: SKILL.md <=500, commands/*.md <=40, _shared/*.md <=150, environments/*.md <=120, rules/*.mdc <=120" -ForegroundColor DarkGray
 
 if ($WarnOnly) { exit 0 }
 exit 1

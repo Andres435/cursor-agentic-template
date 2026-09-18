@@ -15,4 +15,4 @@ Templates for `%APPDATA%\Cursor\User\`. These are **not** applied automatically 
 
 Full new-machine guide: [../MACHINE-SETUP.md](../MACHINE-SETUP.md).
 Day-to-day tickets: [../USER-MANUAL.md](../USER-MANUAL.md).
-Day-to-day IDE behavior: [../environments/cursor-ide-setup.md](../environments/cursor-ide-setup.md).
+Day-to-day IDE behavior: [settings.recommended.json](settings.recommended.json). Machine bootstrap: [../MACHINE-SETUP.md](../MACHINE-SETUP.md).

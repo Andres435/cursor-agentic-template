@@ -83,8 +83,8 @@ ask which to apply. Never apply them all silently.
 |---|---|---|
 | A durable technical lesson | one row: ticket · domain · one-line lesson | [../../../../plans/closeout-index.md](../../../../plans/closeout-index.md) |
 | Repeating setup or a first-search target | one bullet | the matching card under [../../../../environments/](../../../../environments/) |
-| A workflow/tooling improvement | one bullet (small, do-now) | [workflow-context-roadmap.md](../../../../_shared/workflow-context-roadmap.md) |
-| Deferred script/CI/doc-budget work | one row in the Open table | [workflow-tech-debt.md](../../../../_shared/workflow-tech-debt.md) |
+| A workflow/tooling improvement | one bullet (small, do-now) | a project overlay doc the user names |
+| Deferred script/CI/doc-budget work | one row the user names | park it; do not implement unless asked |
 | A gate, script, or command that misfired | a fix, or a roadmap bullet if it is not small | the script/command itself |
 | Something genuinely needing a page | the full closeout file (shape below) | `../plans/WI<n>-closeout.md` |
 
@@ -102,12 +102,16 @@ Rules that do not bend:
 One row per closed ticket, written by the script so the format cannot drift:
 
 ```powershell
+.\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close -Percent <0-100>
 .\.cursor\scripts\ticket\Update-TicketLedger.ps1 -Ticket <ticket> -Type <bug|feature|spike|refactor> `
   -Hours <n> -Points <n> -Efficiency <1-5> -Contextualization <1-5> -CostTokens <1-5> `
   -ContextPct <0-100> -Pr <number>
 ```
 
-**`-ContextPct`:** check the Cursor context-window indicator (shown in the chat header when present). Copy the percentage as an integer (e.g. 67 for "67%"). If the indicator is not visible, omit `-ContextPct` — never invent or guess the number.
+**Context percents:** `-ContextPct` is this **closeout** chat (ledger `Ctx%`). `CtxS%` and `CtxR%`
+are copied from the manifest (`ctxPct.start` / `ctxPct.review`) when you omit `-ContextPctStart` /
+`-ContextPctReview`. Copy the Cursor occupancy integer. If the indicator is hidden, **estimate**
+rather than leaving closeout `Ctx%` blank.
 
 Re-running for the same ticket replaces its row, so a reopen updates in place. Omit any switch you
 genuinely do not have — a blank cell is honest, a guessed number is not. Never hand-edit
@@ -150,7 +154,7 @@ update the top-level `closed:` — never add a second front-matter block.
 ## Chat output
 
 Post at most five lines — see
-[severity-and-output.md](severity-and-output.md#chat-output-budget):
+[severity-and-output.md](../../../../_shared/severity-and-output.md#chat-output-budget):
 
 ```text
 TICKET-42 closed — Add CSV export for users; PR 99.

@@ -3,9 +3,10 @@
     Search prior ticket memory for compact lessons matching this ticket.
 
 .DESCRIPTION
-    Used by ticket-router at /start-ticket. Reads plans/closeout-index.md -- the one
-    retrieval surface, one dense row per durable lesson. Prints JSON:
-    [{ ticket, lesson }, ...] (max 8). Never reads or dumps whole closeout files.
+    Used by ticket-router at /start-ticket. Reads plans/closeout-index.md (product
+    lessons) and _shared/workflow-failure-catalog.md (WF-* workflow defects). Prints
+    JSON: [{ ticket, lesson }, ...] (max 8). Never dumps whole closeout files or the
+    catalog into docSet.
 
 .PARAMETER Query
     Free-text keywords from the work-item title / area.
@@ -91,11 +92,47 @@ if (Test-Path $IndexPath) {
     }
 }
 
+$CatalogPath = Join-Path $RepoRoot '_shared\workflow-failure-catalog.md'
+if (Test-Path -LiteralPath $CatalogPath) {
+    $catalogTerms = [System.Collections.Generic.List[string]]::new()
+    foreach ($tok in ($Query -split '[^\w]+')) {
+        if ($tok.Length -ge 3) { [void]$catalogTerms.Add($tok.ToLowerInvariant()) }
+    }
+    $catalogTerms = @($catalogTerms | Select-Object -Unique)
+    if ($catalogTerms.Count -gt 0) {
+        $raw = Get-Content -LiteralPath $CatalogPath -Raw -Encoding UTF8
+        $headingRx = [regex]'(?m)^## (WF-\d+)\b'
+        $ms = $headingRx.Matches($raw)
+        for ($i = 0; $i -lt $ms.Count; $i++) {
+            $id = $ms[$i].Groups[1].Value
+            $start = $ms[$i].Index
+            $end = if ($i -lt $ms.Count - 1) { $ms[$i + 1].Index } else { $raw.Length }
+            $block = $raw.Substring($start, $end - $start)
+            $lower = $block.ToLowerInvariant()
+            $score = 0
+            foreach ($t in $catalogTerms) {
+                if ([regex]::IsMatch($lower, ('\b{0}\b' -f [regex]::Escape($t)))) { $score++ }
+            }
+            if ($score -le 0) { continue }
+            $lesson = $block
+            if ($block -match '(?s)\*\*Shape to expect\.\*\*\s*(.+?)(?:\r?\n\r?\n|\r?\n---|\z)') {
+                $lesson = ($Matches[1] -replace '\s+', ' ').Trim()
+            }
+            if ($lesson.Length -gt 220) { $lesson = $lesson.Substring(0, 217) + '...' }
+            $hits += [pscustomobject]@{
+                Ticket = $id
+                Lesson = $lesson
+                Score  = $score
+            }
+        }
+    }
+}
+
 # There is deliberately no fall-through to plans/WI*-closeout.md. Those files are
 # now written only for the rare ticket whose retrospective earned a page, and that
 # ticket's lesson is already an index row -- scanning them would re-read whole
-# files to rediscover a line that is one grep away. Returning fewer, better rows is
-# the correct outcome; the index is the retrieval surface (see _shared/closeout-search.md).
+# files to rediscover a line that is one grep away. The catalog is scored against
+# -Query only (not repo names) so TmoPro in a WF- shape does not fire on every ticket.
 
 $result = @(
     $hits |

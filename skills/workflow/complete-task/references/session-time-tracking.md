@@ -6,7 +6,9 @@ keywords: hours, story points, StoryPointsActual, timestamps, startedAtUtc, reop
 
 # Session Time Tracking
 
-Dev time is computed automatically from session timestamps as **hours**. Show hours to the user in the approval package; write **story points** on the work item using the conversion table below. Hours/points are ticket-field-only — see [ado-ticket-workflow.md § Commit / PR Body Exclusions](ado-ticket-workflow.md#commit--pr-body-exclusions).
+Dev time is computed automatically from session timestamps as **hours**. Show hours in the
+approval package; write **story points** on the work item when the tracker has that field.
+Hours/points stay on the ticket, not in the PR body.
 
 Do not ask the user for hours unless the timestamps are missing or the calculation needs manual override.
 

@@ -5,6 +5,10 @@
 Fixture plan file used by CI to validate Assert-TicketArtifacts.ps1.
 This file exists only for testing — it is not a real ticket plan.
 
+## Engineering Decisions
+
+None — fixture plan, no scope or contract calls to make.
+
 ## Context
 
 - **Ticket:** WI00001

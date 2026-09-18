@@ -6,18 +6,15 @@ keywords: implement, execute plan, worktree window, resume, grounded refinement,
 
 # Implement
 
-Full instructions (resume / worktree only): [../skills/workflow/implement/SKILL.md](../skills/workflow/implement/SKILL.md).
+Full instructions: [../skills/workflow/implement/PLAYBOOK.md](../skills/workflow/implement/PLAYBOOK.md).
 
-Read and execute that skill now. Do not ask for confirmation before reading the skill.
+Read and execute that playbook now.
 
 ## Quick reference
 
 ```text
-/implement WI22132
+/implement TICKET-42
 ```
 
-Use this command when:
-1. **Worktree mode** — building in the `WI<n>.code-workspace` window.
-2. **Resuming branch mode** — the `/start-ticket` chat ran out of context.
-
-Do **not** use this in the chat that just approved the plan in branch mode — keep building there.
+Use for **worktree mode** or **resuming** a branch-mode chat that ran out of context. Do **not**
+use this in the chat that just approved the plan.

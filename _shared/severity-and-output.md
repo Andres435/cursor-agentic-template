@@ -112,4 +112,4 @@ Every token paid in this workspace falls into one of three classes. Misidentifyi
 
 ## Conflicts with Sonar
 
-If a Sonar rule's native severity disagrees with the team severity scheme above, defer to the explicit mapping in [.cursor/rules/sonarqube-compliance.mdc](../rules/sonarqube-compliance.mdc) ("Sonar severity -> team severity mapping" callout).
+If a quality-gate native severity disagrees with the team scheme above, record the mapping in an overlay rule — do not invent a severity.

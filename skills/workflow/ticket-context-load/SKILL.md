@@ -1,7 +1,7 @@
 ---
 name: ticket-context-load
-description: Hydrate a fresh chat from a ticket's existing artifacts — mode and root, manifest, approved plan, doc set, environment card, prior findings — instead of re-fetching ADO or re-deriving scope. Use as the first step of any chat that did not itself produce that state.
-keywords: context load, hydrate, fresh chat, manifest, mode, root, artifacts gate, prior findings
+description: Hydrate a fresh chat from a ticket's existing artifacts — mode and root, manifest, approved plan, doc set, environment card, prior findings — instead of re-fetching the tracker or re-deriving scope. Use as the first step of any chat that did not itself produce that state.
+keywords: context load, hydrate, fresh chat, manifest, mode, root, artifacts gate, prior findings, load profile
 ---
 
 # Ticket Context Load
@@ -12,45 +12,54 @@ written to `.cursor/plans/`. This skill loads that state.
 Without it, a fresh chat has only whatever prose the user pasted, so it re-derives scope and
 re-plans. That is the failure this skill exists to prevent.
 
+## Load profile — caller determines depth
+
+**`complete-task`** is a fresh closeout chat. It does **not** need the Work Plan steps, the
+`docSet`, or the `environmentCard` — those were already executed. Read only:
+- `<ticket>-manifest.json` (mode, repos, timestamps, `priorFindings`)
+- The **Plan Digest**, **Engineering Decisions**, and **Deviations** sections of
+  `<ticket>-<type>-plan.md` (skip the Work Plan steps entirely)
+
+**`implement` and `address-pr-comments`** need the full plan and `docSet` — use the standard steps
+below unchanged.
+
+This profile is applied at step 4 and step 5 below.
+
 ## When To Run
 
 As the **first step** of a chat that did not produce the state itself:
-[complete-task](../../commands/complete-task.md),
-[address-pr-comments](../../commands/address-pr-comments.md), and
-[implement](../../commands/implement.md).
+[complete-task](../../../commands/complete-task.md),
+[address-pr-comments](../../../commands/address-pr-comments.md), and
+[implement](../../../commands/implement.md).
 
 **Do not run it** in `/start-ticket` — that command *produces* this state. In branch mode
-`/start-ticket` also builds in the same chat, so loading there would re-read what it just wrote. That
-avoided reload is the point of branch mode.
+`/start-ticket` also builds in the same chat, so loading there would re-read what it just wrote.
+
+**Do not run it** in `/onboard` or `/doctor`.
 
 ## Steps
 
-1. **Resolve the ticket key.** `WI<number>` from the invocation. Ask only if absent and
-   unrecoverable from the workspace folder name.
+1. **Resolve the ticket key.** From the invocation, using `profile.ticketPrefix`. Ask only if
+   absent and unrecoverable from the workspace folder name.
 
 2. **Resolve the mode and root.** Do not assume either.
 
    ```powershell
-   .\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket WI<number> -Json
+   .\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket <ticket> -Json
    ```
 
-   - **`mode: branch`** — work happens in the canonical clones under `source\repos`. That is the
-     normal case, not a fallback.
-   - **`mode: worktree`** — work happens under `source\worktrees\WI<number>`. In Cursor a new Agent
-     chat opened in the ticket window is *already* rooted there. **Never call
-     `move_agent_to_root`** — Cursor cannot set an agent root on a folder holding several independent
-     git repos, so it fails on every ticket worktree. If this chat is rooted at `source\repos`
-     instead, tell the user to open a new Agent chat in the `WI<number>.code-workspace` window.
-     In Claude Code, `cd` to the root or use the directory-change tool — no such limitation.
-   - **`rootExists: false`** — stop. Report it and let the user re-run `/start-ticket WI<number>`.
-     Do not work in the other tree; a worktree ticket silently redirected into the canonical clones
-     is worse than a stopped chat.
+   - **`mode: branch`** — work happens in `profile.repos[].path`. That is the normal case.
+   - **`mode: worktree`** — work happens at the worktree root the script returns. In Cursor a new
+     Agent chat opened in the ticket window is *already* rooted there. **Never call
+     `move_agent_to_root`** on a folder of independent git repos. If this chat is in the wrong
+     window, tell the user to open a new Agent chat in the ticket `.code-workspace`.
+   - **`rootExists: false`** — stop. Report it and let the user re-run `/start-ticket`.
 
 3. **Run the artifacts gate** with `-Phase implement` — for *every* calling command, closeout
    included:
 
    ```powershell
-   .\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket WI<number> -Phase implement
+   .\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase implement
    ```
 
    `-Phase implement` is the load-time gate because it checks only what must already exist (manifest
@@ -59,31 +68,27 @@ avoided reload is the point of branch mode.
 
    On `FAIL`, stop and report exactly which artifacts are missing. Offer to reconstruct them from
    what does exist. Do not proceed by inventing a plan. See
-   [ticket-artifacts.md](../../_shared/ticket-artifacts.md).
+   [ticket-artifacts.md](../../../_shared/ticket-artifacts.md).
 
-4. **Read `WI<n>-manifest.json`** and treat it as the routing table:
+4. **Read `<ticket>-manifest.json`** and treat it as the routing table:
    - `mode` — already resolved in step 2; carry it, do not re-derive.
    - `affectedRepos` — the only repos in scope; scope every `Grep`/`Glob` to the paths
-     `Resolve-TicketRoot.ps1` returned (a search from the multi-repo root times out — WI21053).
-   - `docSet[]` — load **only** these slices, and load each **when the step needs it**. Do not read
-     other `_shared` docs.
-   - `environmentCard` — load it when non-null.
-   - `specialists[]` — which agents to dispatch for implementation help.
-   - `priorFindings[]` — apply these; they are prior lessons already matched to this ticket.
-   - `baseBranch`, `sonarRepos`, `adrIndex`, `dbChange`, `needsDacpac` — carry forward, do not
-     recompute.
-   - Session timestamps (`startedAtUtc` and friends) live here too — `/complete-task` reads them for
-     the hours math.
+     `Resolve-TicketRoot.ps1` returned.
+   - `docSet[]` — **`implement`/`address-pr-comments` only**: load each slice when the step needs it.
+     **`complete-task`**: do not load `docSet` or `environmentCard`.
+   - `environmentCard` — **`implement`/`address-pr-comments` only**: load when non-null.
+   - `specialists[]`, `priorFindings[]`, `baseBranch`, `adrIndex` — carry forward, do not recompute.
+   - Session timestamps live here too — `/complete-task` reads them for the hours math.
 
-5. **Read the approved plan** `WI<n>-<type>-plan.md`, including any **Deviations** section. This is
-   the authority on what to build.
+5. **Read the approved plan** `<ticket>-<type>-plan.md`:
+   - **`implement`/`address-pr-comments`**: full plan including Work Plan steps and **Deviations**.
+   - **`complete-task`**: **only** `## Plan Digest`, `## Engineering Decisions`, and
+     `## Deviations`. Do **not** read the Work Plan steps.
 
-6. **Get title and ADO context from `manifest.ticket`.** The five minimal fields (title, adoType,
-   state, area, priority) are already on the manifest from step 4. Description, repro, and
-   acceptance criteria are in the approved plan from step 5. **Do not call ADO** and do not read a
-   workitem JSON file — re-fetch only if the user says "refresh ADO".
+6. **Get title and tracker context from `manifest.ticket`.** Description, repro, and AC are in
+   the approved plan. **Do not re-fetch the tracker** unless the user says "refresh".
 
-7. **Confirm branch state** in each resolved repo path: on `WI<number>`, and merge
+7. **Confirm branch state** in each resolved repo path: on the ticket branch, and merge
    `origin/<baseBranch>` if behind. Report; do not commit.
 
 8. **Post one compact load line**, then continue with the calling command:
@@ -94,10 +99,10 @@ avoided reload is the point of branch mode.
 
 ## Guardrails
 
-- Do not re-run [ticket-router](../ticket-router/SKILL.md). The manifest already exists; refresh it
-  only when the user says scope changed.
-- Do not re-fetch the ADO work item, and do not search the backlog or other work items.
+- Do not re-run [ticket-router](../ticket-router/SKILL.md). Refresh the manifest only when the user
+  says scope changed.
+- Do not re-fetch the ticket, and do not search the backlog.
 - Do not read `plans/*-closeout.md`, `closeout-index.md`, or `ticket-ledger.md`. `priorFindings` is
   the compact answer.
-- Do not dump the manifest, plan, or work item into chat. One load line.
-- Do not commit, push, create PRs, or write ADO from this skill.
+- Do not dump the manifest or plan into chat. One load line.
+- Do not commit, push, create PRs, or write the tracker from this skill.

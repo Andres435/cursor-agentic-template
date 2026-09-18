@@ -7,10 +7,14 @@
     "the agent should remember to write these files" with a check that fails loudly.
 
     start-ticket   runs -Phase start     as its last action before the final message.
-                   Also checks the plan file opens with a '## Plan Digest' heading
-                   (see ticket-plan-output.md) -- content, not just existence.
-    implement      runs -Phase implement as its first action. Does not re-check the
-                   digest: a plan approved before that requirement existed must not
+                   Also checks plan CONTENT, not just existence: a '## Plan Digest'
+                   heading (ticket-plan-output.md), an 'Engineering Decisions'
+                   heading (engineering-decisions.md -- 'None -- <why>' is valid),
+                   and no unresolved placeholder ('TBD', 'resolve during implement').
+                   The placeholder check is the point: an open decision is meant to
+                   reach the user as a question, not ride into implementation.
+    implement      runs -Phase implement as its first action. Does not re-check plan
+                   content: a plan approved before those requirements existed must not
                    retroactively fail here. This is also the LOAD-TIME gate for
                    /complete-task -- see the note on -Phase close below.
     complete-task  runs -Phase close     before the retrospective, NOT at chat start.
@@ -57,6 +61,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Read ticket prefix from profile.json (default 'WI' for TMO).
+# This script does not dot-source _ServiceLauncherLib.ps1.
 function Get-TicketPrefix {
     $p = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
     if (Test-Path -LiteralPath $p) {
@@ -137,9 +142,25 @@ function Test-PlanFile {
     # start). implement/close load whatever plan already exists -- a plan approved before
     # this requirement existed must not retroactively fail those phases.
     if ($CheckDigest) {
-        $content = Get-Content -LiteralPath $planFile.FullName -Raw
+        $content = Get-Content -LiteralPath $planFile.FullName -Raw -Encoding UTF8
         if ($content -notmatch '(?im)^\s*#{1,3}\s*Plan Digest\s*$') {
             $missing.Add("$($planFile.Name) -- missing '## Plan Digest' heading (see ticket-plan-output.md)")
+            return
+        }
+        # Engineering Decisions is required before the Work Plan. 'None — <why>' is a
+        # valid section; an absent section means the calls were never made explicit.
+        if ($content -notmatch '(?im)^\s*#{1,4}\s*(\d+[a-z]?\.?\s*)?Engineering Decisions\s*$') {
+            $missing.Add("$($planFile.Name) -- missing 'Engineering Decisions' heading (see engineering-decisions.md; 'None -- <why>' is valid)")
+            return
+        }
+        # An unresolved placeholder is the thing the section exists to prevent: the
+        # plan shipped with the call deferred to implementation instead of asked.
+        if ($content -match '(?im)\bTBD\b') {
+            $missing.Add("$($planFile.Name) -- contains 'TBD'; resolve the open decision or ask the user, do not persist a placeholder")
+            return
+        }
+        if ($content -match '(?im)resolve[d]?\s+during\s+implement') {
+            $missing.Add("$($planFile.Name) -- contains 'resolve during implement'; decide it now or ask the user")
             return
         }
     }
@@ -232,23 +253,23 @@ function Test-WorkItemCache {
 }
 
 <#
-    adrIndex is contracted by the router whenever TmoPro is in scope, but was
-    filled in only 1 of 13 real manifests -- the plan chat then never sees the ADR
-    corpus it is supposed to cite. Checked, not restated.
+    adrIndex is copied from profile.json when the project has an ADR corpus.
+    Skip when profile.adrIndex is null (vanilla template).
 #>
 function Test-AdrIndex {
     if (-not $manifest) { return }
-    $repos = @()
-    foreach ($entry in @(Get-ManifestField 'affectedRepos')) {
-        if (-not $entry) { continue }
-        if ($entry -is [string]) { $repos += $entry; continue }
-        if ($entry.PSObject.Properties.Name -contains 'repo') { $repos += $entry.repo }
-    }
-    if ($repos -notcontains 'TmoPro') { return }
+    $profilePath = Join-Path $RepoRoot 'profile.json'
+    if (-not (Test-Path -LiteralPath $profilePath)) { return }
+    $profAdr = $null
+    try {
+        $prof = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+        if ($prof.PSObject.Properties.Name -contains 'adrIndex') { $profAdr = $prof.adrIndex }
+    } catch { return }
+    if ([string]::IsNullOrWhiteSpace([string]$profAdr)) { return }
 
     $adr = Get-ManifestField 'adrIndex'
     if ([string]::IsNullOrWhiteSpace([string]$adr)) {
-        $missing.Add("$Key-manifest.json -- TmoPro is in affectedRepos, so adrIndex must be set (see _shared/adr-policy.md)")
+        $missing.Add("$Key-manifest.json -- profile.adrIndex is set, so the manifest must copy it when ADRs are in scope (or set adrIndex null with a reason in Engineering Decisions)")
         return
     }
     $found.Add("$Key-manifest.json (adrIndex)")

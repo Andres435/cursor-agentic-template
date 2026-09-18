@@ -55,6 +55,7 @@ agents/               ← YOUR specialist agents (stub: fullstack-specialist.md)
 environments/         ← YOUR env cards (stub: local-dev.md)
 skills/domain/        ← YOUR domain skills (empty by default)
 skills/workflow/      ← CORE: do not edit unless upgrading
+playbooks/            ← CORE: start-ticket body (not a slash command)
 scripts/ticket/       ← CORE: do not edit unless upgrading
 hooks/                ← CORE: do not edit unless upgrading
 _shared/              ← CORE contracts: do not edit unless upgrading

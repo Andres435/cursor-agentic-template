@@ -15,11 +15,11 @@ jobs:
         shell: pwsh
         run: ./scripts/ticket/Assert-AgenticFlow.ps1
 
-      - name: Resolve-TicketRoot Pester tests
+      - name: Script Pester tests
         shell: pwsh
         run: |
           Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0 -MaximumVersion 5.99.99
-          Invoke-Pester ./scripts/ticket/Resolve-TicketRoot.Tests.ps1 -Output Detailed -CI
+          Invoke-Pester ./scripts/ticket -Output Detailed -CI
 
       - name: Assert-TicketArtifacts fixture checks
         shell: pwsh

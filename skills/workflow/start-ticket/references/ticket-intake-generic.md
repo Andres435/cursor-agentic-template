@@ -7,6 +7,9 @@ keywords: intake, ticket fetch, github issues, none, ticket system, acceptance c
 # Ticket Intake (Generic)
 
 Load this reference in `/start-ticket` after identifying the `ticketSystem` from `profile.json`.
+If `profile.id` is `customize-me`, stop and run `/onboard` instead.
+
+Do **not** ask for repos, stack command, or specialists — those come from the profile.
 
 ## Intake by `ticketSystem`
 
@@ -38,4 +41,4 @@ If either is missing, ask the user to fill it before proceeding to the ticket ro
 ## After intake
 
 Pass the fetched fields to the ticket router:
-[../../../skills/workflow/ticket-router/SKILL.md](../../../skills/workflow/ticket-router/SKILL.md)
+[../../ticket-router/SKILL.md](../../ticket-router/SKILL.md)

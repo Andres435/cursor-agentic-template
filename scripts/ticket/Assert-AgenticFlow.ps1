@@ -36,28 +36,20 @@ $ErrorActionPreference = 'Stop'
 $violations = [System.Collections.Generic.List[string]]::new()
 function Fail { param([string]$Msg) $violations.Add($Msg) }
 
-# Child scripts call `exit`, so they must run in a subprocess. Reuse *this*
-# process's executable: Windows work machines are powershell.exe (5.1);
-# GitHub ubuntu and some home machines are pwsh. Do not hardcode either name.
-function Get-CurrentPowerShellHost {
-    try {
-        $path = (Get-Process -Id $PID).Path
-        if ($path -and (Test-Path -LiteralPath $path)) { return $path }
-    } catch { }
-    $onWindows = [System.Environment]::OSVersion.Platform -eq 'Win32NT'
-    $names = if ($onWindows) { @('powershell.exe', 'powershell', 'pwsh') } else { @('pwsh') }
-    foreach ($name in $names) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd -and $cmd.Source) { return $cmd.Source }
-    }
-    throw "No PowerShell host found."
+# Child scripts call `exit`, so they must run in a subprocess. The workflow
+# requires PowerShell 7: invoking Windows PowerShell 5.1 here can misdecode
+# BOM-less UTF-8 scripts and turn punctuation inside strings into parse errors.
+function Get-PowerShell7Path {
+    $cmd = Get-Command 'pwsh' -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source) { return $cmd.Source }
+    throw "PowerShell 7 (pwsh) is required. See MACHINE-SETUP.md."
 }
 
 # ---- 1. Doc budgets --------------------------------------------------------
 # Delegate to Assert-DocBudget.ps1 so the budget table is single-source.
 $budgetScript = Join-Path (Join-Path $Root 'scripts') 'Assert-DocBudget.ps1'
 if (Test-Path -LiteralPath $budgetScript) {
-    $out = & (Get-CurrentPowerShellHost) -NonInteractive -NoProfile -File $budgetScript -Root $Root 2>&1
+    $out = & (Get-PowerShell7Path) -NonInteractive -NoProfile -File $budgetScript -Root $Root 2>&1
     if ($LASTEXITCODE -ne 0) {
         foreach ($line in $out) {
             if ($line -match 'over by') { Fail "doc-budget: $line" }
@@ -70,6 +62,31 @@ if (Test-Path -LiteralPath $budgetScript) {
     Fail "doc-budget: Assert-DocBudget.ps1 not found at $budgetScript"
 }
 
+# ---- 1b. Doc links ---------------------------------------------------------
+# Delegate to Assert-DocLinks.ps1 so the link rules stay single-source. Hard
+# failures are broken targets and stale path labels; tier warnings are advisory
+# there and stay advisory here.
+$linkScript = Join-Path (Join-Path $Root 'scripts') 'Assert-DocLinks.ps1'
+if (Test-Path -LiteralPath $linkScript) {
+    $out = & (Get-PowerShell7Path) -NonInteractive -NoProfile -File $linkScript -Root $Root 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        # Only detail lines under a [FAIL] header are violations. [WARN] (tier
+        # inversions) is advisory there and must stay advisory here.
+        $inFail = $false
+        foreach ($line in $out) {
+            $t = $line.ToString()
+            if ($t -match '^\[FAIL\]')          { $inFail = $true;  continue }
+            if ($t -match '^\[(WARN|PASS)\]')   { $inFail = $false; continue }
+            if ($inFail -and $t.Trim())         { Fail "doc-links: $($t.Trim())" }
+        }
+        if (-not ($violations | Where-Object { $_ -like 'doc-links:*' })) {
+            Fail "doc-links: Assert-DocLinks.ps1 exited $LASTEXITCODE -- $($out -join '; ')"
+        }
+    }
+} else {
+    Fail "doc-links: Assert-DocLinks.ps1 not found at $linkScript"
+}
+
 # ---- 2. Command shims must reference skills/, adapters/, or scripts/ ------
 # A command is a thin shim: its body lives in skills/, adapters/, or scripts/.
 # Fail only when none of those patterns appear (guards against full skill bodies
@@ -78,8 +95,8 @@ $commandsDir = Join-Path $Root 'commands'
 if (Test-Path -LiteralPath $commandsDir) {
     Get-ChildItem -LiteralPath $commandsDir -Filter '*.md' | Where-Object { $_.Name -ne 'README.md' } | ForEach-Object {
         $content = Get-Content -LiteralPath $_.FullName -Raw
-        if ($content -notmatch 'skills/' -and $content -notmatch 'adapters/' -and $content -notmatch 'scripts[/\\]') {
-            Fail "command-shim: commands/$($_.Name) does not reference skills/, adapters/, or scripts/ -- commands must be thin shims"
+        if ($content -notmatch 'skills/' -and $content -notmatch 'playbooks/' -and $content -notmatch 'adapters/' -and $content -notmatch 'scripts[/\\]') {
+            Fail "command-shim: commands/$($_.Name) does not reference skills/, playbooks/, adapters/, or scripts/ -- commands must be thin shims"
         }
     }
 }
@@ -140,7 +157,7 @@ $ledgerPath = Join-Path (Join-Path $Root 'plans') 'ticket-ledger.md'
 if (Test-Path -LiteralPath $ledgerPath) {
     $hdr = Get-Content -LiteralPath $ledgerPath | Where-Object { $_ -match 'Ticket.*Type.*Closed' } | Select-Object -First 1
     if (-not $hdr) { $hdr = '' }
-    $required = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'Ctx%', 'PR')
+    $required = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'CtxS%', 'CtxR%', 'Ctx%', 'PR')
     $missing = @($required | Where-Object { $hdr -notmatch [regex]::Escape($_) })
     if ($missing.Count) {
         Fail "ledger-columns: plans/ticket-ledger.md header missing column(s): $($missing -join ', ')"

@@ -20,11 +20,7 @@ Before starting the investigation, ask the user for the following if not already
 - **Scope & Constraints**: Time-box, technical constraints, or boundaries
 - **Success Criteria**: What deliverables are expected?
 
-If the user provides a work item number, use [/start-ticket](../../../../commands/start-ticket.md) before investigating. The startup flow owns the shared ADO intake, required-field gate, automatic **Ready for Dev** -> **In Progress** transition, latest `dev` update, `WI<ticketNumber>` branch creation, and then this spike plan.
-
-If ADO blocks the State transition because required fields are empty, report the blocking fields and continue the spike.
-
-If the user pasted a work item or ticket instead of an ID, extract these from it and ask for the work item number if the ticket should be fetched or updated in ADO. Once you have enough context, proceed.
+If a ticket id is present, `/start-ticket` owns intake. Record spike-scope calls in Engineering Decisions before the Work Plan (`None — <why>` is valid).
 
 ## Instructions
 

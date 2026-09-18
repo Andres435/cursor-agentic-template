@@ -15,12 +15,12 @@
 
     Mode precedence:
       1. manifest "mode"  -- what /start-ticket actually decided (source: manifest)
-      2. filesystem       -- a populated source\worktrees\WI<n> exists (source: filesystem)
-      3. branch           -- the default (source: default)
+      2. branch           -- the default (source: default)
 
-    The manifest wins even when its worktree is gone, because silently
-    redirecting edits into the canonical clones is worse than stopping: callers
-    check rootExists and stop rather than working in the wrong tree.
+    A leftover populated source\worktrees\WI<n> folder does NOT flip the default
+    to worktree. Only an explicit manifest mode of worktree uses that tree.
+    When the manifest says worktree but the folder is gone, rootExists is false
+    and callers stop rather than working in the canonical clones.
 
 .PARAMETER Ticket
     Work item, with or without the WI prefix (WI21588, 21588, AB#21588).
@@ -50,7 +50,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot ".." "_ServiceLauncherLib.ps1")
+. (Join-Path (Split-Path $PSScriptRoot -Parent) '_ServiceLauncherLib.ps1')
 
 $Key = ConvertTo-LauncherTicketId -Raw $Ticket
 if (-not $Key) {
@@ -74,18 +74,9 @@ if (Test-Path -LiteralPath $WorktreeRoot) {
         Where-Object { -not $_.Name.StartsWith('.') }).Count)
 }
 
-if ($manifestMode -and $manifestMode -in @('branch', 'worktree')) {
-    $mode = $manifestMode
-    $modeSource = 'manifest'
-}
-elseif ($worktreePopulated) {
-    $mode = 'worktree'
-    $modeSource = 'filesystem'
-}
-else {
-    $mode = 'branch'
-    $modeSource = 'default'
-}
+$resolvedMode = Resolve-TicketMode -ManifestMode $manifestMode
+$mode = [string]$resolvedMode.mode
+$modeSource = [string]$resolvedMode.modeSource
 
 $root = if ($mode -eq 'worktree') { $WorktreeRoot } else { $ReposRoot }
 $rootExists = if ($mode -eq 'worktree') { $worktreePopulated } else { Test-Path -LiteralPath $ReposRoot }

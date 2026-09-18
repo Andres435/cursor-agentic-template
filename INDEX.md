@@ -21,9 +21,13 @@ One row per doc. Search here before Grep. Add your overlay docs to the bottom ta
 | [_shared/model-usage.md](_shared/model-usage.md) | Token-class law and Ctx% recording | token class, instruction, tool-result, Ctx% |
 | [_shared/adr-policy.md](_shared/adr-policy.md) | ADR consult/cite policy — load when adrIndex is set | ADR, architecture decision, consult, cite |
 | [_shared/runtime-verify.md](_shared/runtime-verify.md) | Token rails for stack and UI verify | stack recycle, UI verify, retry policy |
+| [_shared/engineering-decisions.md](_shared/engineering-decisions.md) | Plan decision gate — open calls stop the plan | engineering decision, TBD, out of scope |
+| [_shared/test-verification.md](_shared/test-verification.md) | Scoped tests | tests, regression |
+| [_shared/cross-repo-workflow.md](_shared/cross-repo-workflow.md) | Multi-repo order from profile.dependencyOrder | multi-repo, dependency order |
+| [playbooks/start-ticket.md](playbooks/start-ticket.md) | Start-ticket full steps | intake, plan, branch, worktree |
 | [skills/workflow/ticket-router/SKILL.md](skills/workflow/ticket-router/SKILL.md) | Ticket classifier — emits the work manifest | router, manifest, affectedRepos, docSet |
-| [skills/workflow/start-ticket/SKILL.md](skills/workflow/start-ticket/SKILL.md) | Start-ticket full steps | intake, plan, branch, worktree |
-| [skills/workflow/review-changes/SKILL.md](skills/workflow/review-changes/SKILL.md) | Review steps — mode, scope, diff, fan-out, output | review, diff, staged, pre-merge |
+| [skills/workflow/ticket-context-load/SKILL.md](skills/workflow/ticket-context-load/SKILL.md) | Fresh-chat hydrate | load profile, complete-task, implement |
+| [skills/workflow/review-changes/PLAYBOOK.md](skills/workflow/review-changes/PLAYBOOK.md) | Review steps | review, diff, staged, pre-merge |
 | [plans/ticket-ledger.md](plans/ticket-ledger.md) | One row per closed ticket (E/C/$tok/Ctx%) | ledger, scorecard, closed tickets |
 | [plans/closeout-index.md](plans/closeout-index.md) | Compact durable lessons from closeouts | memory, lessons, closeout, priorFindings |
 

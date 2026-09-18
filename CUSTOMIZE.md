@@ -3,6 +3,10 @@
 This is the **only file you need to edit to get started**. Work through the checklist top to bottom.
 Sections marked `(required)` must be done before running `/start-ticket`.
 
+**Rule:** these blanks are setup and context. After they are filled, `/start-ticket` and the rest of
+the workflow run **automatically** from `profile.json` — they will not re-interview you for repos,
+stack, or specialists. Use `/onboard` to walk this checklist.
+
 ---
 
 ## 1. Edit `profile.json` (required)
@@ -87,9 +91,11 @@ Or with GitHub Issues:
 These are **core** files — leave them alone unless you are upgrading the workflow:
 
 - `skills/workflow/` (except adding intake references)
+- `playbooks/`
 - `hooks/`, `hooks.json`
 - `scripts/ticket/`
-- `_shared/ticket-artifacts.md`, `_shared/severity-and-output.md`, `_shared/ticket-plan-output.md`
+- `_shared/ticket-artifacts.md`, `_shared/severity-and-output.md`, `_shared/ticket-plan-output.md`,
+  `_shared/engineering-decisions.md`
 
 To upgrade core later: cherry-pick or copy those files from the template repo.
 
@@ -102,7 +108,7 @@ Core files (workflow skills, ticket scripts, hooks) can be updated from the temp
 ```bash
 # From your project's .cursor folder
 git fetch upstream
-git checkout upstream/main -- skills/workflow/ scripts/ticket/ hooks/ _shared/ticket-artifacts.md
+git checkout upstream/main -- skills/workflow/ playbooks/ scripts/ticket/ hooks/ _shared/
 ```
 
 Your overlay files (`profile.json`, `environments/`, `agents/`, `skills/domain/`) are never touched

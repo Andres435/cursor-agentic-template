@@ -23,17 +23,18 @@ Ask for any missing essentials:
 
 ### Symptom + environment gate (before investigating)
 
-Nail these down first; missing them causes wrong-repo exploration and rework (WI18345, WI21270, WI20657, WI20658):
+Each item below is a **decision candidate**: confirm it, or ask. Record what you confirm in
+**Engineering Decisions** ([../../../../_shared/engineering-decisions.md](../../../../_shared/engineering-decisions.md)).
+An item still open when the Work Plan would be drafted stops the plan.
 
-- **Concrete QA symptom:** the exact observed behavior (e.g. Loom: "generic admin error on first retry, second succeeds"; report shows design-time placeholder `SECURITIES/99/99`), not just "it's broken".
-- **Environment/data constraints:** empty tables (e.g. IntegrationHub payment table), one client mapped to multiple databases, whether the feature flag is on/off for the failing client, and whether **flag-off is also broken** (tells you if it is a legacy vs modern-path bug — skips wrong-repo hunting).
-- **Test matrix (data-shaped bugs):** for payments/report bugs, agree the matrix — client, database, billing period, mixed locked/premium rows, 24h boundary — before changing a fingerprint or query shape.
+Nail these down first — missing them causes wrong-repo exploration:
 
-If the user provides a work item number, use [/start-ticket](../../../../commands/start-ticket.md) before planning. The startup flow owns the shared ADO intake, required-field gate, automatic **Ready for Dev** -> **In Progress** transition, latest `dev` update, `WI<ticketNumber>` branch creation, and then this bug investigation/fix plan.
+- **Concrete symptom:** the observed behavior, not just "it's broken".
+- **Environment/data constraints:** flags, empty tables, which client/env failed.
+- **Test matrix** for data-shaped bugs: agree the cases before changing query shape.
 
-If ADO blocks the State transition because required fields are empty, report the blocking fields and continue the bug investigation.
-
-If the user pasted a work item or ticket instead of an ID, extract these details from it and ask for the work item number if the ticket should be fetched or updated in ADO.
+If a ticket id is present, `/start-ticket` already owns intake and branches. Do not re-ask
+profile fields (repos, stack, prefix).
 
 ## Workflow
 
@@ -67,13 +68,13 @@ When QA (or the user) says the bug is already gone, or the plan would touch `Leg
 
 - List affected repos, services, controllers, handlers, UI surfaces, database objects, and docs.
 - Follow [../../../../_shared/cross-repo-workflow.md](../../../../_shared/cross-repo-workflow.md) for dependency order.
-- Flag shared libraries such as `TmoPortalCore`.
+- Flag shared libraries named in `profile.json` / the env card.
 
 ### 4. Root Cause Analysis
 
 - Explain the likely cause and why the behavior escaped existing coverage.
 - Search for the same pattern elsewhere when the bug suggests a reusable defect.
-- When `git blame` or `git log` reveals historical work item IDs, use the read-only lookup path in [./ado-ticket-workflow.md](./ado-ticket-workflow.md) for context. Do not write to historical tickets.
+- When `git blame` or `git log` reveals historical ticket IDs, look them up read-only. Do not write to historical tickets.
 - If root-cause certainty is low, recommend the smallest additional investigation before coding.
 
 ### 5. Bug Fix Test Policy
@@ -90,6 +91,12 @@ Before changing production code:
 
 Use [../../../domain/tdd-red-green-refactor/SKILL.md](../../../domain/tdd-red-green-refactor/SKILL.md) when the user asks for TDD/test-first work or the fix is risky enough to benefit from strict RED -> GREEN -> REFACTOR.
 
+### 5b. Engineering Decisions
+
+Write the plan's **Engineering Decisions** section before the Work Plan
+([../../../../_shared/engineering-decisions.md](../../../../_shared/engineering-decisions.md)).
+The gate above lists the candidates; `None — <why>` is valid.
+
 ### 6. Proposed Fix
 
 - Plan the smallest code change that corrects behavior.
@@ -103,7 +110,7 @@ Use [../../../domain/tdd-red-green-refactor/SKILL.md](../../../domain/tdd-red-gr
 ### 7. Verification
 
 - Run tests per [../../../../_shared/test-verification.md](../../../../_shared/test-verification.md).
-- Run SonarQube checks per [../../../../_shared/sonar-verification.md](../../../../_shared/sonar-verification.md).
+- Run the quality gate only when the manifest lists a key for that repo.
 - Review using [../../../../_shared/review-protocol.md](../../../../_shared/review-protocol.md).
 - Include manual verification steps when UI, data setup, or external integration behavior is involved.
 

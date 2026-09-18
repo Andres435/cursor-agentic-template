@@ -102,6 +102,30 @@ function profileSlice(profile) {
   };
 }
 
+/**
+ * Derive the logical next action from the manifest on disk.
+ * Uses TMO_PLANS_DIR env var when set (useful for tests).
+ *
+ * manifest missing              → "start-ticket"
+ * manifest exists, no reviewReady stamp → "review-changes (stage first)"
+ * reviewReady set, completedAtUtc null  → "complete-task"
+ * completedAtUtc set            → "closed"
+ */
+function resolveNextAction(ticket) {
+  const plansDir = process.env.TMO_PLANS_DIR
+    || path.join(__dirname, "..", "plans");
+  const manifestPath = path.join(plansDir, ticket + "-manifest.json");
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    return "start-ticket";
+  }
+  if (manifest.completedAtUtc) return "closed";
+  if (manifest.reviewReady) return "complete-task";
+  return "review-changes (stage first)";
+}
+
 let raw = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
@@ -131,6 +155,7 @@ process.stdin.on("end", () => {
         compact.rootExists = packet.rootExists;
         compact.repos = packet.repos;
       }
+      compact.nextAction = resolveNextAction(ticket);
     }
 
     const label = ticket ? "Ticket tree for " + ticket : "Profile";

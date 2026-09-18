@@ -27,9 +27,10 @@ Agents: obey this slice; do not invent a debug loop.
 
 ## UI verification
 
-- At most **one** browser screenshot per UI check step. Describe what you see; do not loop.
-- Forbidden: polling a page, repeated screenshots for the same check, opening DevTools to diagnose
-  unless the user asks.
+- **After `/start-stack` prints URLs**, one suggestion line if the ticket is UI-scoped: the user
+  can ask for a smoke pass. Do not start CDP in that same turn.
+- **If the user asks for a browser pass:** one happy-path pass. Cap: four failed actions then stop
+  and report. No screenshot loops.
 
 ## General guardrail
 

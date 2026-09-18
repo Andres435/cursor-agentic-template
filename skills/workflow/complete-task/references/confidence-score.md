@@ -30,8 +30,8 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
 
 | Consumer | `<axis>` value |
 |----------|----------------|
-| `commands/bug-fix.md` | Root-cause certainty |
-| `commands/feature-plan.md` | Design certainty |
+| `skills/workflow/start-ticket/references/bug-fix.md` | Root-cause certainty |
+| `skills/workflow/start-ticket/references/feature-plan.md` | Design certainty |
 | `commands/tech-spike.md` | Findings certainty |
 | `commands/review-changes.md` and `agents/code-reviewer.md` | Change-set understanding |
 | `skills/conventions/sync-tracked-conventions` | Detection coverage |

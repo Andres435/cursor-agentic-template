@@ -18,8 +18,8 @@ Build the plan in **Cursor Plan mode** (Claude Code: plan mode). Two rules:
    Persist only once, from the exact text they approve (see
    [start-ticket.md](../commands/start-ticket.md) step 7).
 2. **Approval is a chat statement, never Plan mode's native Build action.** Clicking Build runs in
-   `source\repos` across canonical clones, not the ticket worktree. The only build path is the paste
-   handoff to [implement.md](../commands/implement.md) in the closing message.
+   the wrong root on worktree tickets. In **branch mode** the same chat continues to build after
+   approval. In **worktree mode** the closing message contains a paste handoff to `/implement`.
 
 ### Plan model
 
@@ -28,14 +28,17 @@ Claude Code: [../adapters/claude/model-usage.md](../adapters/claude/model-usage.
 
 ### Plan structure
 
-Use the matching command shape: [bug-fix.md](../commands/bug-fix.md),
-[feature-plan.md](../commands/feature-plan.md), or [tech-spike.md](../commands/tech-spike.md).
+Use the matching work-type shape (`bug-fix`, `feature-plan`, or `tech-spike` under
+`skills/workflow/start-ticket/references/`). Those files point up at this contract.
+
+Every plan needs an **Engineering Decisions** section before the Work Plan — decided, why, out of
+scope, rejected; `None — <why>` is valid. Shape and gate: [engineering-decisions.md](engineering-decisions.md).
 
 Every plan needs a numbered **Work Plan** section. Each step tagged with difficulty:
 
 - `[low]` — renames, wiring, single-file, routine tests → Auto / Composer
 - `[med]` — multi-file slice, focused bug, one repo → Auto (Grok only if stuck)
-- `[high]` — tricky legacy / C-Class, hard root cause, cross-cutting design → Grok 4.5
+- `[high]` — tricky shared/legacy types, hard root cause, cross-cutting design → Grok 4.5
 
 Split a step that is larger than one Composer subagent can hold. Do not leave steps untagged.
 
@@ -46,15 +49,15 @@ the gist without reading everything.
 
 ```markdown
 ## Plan Digest
-- **Judgment calls:** <assumption or ambiguous requirement resolved — or "None">
-- **Risk / blast radius:** <what could break; C-Class/legacy/cross-repo — or "Low: <why>">
+- **Judgment calls:** <one clause per Engineering Decisions entry — or "None">
+- **Risk / blast radius:** <what could break — or "Low: <why>">
 - **ADRs followed:** <cite by number when adrIndex is set — or "N/A">
 - **Artifacts gate:** PASS (`Assert-TicketArtifacts.ps1 -Phase start`)
 ```
 
-Four lines, not four paragraphs. `Assert-TicketArtifacts.ps1 -Phase start` checks this heading is
-present — write it before running the gate at step 8 of `/start-ticket`.
-Never edit the digest after approval; a changed intent is a new plan.
+Four lines, not four paragraphs. **Judgment calls** summarizes Engineering Decisions; if they
+disagree, the section wins. An open decision stops the plan — do not persist TBD
+([engineering-decisions.md](engineering-decisions.md)).
 
 ### Deviations
 

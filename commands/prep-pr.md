@@ -1,23 +1,18 @@
 ---
 name: prep-pr
-description: Prepare changed repositories for PR submission. Use when generating commit messages, PR descriptions, testing summaries, SonarQube notes, confidence summaries, or cross-repo PR references.
-keywords: PR, commit message, PR description, ADO write-back, approval package, Code Review transition
+description: Prepare changed repositories for PR submission after an approved complete-task package.
+keywords: PR, commit message, PR description, tracker write-back, approval package
 ---
 
 # Prepare Pull Requests
 
-Full instructions (commit → push → PR → ADO write-back): [../skills/workflow/prep-pr/SKILL.md](../skills/workflow/prep-pr/SKILL.md).
+Full instructions: [../skills/workflow/prep-pr/PLAYBOOK.md](../skills/workflow/prep-pr/PLAYBOOK.md).
 
-Read and execute that skill now. Do not ask for confirmation before reading the skill.
-
-## Quick reference
+Read and execute that playbook now.
 
 ```text
-/prep-pr WI22132
+/prep-pr TICKET-42
 ```
 
-Called from `/complete-task` once the user approves the package. Also usable standalone when the
-user says "create the PR" or "submit the PR".
-
-**Draft mode** (default): inventory, draft, approval package, wait.
-**Execute mode**: use only when the user already approved the package from `complete-task`.
+**Draft** (default): inventory and wait. **Execute**: only after the user approved the package.
+Tracker write-back runs only when `profile.ticketSystem` is not `none`.

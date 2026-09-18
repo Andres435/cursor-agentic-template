@@ -23,14 +23,17 @@ initialization script.
 
 ## Steps
 
-1. **Read `CUSTOMIZE.md`** and walk through the profile customization checklist.
-2. **Run the initialization script**:
+1. If `profile.json` `id` is still `customize-me`, walk [CUSTOMIZE.md](../../../CUSTOMIZE.md)
+   **top to bottom** and fill every required blank (`profile.json`, `environments/local-dev.md`,
+   `agents/fullstack-specialist.md`). Do not start a ticket until those are filled.
+2. If the profile is already customized, skip the questionnaire — run the init script and `/doctor`.
+3. **Run the initialization script**:
    ```powershell
    # From the repo root:
    .\.cursor\scripts\machine\Initialize-WorkflowMachine.ps1
    ```
-3. After running the script, run `/doctor` to confirm the workspace is healthy.
-4. If `/doctor` shows failures, walk through the specific fix listed.
+4. After running the script, run `/doctor` to confirm the workspace is healthy.
+5. If `/doctor` shows failures, walk through the specific fix listed.
 
 ## Output
 

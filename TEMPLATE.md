@@ -9,16 +9,18 @@ copied to all projects) vs **overlay** (per-project, never overwritten by upstre
 
 | Path | Notes |
 |---|---|
-| `skills/workflow/` | Ticket lifecycle skills (start-ticket, implement, complete-task, etc.) |
-| `scripts/ticket/` | Assert-TicketArtifacts, Resolve-TicketRoot, Update-TicketLedger, Search-CloseoutMemory |
+| `skills/workflow/` | Ticket lifecycle skills and PLAYBOOKs |
+| `playbooks/` | Command bodies kept out of the slash picker (`start-ticket.md`) |
+| `scripts/ticket/` | Assert-TicketArtifacts, Resolve-TicketRoot, Update-TicketLedger, Search-CloseoutMemory, review-skip / Ctx% |
 | `scripts/machine/` | Initialize-WorkflowMachine |
-| `hooks/` + `hooks.json` | sessionStart, closeout-read-guard, git-commit-ticket, preCompact, nudge |
+| `hooks/` + `hooks.json` | sessionStart, closeout-read-guard, git-commit-ticket, preCompact, nudge, git-push |
 | `hooks/tests/` | Smoke tests for hooks — run before releasing a new core version |
 | `_shared/ticket-artifacts.md` | Phase gate contract |
 | `_shared/ticket-plan-output.md` | Plan and closeout structure |
+| `_shared/engineering-decisions.md` | Plan decision gate |
 | `_shared/severity-and-output.md` | Token-class law + finding format |
 | `_shared/subagent-functions.md` | Subagent function contracts |
-| `commands/` shims | start-ticket, implement, complete-task, prep-pr, review-changes, start-stack |
+| `commands/` shims | start-ticket, implement, complete-task, prep-pr, review-changes, start-stack, doctor, onboard |
 | `rules/model-usage.mdc` | Always-on model rails |
 | `adapters/claude/model-usage.md` | Claude Code adapter |
 | `plans/ticket-ledger.md` (header only) | Ledger format — rows are project data |

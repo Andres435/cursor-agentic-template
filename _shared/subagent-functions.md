@@ -34,9 +34,8 @@ result, so its own context window stays lean (the subagent burns its own window 
   `.\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket WI<n> -Json` — it returns `repos[].path` for the
   ticket's mode (canonical clone in branch mode, `source/worktrees/WI<n>/<repo>` in worktree mode).
   Never construct it by hand.
-- Persist returned packets to `.cursor/plans/WI<n>-*.json|md` when they will be reused later
-  (see [session-time-tracking](session-time-tracking.md) neighbors); reload the packet instead of
-  re-fetching.
+- Persist returned packets to `.cursor/plans/<ticket>-*.json|md` when they will be reused later;
+  reload the packet instead of re-fetching.
 
 ## Global Guardrails
 
@@ -69,10 +68,9 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **subagent_type:** `shell`
 - **Use:** per-repo git prep during start-ticket (parallel across independent repos).
 - **Inputs:** `repo`, `repoPath`, `ticket`, `baseBranch` (default `dev`).
-- **Does:** `fetch origin`; resolve resume vs fresh per
-  [ado-ticket-workflow](ado-ticket-workflow.md) branch rules (local `WI<n>` without `origin/WI<n>`
-  => default QA-reopen: recreate from latest base, do not merge base into old lineage). Worktree
-  creation itself is done by `New-TicketWorktree.ps1`; this function reports the branch decision.
+- **Does:** `fetch origin`; resolve resume vs fresh. Local ticket branch without origin → default
+  reopen: recreate from latest `profile.baseBranchDefault`, do not merge base into the old lineage.
+  Worktree creation is a profile script if present; this function reports the branch decision.
 - **Returns (compact):**
   ```
   repo: <name>
@@ -89,8 +87,8 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **Use:** scoped verification per repo at closeout (parallel, read-only).
 - **Inputs:** `repo`, `repoPath`, `testFilter` (nearest fixture/project), `sonarKey` (or none).
 - **Does:** run the **smallest** scoped tests first per [test-verification](test-verification.md)
-  using the project's test runner. Query Sonar only when `sonarKey` is set, per
-  [sonar-verification](sonar-verification.md). Repos without a `sonarKey` stay `sonar: skipped`.
+  using the project's test runner. Query a quality gate only when `sonarKey` is set.
+  Repos without a key stay `sonar: skipped`.
 - **Returns (compact):**
   ```
   repo: <name>
@@ -105,8 +103,7 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **Use:** staged-diff or pre-merge review per repo (parallel at closeout).
 - **Inputs:** `repo`, `repoPath`, `mode` (staged | premerge), optional `branch`.
 - **Does:** follow [../commands/review-changes.md](../commands/review-changes.md) +
-  [review-protocol](review-protocol.md); staged diff is the findings source. For very large diffs,
-  chunk per file/module before reviewing to avoid context blowups.
+  [review-protocol](review-protocol.md). Skip when `Get-ReviewSkip.ps1` says `skip: true`.
 - **Returns (compact):** the standard report shape from [severity-and-output](severity-and-output.md)
   (Blocker + Major by default) ending with a `Change-set understanding` Confidence Score.
 
@@ -115,8 +112,8 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **subagent_type:** `generalPurpose`
 - **Use:** gather + compact PR threads and CI/quality feedback for one work item (parallel per PR).
 - **Inputs:** `workItem`, optional explicit `prTargets[]`.
-- **Does:** follow [pr-feedback-fetch.md](pr-feedback-fetch.md) (trimmed thread lists first;
-  full thread only when needed; never dump raw JSON). Persist `.cursor/plans/<ticket>-feedback.md`.
+- **Does:** gather PR threads for this ticket (GitHub `gh` or the profile's tracker adapter).
+  Persist `.cursor/plans/<ticket>-feedback.md`. Do not dump raw JSON.
 - **Returns (compact):** the "Compact Context For Follow-Up" packet from that command (per repo/PR:
   thread id | status | file:line | ask | context; sonar gate + issues). No fixes applied.
 - **Guardrail:** read-only. Never marks threads Fixed/WontFix or replies -- that stays on the

@@ -25,7 +25,7 @@ and agents here for specialists.
 - Run [skills/workflow/ticket-router/SKILL.md](skills/workflow/ticket-router/SKILL.md) first in `/start-ticket` to emit the work manifest.
 - Ticket routing reads `profile.json` — repos, specialists, and `ticketSystem` come from there.
 - Domain skills in `skills/domain/` are loaded by the router when `integration` is matched.
-- Always a new chat for `/complete-task`.
+- Always a new chat for `/review-changes` and `/complete-task`. `/start-ticket` plans and builds in one chat (branch mode).
 
 ## Domain Router
 
