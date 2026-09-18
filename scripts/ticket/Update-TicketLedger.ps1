@@ -154,7 +154,8 @@ function Get-TicketPrefix {
     return 'WI'
 }
 $TICKET_PREFIX = Get-TicketPrefix
-$TICKET_ROW_PATTERN = "^\|\s*$([regex]::Escape($TICKET_PREFIX))\d+"
+# Match any prefix+digits row so a rewrite still migrates WI / TICKET- / # ledgers.
+$TICKET_ROW_PATTERN = '^\|\s*[A-Za-z]+-?\d+'
 
 $RepoRoot = if ($Root) { $Root } else { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
 $PlansDir = Join-Path $RepoRoot 'plans'

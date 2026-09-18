@@ -88,6 +88,19 @@ function Get-LauncherManifestValue {
     return $Manifest.$Property
 }
 
+<#
+.SYNOPSIS
+    Ticket mode from the manifest only. A leftover populated worktree folder does
+    not flip the default to worktree.
+#>
+function Resolve-TicketMode {
+    param([string]$ManifestMode)
+    if ($ManifestMode -and $ManifestMode -in @('branch', 'worktree')) {
+        return [pscustomobject]@{ mode = $ManifestMode; modeSource = 'manifest' }
+    }
+    return [pscustomobject]@{ mode = 'branch'; modeSource = 'default' }
+}
+
 # ---- git helpers ----------------------------------------------------------
 function Test-GitWorktree {
     param([string]$Path)
