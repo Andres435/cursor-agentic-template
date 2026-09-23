@@ -26,7 +26,7 @@ then customize for your project — no TMO or project-specific content included.
 
 1. Click **Use this template** on GitHub (or `git clone` + delete `.git`).
 2. Place the folder at `<your-app>/.cursor` (or `source/repos/.cursor` for multi-repo).
-3. **Open `CUSTOMIZE.md`** and work through the checklist — it is the only file you must edit.
+3. Run `/start-new-project`. It fills `profile.json`, `CUSTOMIZE.md`, and `environments/local-dev.md`.
 4. Bootstrap your machine once:
    ```powershell
    .\.cursor\scripts\machine\Initialize-WorkflowMachine.ps1
@@ -40,7 +40,7 @@ then customize for your project — no TMO or project-specific content included.
 
 ```bash
 cp -r cursor-agentic-template/.cursor your-project/.cursor
-# Then edit your-project/.cursor/profile.json and CUSTOMIZE.md
+# Then run /start-new-project in that clone. It fills profile.json and CUSTOMIZE.md.
 ```
 
 ---

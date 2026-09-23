@@ -1,11 +1,31 @@
 # Customize this workflow for your project
 
-This is the **only file you need to edit to get started**. Work through the checklist top to bottom.
+Run `/start-new-project`. It asks five short batches and fills `profile.json`, the status boxes
+below, and `environments/local-dev.md`. Hand-editing this file still works.
+
 Sections marked `(required)` must be done before running `/start-ticket`.
 
 **Rule:** these blanks are setup and context. After they are filled, `/start-ticket` and the rest of
 the workflow run **automatically** from `profile.json` — they will not re-interview you for repos,
-stack, or specialists. Use `/onboard` to walk this checklist.
+stack, or specialists.
+
+## Status
+
+`/start-new-project` checks these and records the answers under Choices.
+
+- [ ] `profile.json`
+- [ ] `environments/local-dev.md`
+- [ ] Specialists recorded in `profile.json`
+
+## Choices
+
+Filled by `/start-new-project`. Leave this blank until that command runs.
+
+- **Product:**
+- **Tracker:**
+- **Layout:**
+- **Stack:**
+- **Overlay:**
 
 ---
 

@@ -23,9 +23,11 @@ initialization script.
 
 ## Steps
 
-1. If `profile.json` `id` is still `customize-me`, walk [CUSTOMIZE.md](../../../CUSTOMIZE.md)
-   **top to bottom** and fill every required blank (`profile.json`, `environments/local-dev.md`,
-   `agents/fullstack-specialist.md`). Do not start a ticket until those are filled.
+1. If `profile.json` `id` is still `customize-me`, stop and tell the user to run
+   `/start-new-project`. That command fills `profile.json`, [CUSTOMIZE.md](../../../CUSTOMIZE.md),
+   and `environments/local-dev.md`. Do not interview for those here, and do not start a ticket
+   until that command has run. The fullstack specialist stub in `agents/fullstack-specialist.md`
+   is still edited by hand when the stack needs project conventions.
 2. If the profile is already customized, skip the questionnaire — run the init script and `/doctor`.
 3. **Run the initialization script**:
    ```powershell

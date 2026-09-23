@@ -6,7 +6,8 @@ One row per doc. Search here before Grep. Add your overlay docs to the bottom ta
 
 | Doc | Purpose | Keywords |
 |---|---|---|
-| [CUSTOMIZE.md](CUSTOMIZE.md) | Onboarding checklist — start here | customize, profile, setup, first ticket |
+| [CUSTOMIZE.md](CUSTOMIZE.md) | Checklist `/start-new-project` fills | customize, profile, setup, first ticket |
+| [commands/start-new-project.md](commands/start-new-project.md) | New product interview — writes profile.json | start-new-project, profile, local-dev |
 | [TEMPLATE.md](TEMPLATE.md) | Maintainer map: core vs overlay | core, overlay, upgrade, versioning |
 | [README.md](README.md) | What this is; quick start | template, clone, start, overview |
 | [MACHINE-SETUP.md](MACHINE-SETUP.md) | First-time machine bootstrap | setup, extensions, folder layout |

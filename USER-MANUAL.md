@@ -2,9 +2,9 @@
 
 Day-to-day ticket workflow for humans. Agents: see [AGENTS.md](AGENTS.md).
 
-**First clone:** run `/onboard` and fill [CUSTOMIZE.md](CUSTOMIZE.md). After `profile.json` and
-the env/agent stubs are filled, slash commands run from that config — they do not re-ask for
-repos or start commands.
+**First clone:** run `/start-new-project`. It fills [profile.json](profile.json) and
+[CUSTOMIZE.md](CUSTOMIZE.md). Then `/onboard` for the machine script. After that, slash commands
+run from the profile — they do not re-ask for repos or start commands.
 
 ## Three-chat lifecycle (branch mode — default)
 
@@ -23,7 +23,8 @@ Worktree mode (`--worktree`) is opt-in and only if `profile.worktreeSupported` i
 
 | Command | When |
 |---|---|
-| `/onboard` | Fill the blanks (profile, env card, specialist) |
+| `/start-new-project` | Fill profile, checklist, and local-dev card for this product |
+| `/onboard` | Machine bootstrap after the profile is filled |
 | `/doctor` | Health check (profile, hooks, gates) |
 | `/start-ticket TICKET-42 feature` | New work (feature, bug, spike, refactor) |
 | `/start-ticket TICKET-42 bug --worktree` | Isolated worktree (optional) |

@@ -6,7 +6,7 @@ keywords: local dev, ports, start command, environment, setup
 
 # Local Development Environment
 
-**Stub — fill in your project's actual values.**
+**Stub — `/start-new-project` replaces this file.** Hand-edit only if you skip that command.
 
 ## Start command
 

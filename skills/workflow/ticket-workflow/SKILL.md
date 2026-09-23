@@ -10,8 +10,8 @@ This file is a **read-only map**. It names the doc that owns each phase. Do not 
 here; invoke the commands directly. If anything here contradicts a command or skill, that file wins.
 
 Setup and context live in **overlay blanks** (`profile.json`, `CUSTOMIZE.md`, `environments/`,
-`agents/`). Fill those once via `/onboard`. Every command below then reads the profile — it does
-not re-interview the user for stack or repos.
+`agents/`). Fill those once via `/start-new-project`, then `/onboard` for the machine.
+Every command below then reads the profile — it does not re-interview the user for stack or repos.
 
 ## Lifecycle overview
 
@@ -43,7 +43,8 @@ flowchart LR
 | PR / tracker write-back | `/prep-pr` (after approval) | [commands/prep-pr.md](../../../commands/prep-pr.md) → [prep-pr/PLAYBOOK.md](../prep-pr/PLAYBOOK.md) |
 | PR feedback | `/address-pr-comments` | [commands/address-pr-comments.md](../../../commands/address-pr-comments.md) → [address-pr-comments/PLAYBOOK.md](../address-pr-comments/PLAYBOOK.md) |
 | Fresh-chat hydrate | First step of implement, complete-task, address-pr-comments | [ticket-context-load/SKILL.md](../ticket-context-load/SKILL.md) |
-| New clone / blanks | `/onboard` | [onboard/SKILL.md](../onboard/SKILL.md) + [CUSTOMIZE.md](../../../CUSTOMIZE.md) |
+| New product | `/start-new-project` | [commands/start-new-project.md](../../../commands/start-new-project.md) → [start-new-project/SKILL.md](../start-new-project/SKILL.md) |
+| New clone / machine | `/onboard` | [onboard/SKILL.md](../onboard/SKILL.md) + [CUSTOMIZE.md](../../../CUSTOMIZE.md) |
 
 ## Contracts that override prose
 
