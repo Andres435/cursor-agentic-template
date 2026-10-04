@@ -140,7 +140,7 @@ Closeout output is owned entirely by [task-retrospective.md](task-retrospective.
 questions, the scorecard rubrics, the ledger row, and the shape of the rare `WI<n>-closeout.md`.
 
 Every closed ticket leaves **one row** in
-[../plans/ticket-ledger.md](../plans/ticket-ledger.md) (written by `scripts/Update-TicketLedger.ps1`),
+`plans/ticket-ledger.md` (user-local, written by `scripts/Update-TicketLedger.ps1`; shape in [../plans/examples/ticket-ledger.example.md](../plans/examples/ticket-ledger.example.md)),
 plus whatever durable lesson the user chose to record in
 [../plans/closeout-index.md](../plans/closeout-index.md). A full closeout page is the exception.
 

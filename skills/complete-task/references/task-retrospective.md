@@ -115,7 +115,7 @@ rather than leaving closeout `Ctx%` blank.
 
 Re-running for the same ticket replaces its row, so a reopen updates in place. Omit any switch you
 genuinely do not have — a blank cell is honest, a guessed number is not. Never hand-edit
-[../../../plans/ticket-ledger.md](../../../plans/ticket-ledger.md); to drop a row entered by mistake, use
+`plans/ticket-ledger.md`; to drop a row entered by mistake, use
 `Update-TicketLedger.ps1 -Ticket <ticket> -Remove`.
 
 Then confirm the close artifacts:
