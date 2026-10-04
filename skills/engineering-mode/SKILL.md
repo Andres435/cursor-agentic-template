@@ -33,9 +33,11 @@ Adapted from pstack's poteto-mode (Lauren Tan, MIT —
 ## Start
 
 1. **Name your own model.** Say it once: `Engineering mode on — orchestrator: <model> (deep)`,
-   unless the active adapter maps this model to a lower tier. With `deepLane: inline` the selected
-   model is the deep tier. If you cannot tell, `ask-user` to pick a model before deep work. Do not
-   name one. Dispatch fast and standard on the active adapter. On the fast tier, add
+   unless the active adapter maps this model to a lower tier. With `deepLane: dispatch`, deep and
+   `[high]` go to that adapter's deep model unless this chat is already on it. With
+   `deepLane: inline` the selected model is the deep tier and is never dispatched. If you cannot
+   tell, `ask-user` to pick a model before deep work. Do not name one. Dispatch fast and standard
+   on the active adapter. On the fast tier, add
    that classification and review are weaker there.
 2. **Read what was appended.** If a ticket command is in this message, Read its playbook and execute
    it before any other work. Do not improvise the command from its name. Engineering mode only

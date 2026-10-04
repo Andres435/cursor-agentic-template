@@ -6,13 +6,11 @@ keywords: model usage, tier, fast, standard, deep, frontier, deepLane, engineeri
 
 # Cursor Model Usage (Team Cost Policy)
 
-Included Cursor models are the efficient default for fast and standard lanes. The model selected
-in the picker is the deep tier and stays inline. A GPT picker uses
+Included Cursor models are the efficient default for fast and standard lanes. Deep dispatches to
+the listed Grok selector. A GPT picker uses
 [../gpt/model-usage.md](../gpt/model-usage.md) instead of this table. Picking
 another family is allowed; it is not a stop. Any other family with no adapter runs inline; say once
 that fast and standard have no selector in that family yet.
-
-**`deepLane: inline`** — deep and `[high]` run on the picker model in this chat. Never dispatched.
 
 ## Plan buckets (Cursor → Settings → Plan & Usage)
 
@@ -29,25 +27,27 @@ Use this table when the picker is a Cursor Grok or Composer model. A GPT picker 
 |---|---|---|
 | `fast` | `composer-2.5-fast` | `[low]` steps; explore-repo, branch-setup, pr-feedback-fetch, verify-repo |
 | `standard` | `composer-2.5-fast` | `[med]` steps; review-diff, peer-review-pr — Cursor's included bucket has one Composer, so fast and standard share it |
-| `deep` | **The chat's selected model, inline only.** Never dispatch a deep `Task`: a Grok subagent runs as Auto (probe below). Any real picker choice is valid deep — do not ask for a newer Grok | plans, `[high]` steps, second-opinion reviewer, architect deep candidate, blast-radius — all in this chat |
+| `deep` | `grok-4.7-high-fast` when that selector is on this session's `Task` list | plans, `[high]` steps, second-opinion reviewer, architect deep lane, blast-radius |
 | `frontier` | Another model the user names | only when the user says so in chat; they own any cost approval |
 
 ### Task `model` selectors
 
 Pass the exact selector from this session's `Task` model list — never guess a slug.
-`composer-2.5-fast` is the known Composer selector.
+`composer-2.5-fast` is the known Composer selector. `grok-4.7-high-fast` is the known Grok selector.
 
-**Lane probe, 2026-09-24 (reconfirmed):** fast and standard on `composer-2.5-fast` were honored (the
-lane reported Composer). Deep on `grok-4.7-high-fast` was **unhonored** — the lane reported Auto.
-That selector is on the session's `Task` list, so Cursor substitutes it for subagents on this plan.
-That is why deep is never dispatched. An older Grok selector on the list is not a reason to reject
-the model the user picked for the chat.
+**`deepLane: dispatch`** — deep and `[high]` go to a `grok-4.7-high-fast` lane; inline when this
+chat already runs on that Grok. If that selector is not on the session's `Task` list, ask the user
+to pick a model. Do not invent a slug. Fast and standard stay on `composer-2.5-fast`.
+
+**Lane probe, 2026-10-04:** fast and standard on `composer-2.5-fast` reported Composer. Deep on
+`grok-4.7-high-fast` reported Grok 4.7 — honored. The 24 Sep result (that selector reported Auto)
+is retired. `/doctor --lanes` dispatches deep. A reply of Auto is still a fail: record the tier
+unhonored and leave deep inline until a later probe honors it.
 
 **Never Auto.** Auto is not a selection: if the picker is Auto or the model cannot be told, ask the
 user to pick a model before deep work, and do not name one. Every lane's reply starts with
-`model:`; one that says Auto is discarded. `/doctor --lanes` skips deep and reports it inline only.
-To re-test after a plan change, run `/doctor --lanes --retest-inline`: it prints the `Task` tool's
-accepted `model` values. If a listed Grok selector still comes back as Auto, deep stays inline.
+`model:`; one that says Auto is discarded. To re-test after a plan change, run
+`/doctor --lanes --retest-inline`: it prints the `Task` tool's accepted `model` values.
 
 ## Subagent roles → `Task` `subagent_type`
 
