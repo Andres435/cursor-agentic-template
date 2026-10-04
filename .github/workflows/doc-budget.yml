@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Assert agentic flow (fail-closed)
         shell: pwsh
@@ -29,9 +31,14 @@ jobs:
           ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase implement -Root $fixture
           ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase close    -Root $fixture
 
-      # Template: Cursor hooks only (no Claude Code bridge)
       - name: Hook smoke tests (Cursor)
         run: |
           node hooks/tests/closeout-guard.test.js
           node hooks/tests/session-context.test.js
           node hooks/tests/git-push-agentic-flow.test.js
+          node hooks/tests/ticket-command-nudge.test.js
+          node hooks/tests/commit-guard.test.js
+          node hooks/tests/context-usage.test.js
+
+      - name: Hook smoke tests (Claude Code bridges)
+        run: node adapters/claude/hooks/tests/claude-hooks.test.js
