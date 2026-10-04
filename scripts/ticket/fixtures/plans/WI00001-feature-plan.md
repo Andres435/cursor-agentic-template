@@ -15,10 +15,10 @@ None — fixture plan, no scope or contract calls to make.
 - **Type:** feature
 - **Mode:** branch
 
-## Approach
+## Work Plan
 
-1. Fixture step one
-2. Fixture step two
+1. [low] Fixture step one
+2. **[med]** Fixture step two
 
 ## Acceptance
 
