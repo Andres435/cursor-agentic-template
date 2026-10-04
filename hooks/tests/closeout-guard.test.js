@@ -12,7 +12,7 @@ const assert = require("assert");
 const { spawnSync } = require("child_process");
 const path = require("path");
 
-const HOOK = path.join(__dirname, "..", "closeout-read-guard.js");
+const HOOK = path.join(__dirname, "..", "..", "adapters", "cursor", "hooks", "closeout-read-guard.js");
 
 function runHook(inputObj) {
   const result = spawnSync(process.execPath, [HOOK], {

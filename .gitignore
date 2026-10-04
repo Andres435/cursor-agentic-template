@@ -16,3 +16,16 @@ node_modules/
 
 # Editor
 .vscode/
+
+# User-local ticket files. Manifests, plans, feedback, verify/review packets, and the
+# ledger belong to whoever ran the ticket and never enter git. Only the files below
+# stay tracked. See _shared/ticket-artifacts.md.
+plans/*
+!plans/README.md
+!plans/closeout-index.md
+!plans/workflow-template-plan.md
+!plans/examples/
+
+# Measured context and the one active-stack owner (dotfile on macOS and Linux).
+scripts/.ctx-usage.json
+scripts/.active-stack.json

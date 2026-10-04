@@ -21,8 +21,12 @@
 .PARAMETER Verdict
     Single verdict applied to all affected repos when -Verdicts is omitted.
 
+.PARAMETER RepoPaths
+    JSON object mapping repo name to its working-tree path. Overrides
+    Resolve-TicketRoot for those repos (tests, or when resolution fails).
+
 .PARAMETER Root
-    Override the .cursor repo root (tests).
+    Override the tmo-agentic repo root (tests).
 
 .EXAMPLE
     .\Set-ReviewReady.ps1 -Ticket WI21961 -Mode staged -Verdicts '{"TmoPro":"Ready"}'
@@ -34,6 +38,7 @@ param(
     [Parameter(Mandatory)][ValidateSet('staged', 'pre-merge')][string]$Mode,
     [string]$Verdicts,
     [string]$Verdict,
+    [string]$RepoPaths,
     [string]$Root
 )
 
@@ -79,12 +84,24 @@ if (-not $verdictMap.Count) {
     foreach ($r in $repoEntries) { $verdictMap[$r.repo] = $Verdict }
 }
 
+$pathMap = @{}
+if ($RepoPaths) {
+    foreach ($p in ($RepoPaths | ConvertFrom-Json).PSObject.Properties) { $pathMap[$p.Name] = [string]$p.Value }
+}
+
 $reposObj = New-Object PSObject
 foreach ($name in ($verdictMap.Keys | Sort-Object)) {
-    $path = $null
-    $hit = $repoEntries | Where-Object { $_.repo -eq $name } | Select-Object -First 1
-    if ($hit) { $path = [string]$hit.path }
-    $fp = if ($path) { Get-StagedDiffFingerprint -RepoPath $path } else { Get-StagedDiffFingerprint -RepoPath ([IO.Path]::GetTempPath()) }
+    $path = $pathMap[$name]
+    if (-not $path) {
+        $hit = $repoEntries | Where-Object { $_.repo -eq $name } | Select-Object -First 1
+        if ($hit) { $path = [string]$hit.path }
+    }
+    $fp = if ($path) { Get-StagedDiffFingerprint -RepoPath $path } else { $null }
+    # A staged stamp over nothing would let /complete-task skip a review that never saw code.
+    if ($Mode -eq 'staged' -and -not $fp) {
+        $where = if ($path) { $path } else { 'an unresolved path' }
+        throw "Nothing staged in $name ($where). Stage the reviewed change before stamping Ready."
+    }
     $reposObj | Add-Member -NotePropertyName $name -NotePropertyValue ([pscustomobject]@{
         verdict     = [string]$verdictMap[$name]
         fingerprint = $fp

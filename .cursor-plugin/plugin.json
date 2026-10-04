@@ -1,0 +1,16 @@
+{
+  "name": "agentic",
+  "version": "1.0.0",
+  "description": "Ticket workflow. Cursor, Claude Code, and Codex load the same rules, skills, and hooks.",
+  "author": {
+    "name": "Andres Quintana"
+  },
+  "keywords": [
+    "ticket",
+    "workflow",
+    "agent"
+  ],
+  "hooks": "./hooks.json",
+  "commands": "./.cursor-plugin/slash-icons-disabled/commands",
+  "skills": "./.cursor-plugin/slash-icons-disabled/skills"
+}

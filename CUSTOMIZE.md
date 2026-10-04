@@ -1,3 +1,5 @@
+Run `/start-new-project` to fill the blanks below. Hand-editing is the same result.
+
 # Customize this workflow for your project
 
 Run `/start-new-project`. It asks five short batches and fills `profile.json`, the status boxes
@@ -69,14 +71,14 @@ in `profile.json` → `specialists`.
 
 ### GitHub Issues
 
-Add `skills/workflow/start-ticket/references/github-ticket-workflow.md` with your intake steps.
-See `skills/workflow/start-ticket/references/ticket-intake-generic.md` for the pattern.
+Add `skills/start-ticket/references/github-ticket-workflow.md` with your intake steps.
+See `skills/start-ticket/references/ticket-intake-generic.md` for the pattern.
 
 ### Azure DevOps (ADO)
 
 Copy ADO reference files from the TMO workspace:
-- `skills/workflow/start-ticket/references/ado-ticket-workflow.md`
-- `skills/workflow/start-ticket/references/ado-field-mapping.md`
+- `skills/start-ticket/references/ado-ticket-workflow.md`
+- `skills/start-ticket/references/ado-field-mapping.md`
 - `_shared/ado-ticket-workflow.md`
 
 Then set `ticketSystem: "ado"` and `ticketPrefix: "WI"` in `profile.json`.
@@ -110,7 +112,7 @@ Or with GitHub Issues:
 
 These are **core** files — leave them alone unless you are upgrading the workflow:
 
-- `skills/workflow/` (except adding intake references)
+- `skills/` (except adding intake references)
 - `playbooks/`
 - `hooks/`, `hooks.json`
 - `scripts/ticket/`
@@ -128,7 +130,7 @@ Core files (workflow skills, ticket scripts, hooks) can be updated from the temp
 ```bash
 # From your project's .cursor folder
 git fetch upstream
-git checkout upstream/main -- skills/workflow/ playbooks/ scripts/ticket/ hooks/ _shared/
+git checkout upstream/main -- skills/ playbooks/ scripts/ticket/ hooks/ _shared/
 ```
 
 Your overlay files (`profile.json`, `environments/`, `agents/`, `skills/domain/`) are never touched

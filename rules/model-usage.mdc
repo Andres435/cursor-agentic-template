@@ -1,16 +1,8 @@
 ---
-description: Cursor model usage rails — Grok for Plans; Auto/Composer for tasks; Composer 2.5 for subagents
+description: Pointer to the IDE's tier map — read it before planning or dispatching any subagent
 alwaysApply: true
 ---
 
-# Cursor Model Usage (rails)
-
-Stay on **included** Cursor Models. **Other Models** only if the user explicitly directs it.
-
-- **Plans** → **Grok 4.5**. Do not plan on Auto/Composer when Grok is available.
-- **Tasks** → honor Work Plan `[low]|[med]|[high]`: Auto/Composer; Grok only if `[high]` or stuck.
-- **Subagents** → `composer-2.5-fast`. Never `inherit` a Grok parent. Split oversized slices.
-- **After plan approval** → keep building in this chat (branch mode). `--worktree` or context overflow: new chat `/implement`. Always a new chat for `/complete-task`.
-- Reload `.cursor/plans/<TICKET>-*` instead of re-fetching ticket/CI JSON.
-
-Full policy: [`../_shared/model-usage.md`](../_shared/model-usage.md).
+Work runs on tiers ([_shared/model-routing.md](../_shared/model-routing.md)). Before a plan or any dispatch, read this IDE's tier map: [adapters/cursor/model-usage.md](../adapters/cursor/model-usage.md) (other IDEs: [adapters/README.md](../adapters/README.md)).
+Every dispatch names its `model` from that map; never omit it. The adapter's `deepLane` says whether deep runs inline or is dispatched.
+Verbs for IDE actions: [_shared/harness-verbs.md](../_shared/harness-verbs.md).

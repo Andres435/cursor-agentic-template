@@ -13,6 +13,10 @@
                    and no unresolved placeholder ('TBD', 'resolve during implement').
                    The placeholder check is the point: an open decision is meant to
                    reach the user as a question, not ride into implementation.
+                   Also requires a 'Work Plan' heading with numbered steps each
+                   tagged [low]|[med]|[high]; any [high] step requires Engineering
+                   Decisions to record an architect result (or an explicit
+                   'architect skipped: <reason>').
     implement      runs -Phase implement as its first action. Does not re-check plan
                    content: a plan approved before those requirements existed must not
                    retroactively fail here. This is also the LOAD-TIME gate for
@@ -20,6 +24,9 @@
     complete-task  runs -Phase close     before the retrospective, NOT at chat start.
                    The close timestamp and the ledger row are written during the
                    command, so running this at load is a guaranteed FAIL.
+                   Close accepts blank context percents and fails one outside 0-100.
+                   ctxPct.review is required unless workType is spike or
+                   reviewSkipped is true. Estimate when the indicator is hidden.
 
     Session timestamps live in the manifest. The retired WI<n>-session.json is still
     accepted as a fallback so tickets started before that change can close.
@@ -163,6 +170,76 @@ function Test-PlanFile {
             $missing.Add("$($planFile.Name) -- contains 'resolve during implement'; decide it now or ask the user")
             return
         }
+
+        # Work Plan section: heading, numbered steps, difficulty tags, and (for any
+        # [high] step) an architect result recorded in Engineering Decisions. This is
+        # the model-usage.md/ticket-plan-output.md contract, checked mechanically.
+        $planLines = $content -split "\r?\n"
+        $workPlanHeadingPattern = '(?i)^\s*#{1,4}\s*(\d+[a-z]?\.?\s*)?Work plan\s*$'
+        $workPlanIdx = -1
+        for ($li = 0; $li -lt $planLines.Count; $li++) {
+            if ($planLines[$li] -match $workPlanHeadingPattern) { $workPlanIdx = $li; break }
+        }
+        if ($workPlanIdx -lt 0) {
+            $missing.Add("$($planFile.Name) -- missing 'Work Plan' heading (see ticket-plan-output.md)")
+            return
+        }
+
+        $workPlanEndIdx = $planLines.Count
+        for ($li = $workPlanIdx + 1; $li -lt $planLines.Count; $li++) {
+            if ($planLines[$li] -match '^\s*#{1,4}\s') { $workPlanEndIdx = $li; break }
+        }
+        $workPlanSection = if ($workPlanEndIdx -gt $workPlanIdx + 1) { $planLines[($workPlanIdx + 1)..($workPlanEndIdx - 1)] } else { @() }
+
+        # Step lines are column-0 numbered lines only; indented sub-lists are notes,
+        # not steps, and are not required to carry a tag.
+        $stepLines = @($workPlanSection | Where-Object { $_ -match '^\d+\.\s' })
+        if ($stepLines.Count -eq 0) {
+            $missing.Add("$($planFile.Name) -- 'Work Plan' has no numbered steps")
+            return
+        }
+
+        $tagPattern = '(?i)^\d+\.\s*[*`_]*\[(low|med|high)\]'
+        $untaggedSteps = [System.Collections.Generic.List[string]]::new()
+        $hasHighStep = $false
+        foreach ($stepLine in $stepLines) {
+            if ($stepLine -match $tagPattern) {
+                if ($Matches[1] -match '(?i)^high$') { $hasHighStep = $true }
+            }
+            elseif ($stepLine -match '^(?<n>\d+)\.') {
+                $untaggedSteps.Add($Matches['n'])
+            }
+        }
+        if ($untaggedSteps.Count -gt 0) {
+            $missing.Add("$($planFile.Name) -- Work Plan step(s) $($untaggedSteps -join ', ') missing a [low]|[med]|[high] tag (see ticket-plan-output.md)")
+            return
+        }
+
+        if ($hasHighStep) {
+            $edHeadingPattern = '(?i)^\s*(#{1,4})\s*(\d+[a-z]?\.?\s*)?Engineering Decisions\s*$'
+            $edIdx = -1
+            $edLevel = 0
+            for ($li = 0; $li -lt $planLines.Count; $li++) {
+                if ($planLines[$li] -match $edHeadingPattern) {
+                    $edIdx = $li
+                    $edLevel = $Matches[1].Length
+                    break
+                }
+            }
+            $edEndIdx = $planLines.Count
+            if ($edIdx -ge 0) {
+                for ($li = $edIdx + 1; $li -lt $planLines.Count; $li++) {
+                    if ($planLines[$li] -match '^\s*(#{1,6})\s') {
+                        if ($Matches[1].Length -le $edLevel) { $edEndIdx = $li; break }
+                    }
+                }
+            }
+            $edSection = if ($edIdx -ge 0 -and $edEndIdx -gt $edIdx + 1) { ($planLines[($edIdx + 1)..($edEndIdx - 1)] -join "`n") } else { '' }
+            if ($edSection -notmatch '(?i)\barchitect') {
+                $missing.Add("$($planFile.Name) -- has a [high] step but Engineering Decisions records no architect result or 'architect skipped: <reason>' (see skills/architect)")
+                return
+            }
+        }
     }
     $found.Add($planFile.Name)
 }
@@ -175,15 +252,15 @@ function Test-Manifest {
         $missing.Add("$Key-manifest.json -- $Why")
         return
     }
-    if ($mode -in @('branch', 'worktree')) {
+    if ($mode -in @('branch', 'worktree', 'investigate')) {
         $found.Add("$Key-manifest.json (mode: $mode)")
         return
     }
     if ($null -eq $mode) {
-        $missing.Add("$Key-manifest.json -- no 'mode' field; must be 'branch' or 'worktree' so later chats know where to work")
+        $missing.Add("$Key-manifest.json -- no 'mode' field; must be 'branch', 'worktree', or 'investigate'")
         return
     }
-    $missing.Add("$Key-manifest.json -- mode '$mode' is not 'branch' or 'worktree'")
+    $missing.Add("$Key-manifest.json -- mode '$mode' is not 'branch', 'worktree', or 'investigate'")
 }
 
 <#
@@ -237,7 +314,7 @@ function Test-TimestampField {
 }
 
 <#
-    The cached ADO fetch is scratch, not durable config, so it lives in
+    The cached ticket fetch is scratch, not durable config, so it lives in
     tmp/tickets/. The old plans/ location is still accepted for in-flight tickets.
 #>
 function Test-WorkItemCache {
@@ -249,27 +326,33 @@ function Test-WorkItemCache {
             return
         }
     }
-    $missing.Add("tmp/tickets/$name -- cached ADO fetch; later chats reload it instead of re-fetching")
+    $missing.Add("tmp/tickets/$name -- cached ticket fetch; later chats reload it instead of re-fetching")
 }
 
 <#
-    adrIndex is copied from profile.json when the project has an ADR corpus.
-    Skip when profile.adrIndex is null (vanilla template).
+    When profile.adrIndex is set, the manifest must carry it so the plan can cite it.
 #>
 function Test-AdrIndex {
     if (-not $manifest) { return }
-    $profilePath = Join-Path $RepoRoot 'profile.json'
-    if (-not (Test-Path -LiteralPath $profilePath)) { return }
-    $profAdr = $null
-    try {
-        $prof = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
-        if ($prof.PSObject.Properties.Name -contains 'adrIndex') { $profAdr = $prof.adrIndex }
-    } catch { return }
-    if ([string]::IsNullOrWhiteSpace([string]$profAdr)) { return }
-
+    $profileAdr = $null
+    $profilePath = Join-Path $Root 'profile.json'
+    if (Test-Path -LiteralPath $profilePath) {
+        try {
+            $prof = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+            if ($prof.PSObject.Properties.Name -contains 'adrIndex') { $profileAdr = [string]$prof.adrIndex }
+        } catch { }
+    }
+    if ([string]::IsNullOrWhiteSpace($profileAdr)) { return }
+    $repos = @()
+    foreach ($entry in @(Get-ManifestField 'affectedRepos')) {
+        if (-not $entry) { continue }
+        if ($entry -is [string]) { $repos += $entry; continue }
+        if ($entry.PSObject.Properties.Name -contains 'repo') { $repos += $entry.repo }
+    }
+    if (-not $repos.Count) { return }
     $adr = Get-ManifestField 'adrIndex'
     if ([string]::IsNullOrWhiteSpace([string]$adr)) {
-        $missing.Add("$Key-manifest.json -- profile.adrIndex is set, so the manifest must copy it when ADRs are in scope (or set adrIndex null with a reason in Engineering Decisions)")
+        $missing.Add("$Key-manifest.json -- profile.adrIndex is set, so the manifest adrIndex must be set (see _shared/adr-policy.md)")
         return
     }
     $found.Add("$Key-manifest.json (adrIndex)")
@@ -280,6 +363,29 @@ function Test-AdrIndex {
     written only when the retrospective earns one, but every closed ticket must
     leave exactly one ledger row -- written by scripts/Update-TicketLedger.ps1.
 #>
+# Context percents are optional: a measured value, or blank. A blank is honest; an
+# invented number is not, so only a present-but-malformed value fails.
+function Test-CtxNumber {
+    param($Ctx, [string]$Name, [string]$Why)
+    if (-not ($Ctx -and ($Ctx.PSObject.Properties.Name -contains $Name)) -or $null -eq $Ctx.$Name) {
+        $found.Add("$Key-manifest.json (ctxPct.$Name not recorded)")
+        return
+    }
+    $raw = [string]$Ctx.$Name
+    if ($raw -match '^\d+$' -and [int]$raw -le 100) { $found.Add("$Key-manifest.json (ctxPct.$Name)") }
+    else { $missing.Add("$Key-manifest.json -- $Why") }
+}
+
+function Test-CloseContext {
+    $ctx = $null
+    if ($manifest -and ($manifest.PSObject.Properties.Name -contains 'ctxPct')) {
+        $ctx = $manifest.ctxPct
+    }
+    foreach ($name in @('start', 'review', 'close')) {
+        Test-CtxNumber -Ctx $ctx -Name $name -Why "ctxPct.$name must be 0-100 when present. Re-run Set-TicketCtxPct.ps1 -Phase $name without -Percent to use the measured value."
+    }
+}
+
 function Test-LedgerRow {
     $ledger = Join-Path $PlansDir 'ticket-ledger.md'
     if (-not (Test-Path -LiteralPath $ledger)) {
@@ -312,6 +418,7 @@ switch ($Phase) {
     'close' {
         Test-Artifact "$Key-manifest.json" 'drives verify/review fan-out' | Out-Null
         Test-TimestampField -Fields @('completedAtUtc', 'reclosedAtUtc') -Why 'no completedAtUtc or reclosedAtUtc set'
+        Test-CloseContext
         Test-LedgerRow
     }
 }
@@ -336,7 +443,7 @@ else {
     else {
         Write-Host "[FAIL] $Key $Phase is incomplete -- $($missing.Count) artifact(s) missing:" -ForegroundColor Red
         foreach ($m in $missing) { Write-Host "       $m" -ForegroundColor Red }
-        Write-Host "       Contract: .cursor/_shared/ticket-artifacts.md" -ForegroundColor DarkGray
+        Write-Host "       Contract: tmo-agentic/_shared/ticket-artifacts.md" -ForegroundColor DarkGray
     }
 }
 

@@ -4,4 +4,4 @@ description: Final closeout step — asks three questions, scores the session, r
 keywords: retrospective, closeout, scorecard, ledger, roadmap candidate, lessons, efficiency, contextualization, cost
 ---
 
-Canonical: [skills/workflow/complete-task/references/task-retrospective.md](../skills/workflow/complete-task/references/task-retrospective.md)
+Canonical: [skills/workflow/complete-task/references/task-retrospective.md](../skills/complete-task/references/task-retrospective.md)

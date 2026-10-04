@@ -1,0 +1,38 @@
+{
+  "name": "agentic",
+  "displayName": "Agentic workflow",
+  "description": "Ticket workflow for any product. Cursor, Claude Code, and Codex load the same skills. Product specifics live in profile.json.",
+  "author": {
+    "name": "Andres Quintana"
+  },
+  "keywords": [
+    "ticket",
+    "workflow",
+    "agent"
+  ],
+  "commands": [],
+  "skills": [
+    "./skills/address-pr-comments",
+    "./skills/architect",
+    "./skills/complete-task",
+    "./skills/doctor",
+    "./skills/document-spike",
+    "./skills/engineering-mode",
+    "./skills/environment-context",
+    "./skills/implement",
+    "./skills/onboard",
+    "./skills/peer-review",
+    "./skills/prep-pr",
+    "./skills/review-changes",
+    "./skills/start-new-project",
+    "./skills/start-stack",
+    "./skills/start-ticket",
+    "./skills/stop-stack",
+    "./skills/swap-stack",
+    "./skills/tdd-red-green-refactor",
+    "./skills/ticket-context-load",
+    "./skills/ticket-router",
+    "./skills/ticket-workflow"
+  ],
+  "hooks": "./adapters/claude/hooks/hooks.json"
+}

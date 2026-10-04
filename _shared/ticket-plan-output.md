@@ -16,14 +16,14 @@ Build the plan in **Cursor Plan mode** (Claude Code: plan mode). Two rules:
 
 1. **The draft is not the file.** Do not write `WI<n>-<type>-plan.md` while the user is iterating.
    Persist only once, from the exact text they approve (see
-   [start-ticket.md](../commands/start-ticket.md) step 7).
-2. **Approval is a chat statement, never Plan mode's native Build action.** Clicking Build runs in
+   [start-ticket.md](../skills/start-ticket/SKILL.md) step 7).
+2. **Approval is a chat statement.** Do not use the plan screen's build button. Clicking it runs in
    the wrong root on worktree tickets. In **branch mode** the same chat continues to build after
    approval. In **worktree mode** the closing message contains a paste handoff to `/implement`.
 
 ### Plan model
 
-Highest included Cursor model — **Grok 4.5** (see [model-usage.md](model-usage.md)).
+The deep tier (see [model-routing.md](model-routing.md)). Models live in the IDE adapter.
 Claude Code: [../adapters/claude/model-usage.md](../adapters/claude/model-usage.md).
 
 ### Plan structure
@@ -36,11 +36,11 @@ scope, rejected; `None — <why>` is valid. Shape and gate: [engineering-decisio
 
 Every plan needs a numbered **Work Plan** section. Each step tagged with difficulty:
 
-- `[low]` — renames, wiring, single-file, routine tests → Auto / Composer
-- `[med]` — multi-file slice, focused bug, one repo → Auto (Grok only if stuck)
-- `[high]` — tricky shared/legacy types, hard root cause, cross-cutting design → Grok 4.5
+- `[low]` — renames, wiring, single-file, routine tests → fast tier
+- `[med]` — multi-file slice, focused bug, one repo → standard tier
+- `[high]` — tricky shared types, hard root cause, cross-cutting design → deep tier
 
-Split a step that is larger than one Composer subagent can hold. Do not leave steps untagged.
+Split a step that is larger than one fast-tier lane can hold. Do not leave steps untagged.
 
 ### Plan digest
 
@@ -127,9 +127,9 @@ Nothing after that inner fence.
 
 - End `/start-ticket` with only a path pointer and no Work Plan in chat.
 - Continue implementation in Plan-mode chat in **worktree mode** — user opens a new chat in the ticket window.
-- Build the plan on a weaker model when Grok 4.5 is available.
+- Build the plan below the deep tier when the deep tier is available.
 - Persist the plan file before explicit approval.
-- Trigger or suggest Plan mode's native Build/Execute action.
+- Trigger or suggest the plan screen's build button.
 - If Plan mode fails, draft in plain chat instead, get the same explicit approval, write the file.
 
 ---

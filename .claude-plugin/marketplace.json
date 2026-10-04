@@ -1,0 +1,13 @@
+{
+  "name": "agentic",
+  "owner": {
+    "name": "Andres Quintana"
+  },
+  "plugins": [
+    {
+      "name": "agentic",
+      "source": "./",
+      "description": "Ticket workflow"
+    }
+  ]
+}

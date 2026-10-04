@@ -1,0 +1,10 @@
+{
+  "name": "agentic",
+  "version": "1.0.0",
+  "description": "Ticket workflow. Install this plugin in Codex to load the skills.",
+  "author": {
+    "name": "Andres Quintana"
+  },
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

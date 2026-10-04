@@ -4,4 +4,4 @@ description: Workspace standard for confidence scoring across bugs, features, sp
 keywords: confidence score, root-cause certainty, design certainty, findings certainty, axes
 ---
 
-Canonical: [skills/workflow/complete-task/references/confidence-score.md](../skills/workflow/complete-task/references/confidence-score.md)
+Canonical: [skills/workflow/complete-task/references/confidence-score.md](../skills/complete-task/references/confidence-score.md)

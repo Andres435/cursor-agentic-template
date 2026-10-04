@@ -13,7 +13,7 @@
     Emit { ticket, mode, repos: [{ repo, skip, reason, verdict }] }.
 
 .PARAMETER Root
-    Override the .cursor repo root (tests).
+    Override the tmo-agentic repo root (tests).
 
 .EXAMPLE
     .\Get-ReviewSkip.ps1 -Ticket WI21961 -Json

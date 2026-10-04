@@ -11,8 +11,7 @@ What to customize first: [CUSTOMIZE.md](CUSTOMIZE.md).
 Before broad searching, check `profile.json` for repo layout, `environments/local-dev.md` for setup,
 and agents here for specialists.
 
-**Model usage (Cursor):** Plans → **Grok 4.5**; tasks → Auto/Composer by `[low]|[med]|[high]`; subagents → **Composer 2.5**.
-**Model usage (Claude Code):** [adapters/claude/model-usage.md](adapters/claude/model-usage.md).
+Work runs on tiers ([_shared/model-routing.md](_shared/model-routing.md)). The IDE adapter maps them. Verbs: [_shared/harness-verbs.md](_shared/harness-verbs.md).
 
 ## Available Agents
 
@@ -22,10 +21,10 @@ and agents here for specialists.
 
 ## Routing Notes
 
-- Run [skills/workflow/ticket-router/SKILL.md](skills/workflow/ticket-router/SKILL.md) first in `/start-ticket` to emit the work manifest.
+- Run [skills/ticket-router/SKILL.md](skills/ticket-router/SKILL.md) first in `/start-ticket` to emit the work manifest.
 - Ticket routing reads `profile.json` — repos, specialists, and `ticketSystem` come from there.
-- Domain skills in `skills/domain/` are loaded by the router when `integration` is matched.
-- Always a new chat for `/review-changes` and `/complete-task`. `/start-ticket` plans and builds in one chat (branch mode).
+- `skills/environment-context` matches cards under `environments/` when `integration` is set.
+- Branch mode is three chats. `/start-ticket` plans and builds in chat 1. `/review-changes` and `/complete-task` are new chats.
 
 ## Domain Router
 

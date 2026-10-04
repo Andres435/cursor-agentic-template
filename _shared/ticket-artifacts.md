@@ -43,9 +43,9 @@ work in the other tree.
 
 | Phase | Command | Must exist when the command reports success |
 |---|---|---|
-| `start` | [start-ticket](../commands/start-ticket.md) | `WI<n>-manifest.json` (with `mode`, non-null `startedAtUtc`, and `ticket` object), `WI<n>-<type>-plan.md` |
-| `implement` | [implement](../commands/implement.md) | inputs above must already exist; no new required output |
-| `close` | [complete-task](../commands/complete-task.md) | manifest close timestamp, one `WI<n>` row in `plans/ticket-ledger.md` |
+| `start` | [start-ticket](../skills/start-ticket/SKILL.md) | `WI<n>-manifest.json` (with `mode`, non-null `startedAtUtc`, and `ticket` object), `WI<n>-<type>-plan.md` |
+| `implement` | [implement](../skills/implement/SKILL.md) | inputs above must already exist; no new required output |
+| `close` | [complete-task](../skills/complete-task/SKILL.md) | manifest close timestamp, one `WI<n>` row in `plans/ticket-ledger.md` |
 
 `<type>` is the manifest `workType` (`bug`, `feature`, `spike`, `refactor`).
 
@@ -73,13 +73,13 @@ Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, 
 
 | File | Written by | Purpose |
 |---|---|---|
-| `WI<n>-manifest.json` | [ticket-router](../skills/workflow/ticket-router/SKILL.md) | Classification **and** session state: `mode`, `workType`, `ticket` (title/adoType/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `sonarRepos`, `adrIndex`, `dbChange`, `needsDacpac`, `featureFlag`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, and the session timestamps. Drives what every later chat loads. |
+| `WI<n>-manifest.json` | [ticket-router](../skills/ticket-router/SKILL.md) | Classification **and** session state: `mode`, `workType`, `ticket` (title/adoType/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `sonarRepos`, `adrIndex`, `dbChange`, `needsDacpac`, `featureFlag`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, and the session timestamps. Drives what every later chat loads. |
 | `WI<n>-<type>-plan.md` | start-ticket | The approved plan. Opens with `## Plan Digest` and `## Engineering Decisions` (structure in [ticket-plan-output.md](ticket-plan-output.md) and [engineering-decisions.md](engineering-decisions.md)); the `-Phase start` gate checks those headings. Durable, and the only plan `implement` follows. |
 | `WI<n>-feedback.md` | address-pr-comments | Compact PR + Sonar triage packet. Conditional. |
 | `WI<n>-verify.json` | complete-task | Compact `verify-repo` packets. Conditional. |
 | `WI<n>-review.md` | complete-task / review-changes | Compact `review-diff` output. Conditional. |
 | `plans/ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, `CtxS%` / `CtxR%` / `Ctx%`. Shared, append-only. |
-| `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([../skills/workflow/ticket-router/references/closeout-search.md](../skills/workflow/ticket-router/references/closeout-search.md)). |
+| `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([../skills/ticket-router/references/closeout-search.md](../skills/ticket-router/references/closeout-search.md)). |
 | `WI<n>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](task-retrospective.md)). Not required by any gate. |
 
 Keep these small and durable. Summarize subagent packets into the relevant file; do not paste raw
@@ -90,7 +90,7 @@ JSON into chat.
 `startedAtUtc`, `completedAtUtc`, `reopenedAtUtc`, `reclosedAtUtc`, and `timezone` live **on the
 manifest**. The retired `WI<n>-session.json` is still read as a fallback so tickets started before
 this change can close; nothing writes it any more. Field semantics and the hours math stay in
-[../skills/workflow/complete-task/references/session-time-tracking.md](../skills/workflow/complete-task/references/session-time-tracking.md).
+[../skills/complete-task/references/session-time-tracking.md](../skills/complete-task/references/session-time-tracking.md).
 
 ## Handoff between chats
 

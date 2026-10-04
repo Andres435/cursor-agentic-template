@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+"use strict";
+
+// Git pre-commit (core.hooksPath = hooks/git-hooks, set by scripts/machine/Install-GitPushHook.ps1).
+// The IDE-neutral last line: refuses a commit that stages a user-local plans/ file.
+
+const { workflowRoot, stagedUserPlans } = require("../core/git-target.js");
+const { PLANS_RULE } = require("../core/commit-guard.js");
+
+const root = workflowRoot(process.cwd());
+const staged = root ? stagedUserPlans(root) : [];
+if (staged.length) {
+  process.stderr.write(
+    "Commit blocked: " + staged.join(", ") + " is staged. Run `git restore --staged plans`.\n" + PLANS_RULE + "\n"
+  );
+  process.exit(1);
+}
+process.exit(0);

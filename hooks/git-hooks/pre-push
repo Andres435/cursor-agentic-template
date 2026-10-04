@@ -1,4 +1,17 @@
 #!/usr/bin/env node
 "use strict";
-process.argv.push("--git-hook");
-require("../git-push-agentic-flow.js");
+
+// Git pre-push (core.hooksPath = hooks/git-hooks, set by scripts/machine/Install-GitPushHook.ps1).
+// git runs this from the top level of the repo being pushed.
+
+const path = require("path");
+const { runAssert, denyMessage, workflowRoot } = require("../core/push-gate.js");
+
+const root = workflowRoot(process.cwd()) || path.join(__dirname, "..", "..");
+const result = runAssert(root);
+if (result.ok) {
+  if (result.output) process.stderr.write(result.output + "\n");
+  process.exit(0);
+}
+process.stderr.write(denyMessage(result.output) + "\n");
+process.exit(1);

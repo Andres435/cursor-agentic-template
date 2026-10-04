@@ -102,7 +102,7 @@ Every token paid in this workspace falls into one of three classes. Misidentifyi
 |---|---|---|---|
 | **Instruction** | Every turn, from turn 1 | Always-on rules (`.mdc`), SKILL.md descriptions in the skills catalog, MCP tool schemas | Keep docs thin; do not add always-on rules for anything recoverable from a command |
 | **Tool-result** | Once, then re-sent until the context window is compacted | `Read` outputs, shell stdout, ADO MCP results | Prefer retrieval (Search-CloseoutMemory, Resolve-TicketRoot JSON packet) over full-file dumps; compact aggressively |
-| **Skill body** | Only when the skill fires (via `/` slash or Custom Mode) | Bug-fix plan, feature-plan, start-ticket SKILL.md body | Safe to be detailed — not paid unless the user explicitly triggers the skill |
+| **Skill body** | Only when the skill fires (via `/` slash or a pinned skill) | Bug-fix plan, feature-plan, start-ticket SKILL.md body | Safe to be detailed — not paid unless the user explicitly triggers the skill |
 
 **Decision rule:** if a doc is referenced on every ticket, it is instruction tax. Slice it or make it a stub that redirects to the skill reference. If a doc is only needed at one phase, move it to `references/` and make `_shared/` a one-line stub.
 

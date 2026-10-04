@@ -3,39 +3,39 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "node .cursor/hooks/session-context.js",
+        "command": "node ./adapters/cursor/hooks/session-context.js",
         "timeout": 10
       }
     ],
     "beforeShellExecution": [
       {
-        "command": "node .cursor/hooks/git-commit-ticket.js",
-        "matcher": "git(\\.exe)?\\s+commit\\b",
+        "command": "node ./adapters/cursor/hooks/git-commit-ticket.js",
+        "matcher": "git(\\.exe)?\\s+(commit|add)\\b",
         "timeout": 8
       },
       {
-        "command": "node .cursor/hooks/git-push-agentic-flow.js",
+        "command": "node ./adapters/cursor/hooks/git-push-agentic-flow.js",
         "matcher": "git(\\.exe)?\\s+push\\b",
         "timeout": 120
       }
     ],
     "beforeSubmitPrompt": [
       {
-        "command": "node .cursor/hooks/ticket-command-nudge.js",
-        "matcher": "start-ticket|complete-task|prep-pr",
+        "command": "node ./adapters/cursor/hooks/ticket-command-nudge.js",
+        "matcher": "start-ticket|implement|review-changes|complete-task|prep-pr|address-pr-comments",
         "timeout": 5
       }
     ],
     "beforeReadFile": [
       {
-        "command": "node .cursor/hooks/closeout-read-guard.js",
+        "command": "node ./adapters/cursor/hooks/closeout-read-guard.js",
         "matcher": "Read",
         "timeout": 3
       }
     ],
     "preCompact": [
       {
-        "command": "node .cursor/hooks/precompact-nudge.js",
+        "command": "node ./adapters/cursor/hooks/precompact-nudge.js",
         "timeout": 3
       }
     ]

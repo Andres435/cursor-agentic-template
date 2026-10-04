@@ -8,6 +8,8 @@ run from the profile — they do not re-ask for repos or start commands.
 
 ## Three-chat lifecycle (branch mode — default)
 
+Branch mode is three chats.
+
 | Chat | What happens |
 |---|---|
 | **Chat 1 `/start-ticket`** | Plan → approve → **build in the same chat** |
@@ -23,8 +25,9 @@ Worktree mode (`--worktree`) is opt-in and only if `profile.worktreeSupported` i
 
 | Command | When |
 |---|---|
-| `/start-new-project` | Fill profile, checklist, and local-dev card for this product |
-| `/onboard` | Machine bootstrap after the profile is filled |
+| `/start-new-project` | Interview that fills profile, checklist, env card, and specialist |
+| `/onboard` | Machine setup after the profile exists |
+| `/engineering-mode` | Pin, then type only the ticket command |
 | `/doctor` | Health check (profile, hooks, gates) |
 | `/start-ticket TICKET-42 feature` | New work (feature, bug, spike, refactor) |
 | `/start-ticket TICKET-42 bug --worktree` | Isolated worktree (optional) |
@@ -34,12 +37,15 @@ Worktree mode (`--worktree`) is opt-in and only if `profile.worktreeSupported` i
 | `/prep-pr` | Commit / push / PR / tracker write-back |
 | `/start-stack TICKET-42` | Start `profile.stacks.startCommand` |
 | `/address-pr-comments TICKET-42` | Address reviewer comments |
+| `/peer-review <id>` | Draft comments; post only what you approve |
+| `/swap-stack <id>` | Give the stack to another ticket |
+| `/stop-stack` | Release the stack owner |
 
 ## Model selection
 
-- **Plan step** → Grok 4.5 (or Opus in Claude Code).
-- **Task steps** → Auto / Composer; honor `[low]|[med]|[high]` tags.
-- **New closeout chat** → Auto is fine.
+Tiers are `fast`, `standard`, `deep`, and `frontier`. The map for this IDE is under `adapters/`.
+`/engineering-mode` routes each step to its tier. A local login file, gitignored, is optional for a browser pass — do not commit it.
+
 
 ## Done table
 

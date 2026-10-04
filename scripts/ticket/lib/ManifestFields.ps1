@@ -13,12 +13,20 @@ function Get-TicketKeyFromRaw {
     $digits = $Ticket -replace '[^\d]', ''
     if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
     if ($Ticket -match '^(?<pre>[A-Za-z]+-?)\d') { return $Matches['pre'] + $digits }
-    return 'WI' + $digits
+    $prefix = 'TICKET-'
+    $profile = Join-Path (Get-CursorRepoRoot -FromScriptRoot $PSScriptRoot) 'profile.json'
+    if (Test-Path -LiteralPath $profile) {
+        try {
+            $p = Get-Content -LiteralPath $profile -Raw | ConvertFrom-Json
+            if ($p.ticketPrefix) { $prefix = [string]$p.ticketPrefix }
+        } catch { }
+    }
+    return $prefix + $digits
 }
 
 function Get-CursorRepoRoot {
     param([string]$FromScriptRoot)
-    # scripts/ticket or scripts/ticket/lib → .cursor repo root
+    # scripts/ticket or scripts/ticket/lib → tmo-agentic repo root
     $dir = $FromScriptRoot
     if ((Split-Path $dir -Leaf) -eq 'lib') { $dir = Split-Path $dir -Parent }
     $parent = Split-Path $dir -Parent
@@ -34,21 +42,27 @@ function Get-TicketManifestFile {
     return (Join-Path (Join-Path $RepoRoot 'plans') "$TicketKey-manifest.json")
 }
 
+# SHA-256 of an empty string. A stamp carrying it reviewed nothing.
+$script:EmptyDiffFingerprint = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+
+# Returns $null when there is nothing to fingerprint: missing path, git failure, or an empty
+# staged diff. Callers must treat $null as "no review possible", never as a match.
 function Get-StagedDiffFingerprint {
     param([Parameter(Mandatory)][string]$RepoPath)
+    if (-not (Test-Path -LiteralPath $RepoPath)) { return $null }
     $diff = ''
-    if (Test-Path -LiteralPath $RepoPath) {
-        $prev = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
-        try {
-            $raw = git -C $RepoPath diff --staged 2>$null
-            if ($null -ne $raw) {
-                if ($raw -is [array]) { $diff = ($raw -join "`n") } else { $diff = [string]$raw }
-            }
-        } finally {
-            $ErrorActionPreference = $prev
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $raw = git -C $RepoPath diff --staged 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        if ($null -ne $raw) {
+            if ($raw -is [array]) { $diff = ($raw -join "`n") } else { $diff = [string]$raw }
         }
+    } finally {
+        $ErrorActionPreference = $prev
     }
+    if ([string]::IsNullOrEmpty($diff)) { return $null }
     $bytes = [Text.Encoding]::UTF8.GetBytes($diff)
     $sha = [Security.Cryptography.SHA256]::Create()
     try {
@@ -88,7 +102,13 @@ function Get-ReviewSkipDecision {
     }
     $stored = ''
     if ($entry.PSObject.Properties.Name -contains 'fingerprint') { $stored = [string]$entry.fingerprint }
+    if (-not $stored -or $stored -eq $script:EmptyDiffFingerprint) {
+        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'empty-stamp'; verdict = $verdict }
+    }
     $current = Get-StagedDiffFingerprint -RepoPath $RepoPath
+    if (-not $current) {
+        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'empty-staged-diff'; verdict = $verdict }
+    }
     if ($current -ne $stored) {
         return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'fingerprint-mismatch'; verdict = $verdict }
     }

@@ -13,7 +13,7 @@ result, so its own context window stays lean (the subagent burns its own window 
 ## Why
 
 - **Parallelism:** independent repos/areas run at the same time (see `parallelPlan` in
-  [ticket-router](../skills/workflow/ticket-router/SKILL.md)).
+  [ticket-router](../skills/ticket-router/SKILL.md)).
 - **Token discipline:** big diffs, ADO/Sonar/PR JSON, and broad searches are read inside the
   subagent; only the distilled packet returns.
 
@@ -25,10 +25,8 @@ result, so its own context window stays lean (the subagent burns its own window 
   `Agent` tool with the translated types in
   [adapters/claude/model-usage.md](../adapters/claude/model-usage.md#subagent-function--agent-tool-mapping)
   instead.
-- **Model:** always pass `model: "composer-2.5-fast"` (highest included Composer / non-charged). Do **not**
-  use `inherit` for subagents when the parent is on Grok — keep fan-out on Composer. Never pick Other
-  Models for subagents unless the user explicitly orders it. If a slice is too large for Composer,
-  **split it** into smaller function calls rather than upsizing the model (see [model-usage.md](model-usage.md)).
+- **Model:** pass `model` from the active adapter's tier map ([model-routing.md](model-routing.md)). Do not omit it, and do not inherit a parent that is on a different tier.
+
 - Always pass: the **ticket id**, the **resolved path** for the target repo, and the exact
   question/scope. Subagents do not see the parent conversation. Get the path from
   `.\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket WI<n> -Json` — it returns `repos[].path` for the
@@ -99,17 +97,17 @@ result, so its own context window stays lean (the subagent burns its own window 
 
 ## `review-diff(repo) -> findings`
 
-- **subagent_type:** `code-reviewer` (WI17154: if the Task tool rejects that type, use `generalPurpose` with the code-reviewer prompt — do not skip the review).
+- **subagent_type:** `code-reviewer` (if that type is rejected, use the general-purpose type with the code-reviewer prompt — do not skip the review).
 - **Use:** staged-diff or pre-merge review per repo (parallel at closeout).
 - **Inputs:** `repo`, `repoPath`, `mode` (staged | premerge), optional `branch`.
-- **Does:** follow [../commands/review-changes.md](../commands/review-changes.md) +
+- **Does:** follow [../skills/review-changes/SKILL.md](../skills/review-changes/SKILL.md) +
   [review-protocol](review-protocol.md). Skip when `Get-ReviewSkip.ps1` says `skip: true`.
 - **Returns (compact):** the standard report shape from [severity-and-output](severity-and-output.md)
   (Blocker + Major by default) ending with a `Change-set understanding` Confidence Score.
 
 ## `pr-feedback-fetch(workItem) -> triagePacket`
 
-- **subagent_type:** `generalPurpose`
+- **subagent_type:** the general-purpose type
 - **Use:** gather + compact PR threads and CI/quality feedback for one work item (parallel per PR).
 - **Inputs:** `workItem`, optional explicit `prTargets[]`.
 - **Does:** gather PR threads for this ticket (GitHub `gh` or the profile's tracker adapter).

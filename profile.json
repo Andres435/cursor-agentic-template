@@ -7,13 +7,42 @@
   "defaultMode": "branch",
   "worktreeSupported": false,
   "baseBranchDefault": "main",
-  "repos": [{ "name": "app", "path": ".", "layers": ["app"] }],
-  "dependencyOrder": ["app"],
-  "specialists": ["fullstack"],
+  "repos": [
+    {
+      "name": "app",
+      "path": ".",
+      "layers": [
+        "app"
+      ]
+    }
+  ],
+  "dependencyOrder": [
+    "app"
+  ],
+  "specialists": [
+    "fullstack"
+  ],
   "adrIndex": null,
   "integrations": [],
   "stacks": {
     "default": "dev",
     "startCommand": "npm run dev"
-  }
+  },
+  "epochRerateAfter": 3,
+  "slashCommands": [
+    "engineering-mode",
+    "start-ticket",
+    "review-changes",
+    "complete-task",
+    "prep-pr",
+    "implement",
+    "start-stack",
+    "swap-stack",
+    "stop-stack",
+    "address-pr-comments",
+    "peer-review",
+    "start-new-project",
+    "doctor",
+    "onboard"
+  ]
 }

@@ -15,7 +15,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const HOOK = path.join(__dirname, "..", "session-context.js");
+const HOOK = path.join(__dirname, "..", "..", "adapters", "cursor", "hooks", "session-context.js");
 const PROFILE = path.join(__dirname, "..", "..", "profile.json");
 
 function ticketPrefix() {
