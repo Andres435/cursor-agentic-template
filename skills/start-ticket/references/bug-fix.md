@@ -121,7 +121,7 @@ The gate above lists the candidates; `None — <why>` is valid.
 
 ### 9. Confidence Score
 
-Fill out [../../../_shared/confidence-score.md](../../../_shared/confidence-score.md), using `Root-cause certainty` as the second-row axis. If `Root-cause certainty` is Med or Low, recommend additional investigation before implementation.
+Fill out [../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md), using `Root-cause certainty` as the second-row axis. If `Root-cause certainty` is Med or Low, recommend additional investigation before implementation.
 
 ### 10. Closeout (User-Invoked)
 

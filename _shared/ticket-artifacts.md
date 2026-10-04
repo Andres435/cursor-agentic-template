@@ -66,6 +66,9 @@ Do not self-assess this contract in prose. Run it:
   `/complete-task`. Do **not** run `-Phase close` at chat start: the close timestamp and the ledger
   row are written *during* `complete-task`, so a load-time close gate always fails.
 - `complete-task` runs `-Phase close` after the ledger row is written, before the retrospective.
+  A non-spike close also requires `plans/<ticket>-verify.json` with `pass: true` and a non-empty
+  `reviewReady` fingerprint for each local affected repo. When that repo path exists, the
+  fingerprint must match the staged diff, or the last commit when nothing is staged. A spike skips both.
 
 Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, missing[], found[] }`.
 
@@ -76,11 +79,11 @@ Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, 
 | `WI<n>-manifest.json` | [ticket-router](../skills/ticket-router/SKILL.md) | Classification **and** session state: `mode`, `workType`, `ticket` (title/adoType/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `sonarRepos`, `adrIndex`, `dbChange`, `needsDacpac`, `featureFlag`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, and the session timestamps. Drives what every later chat loads. |
 | `WI<n>-<type>-plan.md` | start-ticket | The approved plan. Opens with `## Plan Digest` and `## Engineering Decisions` (structure in [ticket-plan-output.md](ticket-plan-output.md) and [engineering-decisions.md](engineering-decisions.md)); the `-Phase start` gate checks those headings. Durable, and the only plan `implement` follows. |
 | `WI<n>-feedback.md` | address-pr-comments | Compact PR + Sonar triage packet. Conditional. |
-| `WI<n>-verify.json` | complete-task | Compact `verify-repo` packets. Conditional. |
+| `WI<n>-verify.json` | complete-task | Compact `verify-repo` packets. Required at `-Phase close` unless `workType` is `spike`. `pass` must be true. |
 | `WI<n>-review.md` | complete-task / review-changes | Compact `review-diff` output. Conditional. |
 | `plans/ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, `CtxS%` / `CtxR%` / `Ctx%`. Shared, append-only. |
 | `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([../skills/ticket-router/references/closeout-search.md](../skills/ticket-router/references/closeout-search.md)). |
-| `WI<n>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](task-retrospective.md)). Not required by any gate. |
+| `WI<n>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](../skills/complete-task/references/task-retrospective.md)). Not required by any gate. |
 
 Keep these small and durable. Summarize subagent packets into the relevant file; do not paste raw
 JSON into chat.

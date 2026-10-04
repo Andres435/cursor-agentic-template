@@ -45,25 +45,10 @@ function Get-TicketManifestFile {
 # SHA-256 of an empty string. A stamp carrying it reviewed nothing.
 $script:EmptyDiffFingerprint = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 
-# Returns $null when there is nothing to fingerprint: missing path, git failure, or an empty
-# staged diff. Callers must treat $null as "no review possible", never as a match.
-function Get-StagedDiffFingerprint {
-    param([Parameter(Mandatory)][string]$RepoPath)
-    if (-not (Test-Path -LiteralPath $RepoPath)) { return $null }
-    $diff = ''
-    $prev = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $raw = git -C $RepoPath diff --staged 2>$null
-        if ($LASTEXITCODE -ne 0) { return $null }
-        if ($null -ne $raw) {
-            if ($raw -is [array]) { $diff = ($raw -join "`n") } else { $diff = [string]$raw }
-        }
-    } finally {
-        $ErrorActionPreference = $prev
-    }
-    if ([string]::IsNullOrEmpty($diff)) { return $null }
-    $bytes = [Text.Encoding]::UTF8.GetBytes($diff)
+function Get-DiffFingerprintFromText {
+    param([AllowEmptyString()][string]$Diff)
+    if ([string]::IsNullOrEmpty($Diff)) { return $null }
+    $bytes = [Text.Encoding]::UTF8.GetBytes($Diff)
     $sha = [Security.Cryptography.SHA256]::Create()
     try {
         $hash = $sha.ComputeHash($bytes)
@@ -71,6 +56,50 @@ function Get-StagedDiffFingerprint {
     } finally {
         $sha.Dispose()
     }
+}
+
+# $null on a missing path or a git failure. An empty diff is '' so the caller can tell
+# "nothing staged" apart from "git failed".
+function Get-GitDiffText {
+    param(
+        [Parameter(Mandatory)][string]$RepoPath,
+        [Parameter(Mandatory)][string[]]$GitArgs
+    )
+    if (-not (Test-Path -LiteralPath $RepoPath)) { return $null }
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $raw = & git -C $RepoPath @GitArgs 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        if ($null -eq $raw) { return '' }
+        if ($raw -is [array]) { return ($raw -join "`n") }
+        return [string]$raw
+    } finally {
+        $ErrorActionPreference = $prev
+    }
+}
+
+# Returns $null when there is nothing to fingerprint: missing path, git failure, or an empty
+# staged diff. Callers must treat $null as "no review possible", never as a match.
+function Get-StagedDiffFingerprint {
+    param([Parameter(Mandatory)][string]$RepoPath)
+    $diff = Get-GitDiffText -RepoPath $RepoPath -GitArgs @('diff', '--staged')
+    if ($null -eq $diff) { return $null }
+    return (Get-DiffFingerprintFromText -Diff $diff)
+}
+
+# Staged diff when one exists; otherwise the last commit (HEAD^..HEAD).
+# $null means there is nothing to compare. Callers must treat $null as "no match".
+function Get-WorkDiffFingerprint {
+    param([Parameter(Mandatory)][string]$RepoPath)
+    $staged = Get-GitDiffText -RepoPath $RepoPath -GitArgs @('diff', '--staged')
+    if ($null -ne $staged) {
+        $stagedFp = Get-DiffFingerprintFromText -Diff $staged
+        if ($stagedFp) { return $stagedFp }
+    }
+    $commit = Get-GitDiffText -RepoPath $RepoPath -GitArgs @('diff', 'HEAD^..HEAD')
+    if ($null -eq $commit) { return $null }
+    return (Get-DiffFingerprintFromText -Diff $commit)
 }
 
 function Get-ReviewSkipDecision {

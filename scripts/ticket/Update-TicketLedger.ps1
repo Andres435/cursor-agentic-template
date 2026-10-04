@@ -11,7 +11,7 @@
 
     /complete-task calls this script instead of hand-writing a markdown table, so
     the row format cannot drift. A full WI<n>-closeout.md is written only when a
-    retrospective actually earns a page (see _shared/task-retrospective.md).
+    retrospective actually earns a page (see skills/complete-task/references/task-retrospective.md).
 
     Re-running for the same ticket REPLACES that ticket's row, so a reopen/reclose
     updates in place rather than duplicating.
@@ -29,7 +29,7 @@
     branch | worktree. Defaults to whatever Resolve-TicketRoot.ps1 reports.
 
 .PARAMETER Hours
-    Calculated session hours (see _shared/session-time-tracking.md).
+    Calculated session hours (see skills/complete-task/references/session-time-tracking.md).
 
 .PARAMETER Points
     Story points written to ADO Custom.StoryPointsActual.

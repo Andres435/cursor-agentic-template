@@ -52,7 +52,7 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
 
 3. **Generate PR Descriptions** for each repo:
    - **Title:** `<ticket>: <title>`
-   - **Summary:** What changed and why (2-3 sentences)
+   - **Summary:** What changed and why (2-3 sentences). Do not paste a full changelog, and do not append a generated-by trailer.
    - **Changes:** Bullet list
    - **Ticket:** link only — hours/points stay on the tracker
    - **Confidence:** carry forward the Confidence Score

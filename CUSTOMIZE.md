@@ -79,7 +79,7 @@ See `skills/start-ticket/references/ticket-intake-generic.md` for the pattern.
 Copy ADO reference files from the TMO workspace:
 - `skills/start-ticket/references/ado-ticket-workflow.md`
 - `skills/start-ticket/references/ado-field-mapping.md`
-- `_shared/ado-ticket-workflow.md`
+- `skills/start-ticket/references/ado-ticket-workflow.md`
 
 Then set `ticketSystem: "ado"` and `ticketPrefix: "WI"` in `profile.json`.
 

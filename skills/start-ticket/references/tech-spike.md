@@ -78,7 +78,7 @@ Include a numbered **Work Plan** section at the end of the plan. Tag every step 
 - Follow-up work items to create
 
 **Confidence Score**:
-- Fill out the rubric in [../../../_shared/confidence-score.md](../../../_shared/confidence-score.md), using `Findings certainty` as the second-row axis.
+- Fill out the rubric in [../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md), using `Findings certainty` as the second-row axis.
 - Use **Risks / Unknowns** to capture residual investigation gaps (e.g. "Did not test against production-scale data", "Vendor library behavior under concurrency unverified").
 - If `Findings certainty` is Med or Low, the recommendation should be flagged as provisional and a follow-up spike or POC should be proposed.
 

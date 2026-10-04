@@ -40,6 +40,9 @@ node hooks/tests/git-push-agentic-flow.test.js
 
 Pass if both exit 0. Fail with: `hooks test failed — check node is on PATH and hooks/ is intact`.
 
+Also read `scripts/.hook-errors.log`. Pass when it is missing or empty: `[PASS] hook errors — none`.
+Warn (not fail) when it has lines: `hook errors — scripts/.hook-errors.log has swallowed hook errors; read it, then delete it`.
+
 ### 3. Artifact gate resolves
 
 ```powershell

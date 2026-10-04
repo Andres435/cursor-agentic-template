@@ -23,7 +23,7 @@ the user needs. These are caps per command, not targets to fill.
 | `/implement` progress | `step N/M done`; do not narrate file reads |
 | `/implement` stop-for-review | steps done · files changed per repo · tests + outcome · Deviations · what was left out |
 | `/complete-task` approval package | the package fields only, no commentary |
-| retrospective | ≤5 lines ([task-retrospective.md](task-retrospective.md#chat-output)) |
+| retrospective | ≤5 lines (`skills/complete-task/references/task-retrospective.md`) |
 | any subagent return | the compact packet shape in [subagent-functions.md](subagent-functions.md) |
 
 Always, in every command:
@@ -59,7 +59,7 @@ appears to contradict it, this file wins.
 
 ## Standard report shape
 
-Use these headings only when they have content. The verdict (and Confidence Score, see [confidence-score.md](confidence-score.md)) are always included.
+Use these headings only when they have content. The verdict (and Confidence Score, see [confidence-score.md](../skills/complete-task/references/confidence-score.md)) are always included.
 
 ```markdown
 ## Review report
@@ -87,7 +87,7 @@ Use these headings only when they have content. The verdict (and Confidence Scor
 
 ### Confidence Score
 
-<Multi-dimensional block per .cursor/_shared/confidence-score.md>
+<Multi-dimensional block per skills/complete-task/references/confidence-score.md>
 
 ### Verdict
 

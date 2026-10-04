@@ -136,7 +136,7 @@ Nothing after that inner fence.
 
 ## At Ticket Close
 
-Closeout output is owned entirely by [task-retrospective.md](task-retrospective.md) — the three
+Closeout output is owned entirely by [task-retrospective.md](../skills/complete-task/references/task-retrospective.md) — the three
 questions, the scorecard rubrics, the ledger row, and the shape of the rare `WI<n>-closeout.md`.
 
 Every closed ticket leaves **one row** in
@@ -145,5 +145,5 @@ plus whatever durable lesson the user chose to record in
 [../plans/closeout-index.md](../plans/closeout-index.md). A full closeout page is the exception.
 
 **Session scorecard**, **Retrospective**, and **Other findings** are required. Scoring rubric:
-[task-retrospective.md](task-retrospective.md). After writing the file, post a brief chat summary with
+[task-retrospective.md](../skills/complete-task/references/task-retrospective.md). After writing the file, post a brief chat summary with
 the path. Do not repeat the closeout in chat.

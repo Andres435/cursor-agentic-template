@@ -113,7 +113,7 @@ Follow [../../../_shared/adr-policy.md](../../../_shared/adr-policy.md). When `a
 
 ### 12. Confidence Score
 
-Fill out [../../../_shared/confidence-score.md](../../../_shared/confidence-score.md), using `Design certainty` as the second-row axis. If `Design certainty` is Med or Low, recommend a tech spike using [tech-spike.md](tech-spike.md).
+Fill out [../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md), using `Design certainty` as the second-row axis. If `Design certainty` is Med or Low, recommend a tech spike using [tech-spike.md](tech-spike.md).
 
 ### 13. Closeout (User-Invoked)
 

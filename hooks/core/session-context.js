@@ -12,6 +12,7 @@
 const { execFileSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { writeHookError } = require("./hook-log");
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
 
@@ -24,8 +25,8 @@ function loadProfile() {
   for (const candidate of candidates) {
     try {
       return JSON.parse(fs.readFileSync(candidate, "utf8"));
-    } catch {
-      // try next
+    } catch (error) {
+      writeHookError("session-context", error);
     }
   }
   return null;
@@ -64,7 +65,10 @@ function runResolve(ticket) {
       );
       return JSON.parse(String(result).trim());
     } catch (err) {
-      if (!err || err.code !== "ENOENT") return null;
+      if (!err || err.code !== "ENOENT") {
+        writeHookError("session-context", err);
+        return null;
+      }
     }
   }
   return null;
@@ -82,7 +86,8 @@ function resolveNextAction(ticket) {
   let manifest;
   try {
     manifest = JSON.parse(fs.readFileSync(path.join(plansDir, ticket + "-manifest.json"), "utf8"));
-  } catch {
+  } catch (error) {
+    writeHookError("session-context", error);
     return "start-ticket";
   }
   if (manifest.completedAtUtc) return "closed";

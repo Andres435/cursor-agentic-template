@@ -11,6 +11,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { writeHookError } = require("./hook-log");
 
 const DEFAULT_FILE = path.join(__dirname, "..", "..", "scripts", ".ctx-usage.json");
 const TAIL_BYTES = 512 * 1024;
@@ -33,8 +34,8 @@ function record(session, pct, source) {
   try {
     data = JSON.parse(fs.readFileSync(file, "utf8"));
     if (!data.sessions) data.sessions = {};
-  } catch {
-    // start fresh
+  } catch (error) {
+    writeHookError("context-usage", error);
   }
   data.latest = entry;
   if (entry.session) data.sessions[entry.session] = entry;
@@ -63,7 +64,8 @@ function fromTranscript(transcriptPath) {
     } finally {
       fs.closeSync(fd);
     }
-  } catch {
+  } catch (error) {
+    writeHookError("context-usage", error);
     return null;
   }
   const lines = text.split(/\r?\n/);
@@ -73,7 +75,9 @@ function fromTranscript(transcriptPath) {
     let row;
     try {
       row = JSON.parse(line);
-    } catch {
+    } catch (error) {
+      // A tail read starts mid-line. Only a whole object that fails to parse is a hook failure.
+      if (line.trimStart().startsWith("{")) writeHookError("context-usage", error);
       continue;
     }
     const usage = row && row.message && row.message.usage;

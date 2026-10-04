@@ -29,3 +29,5 @@ plans/*
 # Measured context and the one active-stack owner (dotfile on macOS and Linux).
 scripts/.ctx-usage.json
 scripts/.active-stack.json
+# Swallowed hook errors (hooks/core/hook-log.js). /doctor warns when this is non-empty.
+scripts/.hook-errors.log

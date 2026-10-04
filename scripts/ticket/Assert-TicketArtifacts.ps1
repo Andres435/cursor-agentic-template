@@ -25,8 +25,12 @@
                    The close timestamp and the ledger row are written during the
                    command, so running this at load is a guaranteed FAIL.
                    Close accepts blank context percents and fails one outside 0-100.
-                   ctxPct.review is required unless workType is spike or
-                   reviewSkipped is true. Estimate when the indicator is hidden.
+                   A non-spike close also requires plans/<ticket>-verify.json with
+                   pass true, and a non-empty reviewReady fingerprint for each local
+                   affected repo. When that repo's path exists, the fingerprint must
+                   match the staged diff, or the last commit when nothing is staged.
+                   A spike skips both. ctxPct.review is required unless workType is
+                   spike or reviewSkipped is true. Estimate when the indicator is hidden.
 
     Session timestamps live in the manifest. The retired WI<n>-session.json is still
     accepted as a fallback so tickets started before that change can close.
@@ -66,6 +70,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'lib/ManifestFields.ps1')
 
 # Read ticket prefix from profile.json (default 'WI' for TMO).
 # This script does not dot-source _ServiceLauncherLib.ps1.
@@ -386,6 +392,125 @@ function Test-CloseContext {
     }
 }
 
+function Get-CloseRepoNames {
+    $list = [System.Collections.Generic.List[object]]::new()
+    foreach ($entry in @(Get-ManifestField 'affectedRepos')) {
+        if (-not $entry) { continue }
+        if ($entry -is [string]) {
+            $list.Add([pscustomobject]@{ repo = [string]$entry; path = $null })
+            continue
+        }
+        $props = @($entry.PSObject.Properties.Name)
+        if ($props -notcontains 'repo') { continue }
+        $name = [string]$entry.repo
+        if (-not $name) { continue }
+        if (($props -contains 'local') -and ($null -ne $entry.local) -and -not [bool]$entry.local) { continue }
+        $path = $null
+        if (($props -contains 'path') -and $entry.path) { $path = [string]$entry.path }
+        $list.Add([pscustomobject]@{ repo = $name; path = $path })
+    }
+    return @($list)
+}
+
+# Real closes resolve repo paths. Fixture runs pass -Root and only compare when the
+# manifest entry itself names a path, so a missing checkout stays a JSON check.
+function Get-ResolvedRepoPaths {
+    $map = @{}
+    if ($Root) { return $map }
+    $resolveScript = Join-Path $PSScriptRoot 'Resolve-TicketRoot.ps1'
+    if (-not (Test-Path -LiteralPath $resolveScript)) { return $map }
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $json = & $resolveScript -Ticket $Key -Json 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $json) { return $map }
+        $resolved = $json | ConvertFrom-Json
+        foreach ($r in @($resolved.repos)) {
+            if (-not $r) { continue }
+            $names = @($r.PSObject.Properties.Name)
+            $exists = ($names -contains 'exists') -and [bool]$r.exists
+            if ($exists -and $r.path) { $map[[string]$r.repo] = [string]$r.path }
+        }
+    }
+    catch { }
+    finally { $ErrorActionPreference = $prev }
+    return $map
+}
+
+function Test-VerifyReceipt {
+    $name = "$Key-verify.json"
+    $path = Join-Path $PlansDir $name
+    if (-not (Test-Path -LiteralPath $path)) {
+        $missing.Add("$name -- verify-repo receipt with pass true")
+        return
+    }
+    try {
+        $doc = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        $missing.Add("$name -- present but not valid JSON: $($_.Exception.Message)")
+        return
+    }
+    $packets = @($doc)
+    if ($packets.Count -eq 0) {
+        $missing.Add("$name -- verify-repo receipt has no packets")
+        return
+    }
+    foreach ($packet in $packets) {
+        $names = @()
+        if ($packet) { $names = @($packet.PSObject.Properties.Name) }
+        $ok = ($names -contains 'pass') -and [bool]$packet.pass
+        if (-not $ok) {
+            $missing.Add("$name -- pass must be true")
+            return
+        }
+    }
+    $found.Add($name)
+}
+
+function Test-ReviewFingerprints {
+    $repos = @(Get-CloseRepoNames)
+    $resolved = Get-ResolvedRepoPaths
+    $stampRepos = $null
+    if ($manifest -and ($manifest.PSObject.Properties.Name -contains 'reviewReady') -and $manifest.reviewReady) {
+        $stamp = $manifest.reviewReady
+        if ($stamp.PSObject.Properties.Name -contains 'repos') { $stampRepos = $stamp.repos }
+    }
+    foreach ($repo in $repos) {
+        $entry = $null
+        if ($stampRepos -and ($stampRepos.PSObject.Properties.Name -contains $repo.repo)) {
+            $entry = $stampRepos.($repo.repo)
+        }
+        $fp = ''
+        if ($entry -and ($entry.PSObject.Properties.Name -contains 'fingerprint')) {
+            $fp = [string]$entry.fingerprint
+        }
+        $fpNorm = $fp.ToLowerInvariant()
+        if ($fpNorm -notmatch '^[0-9a-f]{64}$' -or $fpNorm -eq $script:EmptyDiffFingerprint) {
+            $missing.Add("$Key-manifest.json -- reviewReady.repos.$($repo.repo).fingerprint must be a non-empty review hash")
+            continue
+        }
+        $path = $repo.path
+        if (-not $path -and $resolved.ContainsKey($repo.repo)) { $path = $resolved[$repo.repo] }
+        if (-not $path -or -not (Test-Path -LiteralPath $path)) {
+            $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo).fingerprint)")
+            continue
+        }
+        $current = Get-WorkDiffFingerprint -RepoPath $path
+        if (-not $current -or ($current -ne $fpNorm)) {
+            $missing.Add("$Key-manifest.json -- reviewReady.repos.$($repo.repo).fingerprint does not match the staged diff or last commit")
+            continue
+        }
+        $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo).fingerprint matches)")
+    }
+}
+
+function Test-CloseWork {
+    if ($workType -eq 'spike') { return }
+    Test-VerifyReceipt
+    Test-ReviewFingerprints
+}
+
 function Test-LedgerRow {
     $ledger = Join-Path $PlansDir 'ticket-ledger.md'
     if (-not (Test-Path -LiteralPath $ledger)) {
@@ -420,6 +545,7 @@ switch ($Phase) {
         Test-TimestampField -Fields @('completedAtUtc', 'reclosedAtUtc') -Why 'no completedAtUtc or reclosedAtUtc set'
         Test-CloseContext
         Test-LedgerRow
+        Test-CloseWork
     }
 }
 

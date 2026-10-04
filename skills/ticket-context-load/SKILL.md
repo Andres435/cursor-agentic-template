@@ -1,6 +1,6 @@
 ---
 name: ticket-context-load
-description: Hydrate a fresh chat from a ticket's existing artifacts — mode and root, manifest, approved plan, doc set, environment card, prior findings — instead of re-fetching the tracker or re-deriving scope. Use as the first step of any chat that did not itself produce that state.
+description: Hydrate a fresh chat from a ticket's existing artifacts — mode and root, manifest, approved plan, doc set, environment card, prior findings — instead of re-fetching the tracker or re-deriving scope. First step of complete-task, review-changes, address-pr-comments, and implement in worktree mode or when resuming.
 keywords: context load, hydrate, fresh chat, manifest, mode, root, artifacts gate, prior findings, load profile
 icon: book
 color: blue
