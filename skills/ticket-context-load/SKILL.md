@@ -18,9 +18,12 @@ re-plans. That is the failure this skill exists to prevent.
 
 **`complete-task`** is a fresh closeout chat. It does **not** need the Work Plan steps, the
 `docSet`, or the `environmentCard` — those were already executed. Read only:
-- `<ticket>-manifest.json` (mode, repos, timestamps, `priorFindings`)
+- `<ticket>-manifest.json` (mode, repos, timestamps, `priorFindings`, optional `stackSmoke`)
 - The **Plan Digest**, **Engineering Decisions**, and **Deviations** sections of
   `<ticket>-<type>-plan.md` (skip the Work Plan steps entirely)
+
+**`review-changes`** reviews the diff, not the plan. Read the same files as `complete-task`, minus
+`priorFindings` and Deviations. The plan sections are there so findings can cite what was intended.
 
 **`implement` and `address-pr-comments`** need the full plan and `docSet` — use the standard steps
 below unchanged.
@@ -31,11 +34,15 @@ This profile is applied at step 4 and step 5 below.
 
 As the **first step** of a chat that did not produce the state itself:
 [complete-task](../complete-task/SKILL.md),
+[review-changes](../review-changes/SKILL.md) (when a ticket key is known),
 [address-pr-comments](../address-pr-comments/SKILL.md), and
 [implement](../implement/SKILL.md).
 
 **Do not run it** in `/start-ticket` — that command *produces* this state. In branch mode
 `/start-ticket` also builds in the same chat, so loading there would re-read what it just wrote.
+That avoided reload is the point of branch mode.
+
+**Do not run it** in `/peer-review` — coworker PRs have no local ticket artifacts.
 
 **Do not run it** in `/onboard` or `/doctor`.
 

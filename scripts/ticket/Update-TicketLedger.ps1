@@ -32,7 +32,7 @@
     Calculated session hours (see skills/complete-task/references/session-time-tracking.md).
 
 .PARAMETER Points
-    Story points written to ADO Custom.StoryPointsActual.
+    Story points written to the tracker's points field.
 
 .PARAMETER Efficiency
 .PARAMETER Contextualization

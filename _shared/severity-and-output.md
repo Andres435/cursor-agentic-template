@@ -16,13 +16,14 @@ the user needs. These are caps per command, not targets to fill.
 | Command / step | Chat output |
 |---|---|
 | `ticket-router` | one line: work type, mode, repos, integration, specialists |
-| `ticket-context-load` | one `Loaded WI<n> — …` line |
-| `/start-ticket` **branch** | startup line · implementation summary · "run `/complete-task` in a new chat" |
+| `ticket-context-load` | one `Loaded <ticket> — …` line |
+| `/start-ticket` **branch** | startup line · implementation summary · "run `/review-changes` in a new chat, then `/complete-task`" |
 | `/start-ticket` **worktree** | startup line · approved Work Plan with `[low]/[med]/[high]` tags · handoff paste block last |
-| plan revision in Plan mode | **only the section that changed** — never reprint the whole plan |
+| plan revision in plan mode | **only the section that changed** — never reprint the whole plan |
 | `/implement` progress | `step N/M done`; do not narrate file reads |
 | `/implement` stop-for-review | steps done · files changed per repo · tests + outcome · Deviations · what was left out |
-| `/complete-task` approval package | the package fields only, no commentary |
+| `/complete-task` approval package | the package fields only, no commentary; do **not** reload the Work Plan steps or `docSet` |
+| `/peer-review` draft | proposed comments only (id, path:line, Why, Comment to post); no diffs/JSON; no Blocker/Major labels |
 | retrospective | ≤5 lines (`skills/complete-task/references/task-retrospective.md`) |
 | any subagent return | the compact packet shape in [subagent-functions.md](subagent-functions.md) |
 
@@ -83,7 +84,7 @@ Use these headings only when they have content. The verdict (and Confidence Scor
 
 ### Notes
 
-<Optional. Max 2-3 short lines: API breaks, residual risk, test expectation churn. Omit if empty.>
+<Optional. Max 2-3 short lines: API breaks, residual risk, test expectation churn, stack smoke label when UI/runtime. Omit if empty.>
 
 ### Confidence Score
 
@@ -101,15 +102,15 @@ Every token paid in this workspace falls into one of three classes. Misidentifyi
 | Class | Paid | Examples | Optimization lever |
 |---|---|---|---|
 | **Instruction** | Every turn, from turn 1 | Always-on rules (`.mdc`), SKILL.md descriptions in the skills catalog, MCP tool schemas | Keep docs thin; do not add always-on rules for anything recoverable from a command |
-| **Tool-result** | Once, then re-sent until the context window is compacted | `Read` outputs, shell stdout, ADO MCP results | Prefer retrieval (Search-CloseoutMemory, Resolve-TicketRoot JSON packet) over full-file dumps; compact aggressively |
-| **Skill body** | Only when the skill fires (via `/` slash or a pinned skill) | Bug-fix plan, feature-plan, start-ticket SKILL.md body | Safe to be detailed — not paid unless the user explicitly triggers the skill |
+| **Tool-result** | Once, then re-sent until the context window is compacted | `Read` outputs, shell stdout, tracker MCP results | Prefer retrieval (Search-CloseoutMemory, Resolve-TicketRoot JSON packet) over full-file dumps; compact aggressively |
+| **Skill body** | Only when the skill fires (via `/` slash or a pinned mode) | Bug-fix plan, feature-plan, start-ticket SKILL.md body | Safe to be detailed — not paid unless the user explicitly triggers the skill |
 
 **Decision rule:** if a doc is referenced on every ticket, it is instruction tax. Slice it or make it a stub that redirects to the skill reference. If a doc is only needed at one phase, move it to `references/` and make `_shared/` a one-line stub.
 
-**`Ctx%` metric:** the context-window percentage shown in Cursor at `/complete-task` time (also surfaced by the `preCompact` hook). Record it in the ledger row via `-ContextPct`. When the average across tickets exceeds ~60%, a TMO MCP context-loader becomes worth prototyping.
+**`Ctx%` metric:** context-window occupancy, recorded per **chat** with `report-context` ([harness-verbs.md](harness-verbs.md)) (not ticket lifetime). `/start-ticket` writes `ctxPct.start` (`CtxS%`); `/review-changes` writes `ctxPct.review` (`CtxR%`); `/complete-task` writes `ctxPct.close` (ledger `Ctx%`). `/implement` is not recorded. Use the hook-measured value; never estimate — a blank is honest. When average CtxS% across tickets stays high, a context-loader MCP becomes worth prototyping.
 
-**Hooks that enforce this law:** `sessionStart` injects a `Resolve-TicketRoot` packet (tool-result, once). `beforeReadFile` denies closeout dumps so agents use `Search-CloseoutMemory.ps1`. Workflow skills that write branches/PRs/ADO set `disable-model-invocation` so their bodies stay skill-class, not instruction-class.
+**Hooks that enforce this law:** the session-start hook injects a `Resolve-TicketRoot` packet (tool-result, once). The read guard denies closeout dumps so agents use `Search-CloseoutMemory.ps1`. Workflow skills that write branches/PRs/tracker set `disable-model-invocation` so their bodies stay skill-class, not instruction-class.
 
-## Conflicts with Sonar
+## Conflicts with static analysis
 
 If a quality-gate native severity disagrees with the team scheme above, record the mapping in an overlay rule — do not invent a severity.

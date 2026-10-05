@@ -14,7 +14,7 @@ Create a feature plan from requirements through behavior slices, affected repos,
 
 Ask for any missing essentials:
 
-- **Work item number**: ADO work item ID such as `WI12345` or `AB#12345`
+- **Ticket id**: the tracker id, using `profile.ticketPrefix`
 - **Title**: feature or work item title
 - **Description**: what the feature should do
 - **Acceptance criteria**: conditions that must be met
@@ -23,24 +23,35 @@ If a ticket id is present, `/start-ticket` owns intake. Do not re-ask profile fi
 
 ## Pre-Plan Gate (resolve before designing)
 
-Each item is a **decision candidate** for Engineering Decisions
-([../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md)).
-An open item stops the plan.
+Each item below is a **decision candidate**: confirm it, or ask the user. Whatever you confirm is
+recorded in the plan's Engineering Decisions section (step 2b) —
+[../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md).
+An item still open when the Work Plan would be drafted stops the plan; it does not become a default.
 
-Confirm these up front:
+A wrong assumption here causes rework:
 
-- **External API contract:** when the feature calls an external/vendor API, confirm the exact request/response bodies and types before design.
+- **External API contract:** when the feature calls an external/vendor API, confirm the exact request/response bodies and types before design. A mock must echo generated IDs and honor the vendor's request filters.
 - **AC vs description conflict:** when acceptance criteria and description disagree, **lock to the acceptance criteria** and call out the conflict.
 - **Contract placement:** decide where new integration contracts live (integration-owned vs shared packages) before building.
 - **Vendor enum naming:** map to the vendor API's enum names, not your internal `enum.ToString()` equivalents.
+
+## Clarify batch
+
+If the acceptance criteria, the description, or a Pre-Plan Gate item is ambiguous, ask **at most five
+questions in one turn** (`ask-user`). Do not drip them across turns. Write each answer into
+Engineering Decisions before drafting the Work Plan. An answer that stays only in chat is not resolved.
 
 ## Workflow
 
 **Switch to Plan mode automatically** and build the full plan there. Follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the plan lives in Plan mode, not in the chat tab.
 
-When invoked from [/start-ticket](../SKILL.md), call `enter-plan` without asking the user to confirm. `/start-ticket` owns approval and the final message: Approved plan, then the copy-paste fence last ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)).
+When invoked from [/start-ticket](../SKILL.md), run `enter-plan` ([harness-verbs](../../../_shared/harness-verbs.md)) without asking the user to confirm. `/start-ticket` owns approval and the final message: Approved plan, then the copy-paste fence last ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)).
 
-Include a numbered **Work Plan** section at the end of the plan. Tag every step `[low]|[med]|[high]` per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) so implementation picks the fast, standard, or deep tier.
+Include a numbered **Work Plan** section at the end of the plan. Tag every step `[low]|[med]|[high]` per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the tag is the tier the step runs on ([../../../_shared/model-routing.md](../../../_shared/model-routing.md#difficulty-rubric)).
+
+Each step cites the behavior it satisfies (`B1`, `B2`) or `Foundational` when it blocks every behavior. A step with no behavior id, or a behavior with no step, is a plan defect. When there are three or more behaviors, group the steps **Foundational**, then one group per behavior in priority order. Cross-repo order inside a group still follows [../../../_shared/cross-repo-workflow.md](../../../_shared/cross-repo-workflow.md).
+
+TDD belongs on the Work Plan, not on the behavior list. **Default to RED -> GREEN -> REFACTOR** for any behavior-heavy, risky, or cross-layer step. Skip TDD only for trivial wiring (e.g. a pass-through DTO property) and note the reason on that step. Use existing fixtures before new test structure. Do not write every test up front. Use [../../tdd-red-green-refactor/SKILL.md](../../tdd-red-green-refactor/SKILL.md) for behavior-heavy steps.
 
 UI/CSS verification: [../../../_shared/runtime-verify.md](../../../_shared/runtime-verify.md) — no CDP, no server rebuild for markup/CSS.
 
@@ -52,18 +63,60 @@ Use [../../environment-context/SKILL.md](../../environment-context/SKILL.md) bef
 
 Summarize the user-facing or API-facing outcome and the main behavior changes.
 
-### 3. Behavior Slices
+### 2b. Engineering Decisions
 
-Plan features as behavior slices:
+Record the calls resolved by the Pre-Plan Gate and the clarify batch, in the shape defined by
+[../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md).
+This section is written **before** the Behaviors list below, because a boundary decided late is a
+behavior rewritten.
 
-1. List observable behaviors from the acceptance criteria.
-2. Choose the smallest behavior that proves the path.
-3. **Default to RED -> GREEN -> REFACTOR** for any behavior-heavy, risky, or cross-layer logic. Skip TDD only for trivial wiring (e.g. a pass-through DTO property) and note the reason explicitly.
-4. Use existing fixtures and test helpers before creating new test structure.
-5. Avoid writing every test up front; each passing slice should inform the next one.
-6. Broaden test scope only after the focused slice is green.
+Features almost always have at least one. The usual candidates:
 
-Use [../../tdd-red-green-refactor/SKILL.md](../../tdd-red-green-refactor/SKILL.md) to drive behavior-heavy or risky slices through the RED -> GREEN -> REFACTOR loop.
+- **Contract placement** — integration-owned vs shared packages.
+- **Scope boundary** — which repos and layers this ticket delivers, and which follow-up owns the rest.
+- **Feature flag** — the flag name, and whether flag-off behavior is also in scope.
+- **Vendor contract** — enum names, request/response shape, auth, and mock behavior.
+- **AC vs description conflict** — AC wins; name the conflict rather than silently resolving it.
+- **Design shape** — a deep change that crosses a module or repo boundary, or adds a type, contract,
+  table, or endpoint no Accepted ADR settles, runs
+  [../../architect/SKILL.md](../../architect/SKILL.md): the winner is the
+  Decision, the loser its Rejected. Otherwise, with any `[high]` step, write
+  `architect skipped: <reason>` (the start gate checks it).
+- **Shared owner** — a shared or protected type, shared schema object, shared library contract, or
+  public DTO runs [../../blast-radius/SKILL.md](../../blast-radius/SKILL.md); the entry
+  carries its safety fact and proof level.
+
+If none apply, write `None —` with the one clause saying why. Cite a principle from
+[../../../_shared/engineering-principles.md](../../../_shared/engineering-principles.md) only
+in the **Why** of a decision it changed.
+
+### 3. Behaviors
+
+Observable behavior only — what a user or API caller can see. No file paths, no repos, no layers.
+
+If the user points at an existing spec with a behavior list, load it and use its behaviors as this
+list. Do not re-interview them.
+
+```markdown
+## Behaviors
+- **B1** (P1): <observable behavior>
+  - **Check:** <how this behavior is proven on its own>
+- **B2** (P2): ...
+  - **Check:** ...
+```
+
+One behavior per acceptance criterion that names a distinct outcome. Priority is P1, then P2, then P3.
+
+### Consistency report
+
+Immediately before asking for approval, report these three lists in chat:
+
+- Behaviors with no Work Plan step
+- Work Plan steps with no behavior id
+- Engineering Decisions that contradict an acceptance criterion
+
+Do not offer the draft for approval, and do not persist, until each list is empty or the user
+explicitly accepts that item as out of scope. Record an accepted omission in Engineering Decisions.
 
 ### 4. Affected Repositories
 
@@ -100,7 +153,7 @@ Use [../../../_shared/test-verification.md](../../../_shared/test-verification.m
 
 - Run the quality gate only when the manifest lists a key for that repo.
 - Review the plan and eventual changes against [../../../_shared/review-protocol.md](../../../_shared/review-protocol.md).
-- Note any documentation updates in TmoDocs.
+- Note any documentation updates the change needs.
 
 ### 11. ADR Compliance
 

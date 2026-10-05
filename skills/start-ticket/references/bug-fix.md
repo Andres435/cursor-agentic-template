@@ -14,7 +14,7 @@ Guide bug investigation from symptoms to root cause, regression protection, impl
 
 Ask for any missing essentials:
 
-- **Work item number**: ADO work item ID such as `WI12345` or `AB#12345`
+- **Ticket id**: the tracker id, using `profile.ticketPrefix`
 - **Title**: bug or work item title
 - **Description**: what is happening
 - **Steps to reproduce**: how to trigger the bug
@@ -23,15 +23,16 @@ Ask for any missing essentials:
 
 ### Symptom + environment gate (before investigating)
 
-Each item below is a **decision candidate**: confirm it, or ask. Record what you confirm in
-**Engineering Decisions** ([../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md)).
-An item still open when the Work Plan would be drafted stops the plan.
+Each item below is a **decision candidate**: confirm it, or ask the user. Whatever you confirm is
+recorded in the plan's Engineering Decisions section (step 5b) —
+[../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md).
+An item still open when the Work Plan would be drafted stops the plan; it does not become a default.
 
-Nail these down first — missing them causes wrong-repo exploration:
+Nail these down first; missing them causes wrong-repo exploration and rework:
 
-- **Concrete symptom:** the observed behavior, not just "it's broken".
-- **Environment/data constraints:** flags, empty tables, which client/env failed.
-- **Test matrix** for data-shaped bugs: agree the cases before changing query shape.
+- **Concrete symptom:** the exact observed behavior (the message, the wrong value, the sequence that fails on first try and works on the second), not just "it's broken".
+- **Environment/data constraints:** empty tables, one customer mapped to several databases, whether the feature flag is on/off for the failing case, and whether **flag-off is also broken** (tells you if it is a legacy vs modern-path bug — skips wrong-repo hunting).
+- **Test matrix (data-shaped bugs):** for payment or report bugs, agree the matrix — customer, database, period, mixed row kinds, time-boundary cases — before changing a query shape or fingerprint.
 
 If a ticket id is present, `/start-ticket` already owns intake and branches. Do not re-ask
 profile fields (repos, stack, prefix).
@@ -40,9 +41,9 @@ profile fields (repos, stack, prefix).
 
 **Switch to Plan mode automatically** and build the full plan there. Follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the plan lives in Plan mode, not in the chat tab.
 
-When invoked from [/start-ticket](../SKILL.md), call `enter-plan` without asking the user to confirm. `/start-ticket` owns approval and the final message: Approved plan, then the copy-paste fence last ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)).
+When invoked from [/start-ticket](../SKILL.md), run `enter-plan` ([harness-verbs](../../../_shared/harness-verbs.md)) without asking the user to confirm. `/start-ticket` owns approval and the final message: Approved plan, then the copy-paste fence last ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)).
 
-Include a numbered **Work Plan** section at the end of the plan. Tag every step `[low]|[med]|[high]` per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) so implementation picks the fast, standard, or deep tier.
+Include a numbered **Work Plan** section at the end of the plan. Tag every step `[low]|[med]|[high]` per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the tag is the tier the step runs on ([../../../_shared/model-routing.md](../../../_shared/model-routing.md#difficulty-rubric)).
 
 UI/CSS verification (if the bug is visual): [../../../_shared/runtime-verify.md](../../../_shared/runtime-verify.md) — no CDP, no server rebuild for markup/CSS.
 
@@ -58,11 +59,11 @@ Use [../../environment-context/SKILL.md](../../environment-context/SKILL.md) bef
 
 ### 2b. Already-fixed / sibling-PR gate (before crediting a cause)
 
-When QA (or the user) says the bug is already gone, or the plan would touch `LegacyModalSupport` / overlay z-index / modal dispose:
+When QA (or the user) says the bug is already gone, or the plan would touch shared teardown/overlay code:
 
-1. On the affected repo, do not stop at the newest similarly named merge (`z-index`, `tmomodal`, `renderX`). Also run `git log --oneline --grep=revert -20` and `git log --diff-filter=D --summary -- <suspected paths>` so a **deleted** helper is not missed.
-2. If the active work item has Related links, `wit_work_item` get those IDs (still `project: "Net"`) and read `Custom.RootCauseAnalysis` — WI21709 named WI21275/WI21657 as the regressors; a recent overlay PR did not.
-3. Look for recently deleted helpers (run `git log --diff-filter=D --summary -- <suspected paths>`) — a fix that reinvents deleted code is usually wrong.
+1. On the affected repo, do not stop at the newest similarly named merge. Also run `git log --oneline --grep=revert -20` and `git log --diff-filter=D --summary -- <suspected paths>` so a **deleted** helper is not missed.
+2. If `profile.ticketSystem` is not `none` and the active ticket has related links, read those tickets (read-only) and any root-cause field — the named regressor is often not the most recent similar PR.
+3. A fix that reinvents a recently deleted helper is usually wrong; find out why it was removed.
 
 ### 3. Affected Components
 
@@ -73,6 +74,7 @@ When QA (or the user) says the bug is already gone, or the plan would touch `Leg
 ### 4. Root Cause Analysis
 
 - Explain the likely cause and why the behavior escaped existing coverage.
+- Cite the **executable statement**, not a comment or doc-comment that describes it (a mismatch is a finding, not the behavior).
 - Search for the same pattern elsewhere when the bug suggests a reusable defect.
 - When `git blame` or `git log` reveals historical ticket IDs, look them up read-only. Do not write to historical tickets.
 - If root-cause certainty is low, recommend the smallest additional investigation before coding.
@@ -93,9 +95,30 @@ Use [../../tdd-red-green-refactor/SKILL.md](../../tdd-red-green-refactor/SKILL.m
 
 ### 5b. Engineering Decisions
 
-Write the plan's **Engineering Decisions** section before the Work Plan
-([../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md)).
-The gate above lists the candidates; `None — <why>` is valid.
+Record the calls resolved by the symptom/environment gate plus anything root-cause analysis forced,
+in the shape defined by
+[../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md).
+This sits after root cause and before the fix, because on a bug the fix-shape call depends on the
+cause — the intake-time calls (environment, test matrix, already-fixed) are simply carried here.
+
+Bug candidates:
+
+- **Fix layer** — legacy path, modern path, or both; which repo owns the correct behavior. Write
+  it as `Fix layer: <layer>`.
+- **Blast radius** — a shared or protected type or shared library change (needs approval) vs a
+  contained fix. A shared owner runs [../../blast-radius/SKILL.md](../../blast-radius/SKILL.md); the
+  entry carries its safety fact and proof level.
+- **Fix shape** — a deep fix that crosses a module or repo boundary runs
+  [../../architect/SKILL.md](../../architect/SKILL.md). Otherwise, when any Work
+  Plan step is `[high]`, write `architect skipped: <reason>` (the start gate checks it).
+- **Symptom scope** — the failing case this ticket fixes, and any sibling case it explicitly does not.
+- **Coverage gap** — the regression test that proves the bug, and what stays uncovered on purpose.
+- **ADR conflict** — when `adrIndex` is set, a fix reaching for a pattern an Accepted ADR settled
+  differently.
+
+Most bug fixes are small: `None — <why>` is a normal and expected answer. Cite a principle from
+[../../../_shared/engineering-principles.md](../../../_shared/engineering-principles.md) only
+in the **Why** of a decision it changed.
 
 ### 6. Proposed Fix
 

@@ -8,80 +8,46 @@ keywords: spike, research, feasibility, investigation, timebox, findings
 
 ## Purpose
 
-Guide technical investigations from problem framing through research, options, recommendation, documentation, and confidence scoring.
+Answer one question well enough for a PM to staff the follow-up and for an engineer to build it. The ticket holds that answer. This file is the local plan, not the ticket.
 
 ## First: Gather Input
 
-Before starting the investigation, ask the user for the following if not already provided in this message:
-- **Work item number**: ADO work item ID such as `WI12345` or `AB#12345`
-- **Title**: Name of the spike
-- **Objective**: What question(s) are we trying to answer?
-- **Background**: Why is this investigation needed?
-- **Scope & Constraints**: Time-box, technical constraints, or boundaries
-- **Success Criteria**: What deliverables are expected?
+A spike does not get a branch. `/start-ticket` records `mode: investigate`, fetches the ticket, runs the start gate, classifies, and searches the clones as they are. It does not ask main tree vs worktree and does not create `<ticket>`.
 
-If a ticket id is present, `/start-ticket` owns intake. Record spike-scope calls in Engineering Decisions before the Work Plan (`None — <why>` is valid).
+Before researching, take from the ticket or ask once if missing:
 
-## Instructions
+- **Ticket id**
+- **Question** this spike must answer
+- **Spike points** already on the ticket (timebox or story points), when the tracker has them. That number is how long a developer should spend investigating. Repeat it. If it is empty, recommend one and write it only after the user agrees. Do not replace it with session hours or with the build estimate.
 
-**Switch to Plan mode automatically** and build the full spike plan there. Follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the plan lives in Plan mode, not in the chat tab.
+If the tracker blocks the start transition because required fields are empty, report the blocking fields and continue the spike.
 
-When invoked from [/start-ticket](../SKILL.md), call `enter-plan` without asking the user to confirm. `/start-ticket` owns approval and the final message: Approved plan, then the copy-paste fence last ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)).
+## Local plan
 
-Include a numbered **Work Plan** section at the end of the plan. Tag every step `[low]|[med]|[high]` per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) so implementation picks the fast, standard, or deep tier.
+**Switch to Plan mode** and follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md). When invoked from `/start-ticket`, run `enter-plan` ([harness-verbs](../../../_shared/harness-verbs.md)) without asking. Approval and the final message stay with `/start-ticket`.
 
-1. **Problem Analysis**:
-   - Break down the problem into specific questions to answer
-   - Identify unknowns and risks
-   - Define what "done" looks like for this spike
+The persisted plan keeps:
 
-2. **Research & Discovery**:
-   - Examine relevant existing code patterns across all repos in the workspace
-   - Check legacy paths and modern equivalents when both exist
-   - When `adrIndex` is set, check the ADR index for a decision that already settles this question
-     — a spike's job is to answer what's genuinely open, not re-litigate an Accepted ADR (see
-     [../../../_shared/adr-policy.md](../../../_shared/adr-policy.md)).
-   - When `git blame` or `git log` reveals historical ticket IDs, look them up read-only for context. Do not write to historical tickets.
-   - Research external solutions, libraries, or best practices
-   - Create proof-of-concept code if needed
+1. **Problem Analysis** — the question, unknowns, and what "done" means.
+1b. **Engineering Decisions** — scope of the investigation, per [../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md), before research. Candidates: the question this spike answers and the one it does not; the spike-point budget and what gets cut if it binds; whether a POC is in scope; which repos are in the search; an Accepted ADR that already settles part of it (when `adrIndex` is set — a spike answers what is genuinely open, it does not re-litigate an Accepted ADR, [adr-policy](../../../_shared/adr-policy.md)). `None — <why>` is valid. A `[high]` step records `architect: at Recommendation` or `architect skipped: investigation only`.
+2. **Work Plan** — short, numbered, each step tagged `[low]|[med]|[high]` ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)). Research only. Read code on the current checkout; check legacy and modern paths when both exist. Do not edit product code.
 
-3. **Options Evaluation** (minimum 2-3 options, each with):
-   - Description of the approach
-   - Pros and cons
-   - Estimated effort: Low / Medium / High
-   - Risk assessment
-   - Impact on existing codebase
-   - SonarQube compliance implications
-   - When `adrIndex` is set: alignment with existing Accepted ADRs, or explicit note that this option
-     would need a new one
-   - Which repos would be affected — use the dependency order from `profile.json`
+Options stay in this plan only when they change the recommendation. Do not require two or three fully written options. Do not paste this plan onto the ticket. When `git blame` or `git log` reveals historical ticket ids, look them up read-only; do not write to them.
 
-4. **Technical Findings**:
-   - Key discoveries from code exploration
-   - Dependencies or blockers identified
-   - Performance or scalability considerations
-   - Security implications
+If the recommendation sets a genuinely new architectural precedent no Accepted ADR covers, name it as an ADR-stub candidate for the implementing ticket to draft — a spike proposes, it does not draft or accept the ADR.
 
-5. **Recommendation**:
-   - Recommended approach with clear justification
-   - Implementation roadmap with repo-by-repo breakdown
-   - Open questions or follow-up items
-   - If the recommendation sets a genuinely new architectural precedent (not a case already
-     covered by an existing ADR), say so explicitly and name it as an ADR-stub candidate for the
-     implementing ticket to draft — a spike proposes, it does not draft or accept the ADR itself
-     ([../../../_shared/adr-policy.md](../../../_shared/adr-policy.md)).
+## What the ticket gets
 
-**Conclude with a Summary**:
-- Key findings (bullet points)
-- Recommended next steps
-- TmoDocs documentation to create (document findings for future reference)
-- Follow-up work items to create
+Draft two sections while researching so closeout is a confirmation, not a rewrite: **Outcome** (the recommendation and next steps) and **Findings** (key discoveries, blockers, risks, what was not proven). `/complete-task` shows both before anything is posted; when `profile.ticketSystem` is not `none` it posts them to the ticket, otherwise they stay in the closeout.
 
-**Confidence Score**:
-- Fill out the rubric in [../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md), using `Findings certainty` as the second-row axis.
-- Use **Risks / Unknowns** to capture residual investigation gaps (e.g. "Did not test against production-scale data", "Vendor library behavior under concurrency unverified").
-- If `Findings certainty` is Med or Low, the recommendation should be flagged as provisional and a follow-up spike or POC should be proposed.
+**Points to implement** are the estimate to build the recommendation, for one developer using this AI workflow. Say that in one line, and say what would make the number wrong (hidden schema migration, ops queue, unknown vendor). That number is outcome text only. It is not the spike's own point field.
 
-## Closeout (User-Invoked)
+**Database change** and **Ops help** are each Yes or No plus one sentence. Ops means pipelines, configuration, secrets, or infra.
 
-Do not run closeout automatically after the spike summary. When the user is ready to stop and review the work, they invoke [/complete-task](../../complete-task/SKILL.md).
+## Confidence Score
+
+Fill out the rubric in [../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md), using `Findings certainty` as the second-row axis. Use **Risks / Unknowns** for residual gaps. If `Findings certainty` is Med or Low, flag the recommendation as provisional and propose a follow-up spike or POC.
+
+## Closeout
+
+Do not close automatically. The user invokes [/complete-task](../../complete-task/SKILL.md). A durable findings page is [/document-spike](../../document-spike/SKILL.md) only when the user asks — it is not part of finishing the spike.

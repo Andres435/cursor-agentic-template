@@ -13,14 +13,14 @@ Full instructions: [playbooks/peer-review.md](playbooks/peer-review.md).
 
 Read and execute that skill now. Load
 [references/comment-voice.md](references/comment-voice.md)
-before drafting any the tracker text. Do not ask for confirmation before reading the skill.
+before drafting any posted text. Do not ask for confirmation before reading the skill.
 
 ## Quick reference
 
 ```text
-/peer-review WI22794
+/peer-review <ticket>
 ```
 
-Prefer a **new chat**. Do **not** post to the tracker until the user approves specific comment ids.
+Prefer a **new chat**. Do **not** post anything until the user approves specific comment ids.
 
-Inputs: work item number, or a single PR URL/`repo PR_NUMBER` for narrow scope.
+Inputs: ticket id, or a single PR URL/`repo PR_NUMBER` for narrow scope.

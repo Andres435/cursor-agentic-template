@@ -6,10 +6,10 @@
     Writes manifest.lanes, for example f2/s1/d0 inline:d3.
     /complete-task copies it into the ledger Lanes column.
     Do not invent a mix for a ticket that did not run engineering mode.
-    Pass -Lanes '' only when engineering mode was off; the cell stays blank.
+    Pass -Lanes off when engineering mode was off, so the ledger tells that apart from a blank.
 
 .PARAMETER Ticket
-    Work item, with or without the WI prefix.
+    Work item, with or without the ticket prefix.
 
 .PARAMETER Lanes
     Short mix string. No pipe characters.

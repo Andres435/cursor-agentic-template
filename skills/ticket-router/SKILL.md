@@ -106,7 +106,7 @@ Write `.cursor/plans/<PREFIX><number>-manifest.json`:
   "worktreeRoot": null,
   "docSet": [
     ".cursor/_shared/ticket-plan-output.md",
-    ".cursor/skills/workflow/start-ticket/references/feature-plan.md",
+    ".cursor/skills/start-ticket/references/feature-plan.md",
     ".cursor/_shared/engineering-decisions.md",
     ".cursor/_shared/test-verification.md"
   ],

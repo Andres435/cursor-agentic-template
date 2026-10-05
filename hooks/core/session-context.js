@@ -20,7 +20,7 @@ function loadProfile() {
   const candidates = [
     path.join(REPO_ROOT, "profile.json"),
     path.join(process.cwd(), "profile.json"),
-    path.join(process.cwd(), "tmo-agentic", "profile.json"),
+    path.join(process.cwd(), ".cursor", "profile.json"),
   ];
   for (const candidate of candidates) {
     try {

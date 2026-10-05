@@ -15,13 +15,13 @@
     Affected repo names (comma-separated or array).
 
 .PARAMETER Integration
-    OSC, Miniter, TaxTracking, or empty.
+    an integration name from environments/, or empty.
 
 .PARAMETER MaxResults
     Cap (default 8).
 
 .EXAMPLE
-    .\Search-CloseoutMemory.ps1 -Query "OSC document download" -Repos TmoPro -Integration OSC
+    .\Search-CloseoutMemory.ps1 -Query "document download" -Repos app -Integration payments
 #>
 
 [CmdletBinding()]
@@ -132,7 +132,7 @@ if (Test-Path -LiteralPath $CatalogPath) {
 # now written only for the rare ticket whose retrospective earned a page, and that
 # ticket's lesson is already an index row -- scanning them would re-read whole
 # files to rediscover a line that is one grep away. The catalog is scored against
-# -Query only (not repo names) so TmoPro in a WF- shape does not fire on every ticket.
+# -Query only (not repo names) so a repo name in a WF- shape does not fire on every ticket.
 
 $result = @(
     $hits |

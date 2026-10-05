@@ -23,7 +23,7 @@ ledger row plus, occasionally, one lesson. So:
 
 ## 1. Score the session
 
-Score each axis **1–5** (5 = excellent). Heuristic — Cursor does not always expose token counts.
+Score each axis **1–5** (5 = excellent). Heuristic — the IDE does not always expose token counts.
 Prefer evidence from the chat over inventing numbers.
 
 ### Efficiency (time-to-done / rework)
@@ -56,7 +56,7 @@ Prefer evidence from the chat over inventing numbers.
 | 2 | Off-plan models used without user direction, or many redundant full-doc loads |
 | 1 | Clear on-demand burn or runaway context with no discipline |
 
-Also note the **context percentage** used by the end of the session. That number is why branch mode
+Also note the **context percentages** for this closeout chat (`Ctx%`) plus any `CtxS%` / `CtxR%` already on the manifest. Closeout occupancy is why we skip a duplicate review-diff when `/review-changes` is still Ready, and why branch mode
 and the merged chat exist — recording it per ticket turns an impression into a trend.
 
 ## 2. Ask the three questions
@@ -66,7 +66,7 @@ word. Do not pad them with preamble.
 
 1. **Did the plan hold?** — steps wrong · scope missed · estimate off · nothing
 2. **Any friction in the agentic flow?** — wrong route/specialist · a doc that was missing or
-   unfindable · an avoidable ADO/Sonar re-fetch · a gate or script that misfired · nothing
+   unfindable · an avoidable tracker/CI re-fetch · a gate or script that misfired · nothing
 3. **Anything durable for next time?** — an environment-card fact · a lesson for the index · a
    workflow roadmap item · nothing
 
@@ -102,23 +102,31 @@ Rules that do not bend:
 One row per closed ticket, written by the script so the format cannot drift:
 
 ```powershell
-.\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close -Percent <0-100>
+.\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close   # report-context
 .\.cursor\scripts\ticket\Update-TicketLedger.ps1 -Ticket <ticket> -Type <bug|feature|spike|refactor> `
   -Hours <n> -Points <n> -Efficiency <1-5> -Contextualization <1-5> -CostTokens <1-5> `
-  -ContextPct <0-100> -Pr <number>
+  -Pr <number>
 ```
 
-**Context percents:** `-ContextPct` is this **closeout** chat (ledger `Ctx%`). `CtxS%` and `CtxR%`
-are copied from the manifest (`ctxPct.start` / `ctxPct.review`) when you omit `-ContextPctStart` /
-`-ContextPctReview`. Copy the Cursor occupancy integer. If the indicator is hidden, **estimate**
-rather than leaving closeout `Ctx%` blank.
+**Context percents:** omit `-ContextPct`, `-ContextPctStart` and `-ContextPctReview`; the ledger
+copies `ctxPct.close` / `.start` / `.review` from the manifest, which `report-context` filled with the
+hook-measured value. `Lanes` is copied from `manifest.lanes`. Pass a number only when you can
+actually read one; **never estimate**. A value the agent typed shows as `~NN`. `-Phase close` accepts
+a blank percent and fails only on one outside 0–100; when nothing was measured, leave it blank and
+say so.
 
 Re-running for the same ticket replaces its row, so a reopen updates in place. Omit any switch you
 genuinely do not have — a blank cell is honest, a guessed number is not. Never hand-edit
 `plans/ticket-ledger.md`; to drop a row entered by mistake, use
 `Update-TicketLedger.ps1 -Ticket <ticket> -Remove`.
 
-Then confirm the close artifacts:
+The row records the workflow `Epoch` it closed under. If `scripts/ticket/Assert-WorkflowEpoch.ps1`
+prints `[INFO] re-rate`, say so in one line and offer a re-rating of that epoch's rows; after the
+user rates, run `Update-TicketLedger.ps1 -MarkRated`.
+
+Then confirm the close artifacts (run **after** the ledger row; the close gate also requires a
+passing verify receipt per affected repo and a review stamp that still matches the committed work —
+a spike skips both):
 
 ```powershell
 .\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase close

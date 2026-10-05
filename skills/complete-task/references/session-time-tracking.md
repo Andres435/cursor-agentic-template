@@ -1,7 +1,7 @@
 ---
 name: session-time-tracking
 description: Automatic dev time spent from start-ticket through complete-task using session timestamps, business-day rules, per-day caps, and hours-to-story-points conversion for ADO.
-keywords: hours, story points, StoryPointsActual, timestamps, startedAtUtc, reopen, business days, time tracking
+keywords: hours, story points, timestamps, startedAtUtc, reopen, business days, time tracking
 ---
 
 # Session Time Tracking
@@ -82,7 +82,7 @@ If only the original segment is open (`completedAtUtc` null), use `[startedAtUtc
 4. **Per-day cap: 8 hours maximum** — for each counted day, compute overlap between the segment interval and that local calendar day, then `min(overlapHours, 8)`.
 5. **Sum** capped daily hours across all segments → `calculatedHours` (one decimal place).
 6. **Display** each segment, `calculatedHours`, and the daily breakdown to the user in the approval package.
-7. **Convert** `calculatedHours` to story points (see table below) and write **only the story-point value** on the work item. Never write raw hours to the tracker.
+7. **Convert** `calculatedHours` to story points (see table below) and write **only the story-point value** on the work item. Never write raw hours to the tracker. A spike does not use this conversion: session hours stay local, spike points stay the investigation budget already on the work item, and the build estimate stays in the outcome text.
 
 ### Hours → Story Points (work item)
 

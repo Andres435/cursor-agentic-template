@@ -1,7 +1,7 @@
 ---
 name: test-verification
 description: Scoped test policy for ticket work. Load when verifying a change; not always-on.
-keywords: tests, scoped tests, regression, verification
+keywords: tests, scoped tests, regression, verification, test-first, conventions
 ---
 
 # Test verification
@@ -9,11 +9,32 @@ keywords: tests, scoped tests, regression, verification
 Run the **smallest** test that proves the change. Prefer the nearest fixture or project over a
 full-repo suite.
 
+## Scoped test order
+
+1. Run a single test or fixture filter when one directly matches the change.
+2. Broaden to the nearest affected test project.
+3. Broaden to a parent domain test set only when shared behavior or cross-component contracts changed.
+4. Report unrelated restore, analyzer, or dependency failures instead of escalating to a full-suite run.
+   Run the full suite only when the user asks.
+
+## Bug fix and feature policy
+
 1. Search for existing tests around the affected behavior.
 2. Bugs: if a relevant test already fails, that is RED. If none exists, add the smallest regression
-   test, then the production change, then re-run that test.
-3. Features: convert acceptance criteria into observable tests for the slice you are shipping.
+   test in the nearest fixture, confirm it fails for the expected reason, make the smallest
+   production change, re-run it, then the nearest broader scope. Refactor only while green.
+3. Features: list observable behaviors from the acceptance criteria and ship them as slices — the
+   smallest behavior that proves the path first, broaden only after it is green.
 4. Quote pass/fail counts. Do not paste full logs unless the user asks.
+
+## Conventions
+
+- Name tests for observable behavior, not implementation. Arrange / Act / Assert, setup close to the behavior.
+- Reuse existing fixtures, factories, and helpers before creating new ones.
+- Mock at system boundaries only; never the unit under test, and never duplicate production logic in assertions.
+- Async code gets async tests; no blocking waits.
+- For legacy areas, prefer characterization tests around observable behavior, and get user approval
+  before changing core shared logic.
 
 The project's test command belongs in `environments/local-dev.md` (overlay). Do not invent a
 runner the profile never named.

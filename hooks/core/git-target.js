@@ -2,7 +2,7 @@
 
 /**
  * Which repo a shell command's git subcommand acts on, and whether that repo is a
- * tmo-agentic clone. Shared by the push gate and the commit guard; names no IDE.
+ * workflow repo clone. Shared by the push gate and the commit guard; names no IDE.
  */
 
 const { spawnSync } = require("child_process");
@@ -56,7 +56,7 @@ function gitCalls(command, cwd, subcommand) {
   return calls;
 }
 
-/** The tmo-agentic clone that contains dir, or null when dir is in any other repo. */
+/** The workflow repo clone that contains dir, or null when dir is in any other repo. */
 function workflowRoot(dir) {
   if (!dir || !fs.existsSync(dir)) return null;
   const r = spawnSync("git", ["-C", dir, "rev-parse", "--show-toplevel"], {

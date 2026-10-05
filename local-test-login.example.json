@@ -1,0 +1,17 @@
+{
+  "description": "Copy to local-test-login.local.json and fill in password. The .local.json file is gitignored; never commit it.",
+  "owner": {
+    "displayName": "Your Name",
+    "email": "you@example.com"
+  },
+  "login": {
+    "username": "you@example.com",
+    "password": "YOUR_PASSWORD_HERE"
+  },
+  "defaults": {
+    "appUrl": "https://localhost:3000",
+    "apiUrl": "https://localhost:5001",
+    "preferredMethod": "password"
+  },
+  "notes": "Local test account only. Never a real production credential."
+}

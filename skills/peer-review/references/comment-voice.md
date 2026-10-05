@@ -1,6 +1,6 @@
 ---
 name: peer-review-comment-voice
-description: Voice rules and examples for /peer-review the tracker comments. Load before drafting any comment text.
+description: Voice rules and examples for /peer-review comments. Load before drafting any comment text.
 keywords: peer review, comment voice, short, human, no severity
 ---
 
@@ -23,7 +23,7 @@ Load this file before drafting `Comment to post` text.
 - Do not paste code blocks or diffs into the comment.
 
 The chat draft may include a private `Why` line for the user. That line is **not** posted.
-`Comment to post` is the the tracker body verbatim.
+`Comment to post` is the posted body verbatim.
 
 ## Good (post this)
 
