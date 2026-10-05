@@ -1,11 +1,11 @@
 # Machine setup
 
-One-time setup for a laptop that will run this workflow. No Visual Studio, IIS, or Azure CLI
-unless your project overlay adds them.
+One-time setup for a laptop that will run this workflow. Visual Studio, IIS, cloud CLIs, and
+product SDKs are not needed unless your project overlay adds them.
 
 ## 1. Folder layout
 
-Place this folder at `<app>/.cursor` (monorepo) or `source/repos/.cursor` (multi-repo siblings).
+Place this folder at `<app>/.cursor` (one repo) or `source/repos/.cursor` (sibling repos):
 
 ```
 my-app/
@@ -13,39 +13,104 @@ my-app/
   package.json
 ```
 
-or
-
 ```
 source/repos/
   .cursor/          ← this repo
-  app/
+  api/
+  web/
 ```
 
-Repos and paths are defined in `profile.json`. Do not hardcode product names.
+Repos and paths come from `profile.json`. Do not hardcode product names in core files.
 
 ## 2. Prerequisites
 
-- [Cursor](https://cursor.com)
-- Git
-- Node.js ≥ 20 (for hooks and typical `npm run dev`)
-- PowerShell 7 (`pwsh`) if you use the ticket scripts on macOS/Linux
+| Tool | Why |
+|---|---|
+| Git | Repos, review fingerprints, the push gate |
+| PowerShell 7 (`pwsh`) | Ticket gates and Pester tests. Windows PowerShell 5.1 is not enough |
+| Node.js LTS | IDE hooks; `npx` starts most MCP servers |
+| One IDE: [Cursor](https://cursor.com), [Claude Code](https://claude.ai/code), or Codex | Loads the plugin |
+| `gh` (optional) | When `profile.ticketSystem` is `github-issues` |
+
+On a managed Windows device, install PowerShell 7 with the MSI under `Program Files`. A portable
+copy in `%LOCALAPPDATA%` can be blocked by application control.
 
 ## 3. Bootstrap
 
 ```powershell
-.\.cursor\scripts\machine\Initialize-WorkflowMachine.ps1
+scripts/machine/Initialize-WorkflowMachine.ps1            # -WhatIf previews everything
 ```
 
-Installs recommended Cursor extensions and applies `user/settings.recommended.json` plus
-command junctions so slash commands appear in every window.
+Phases are isolated and safe to re-run:
 
-## 4. First ticket
+1. **Preflight**: reports missing tools; never blocks.
+2. **Extensions / user config / cockpit**: run only when your overlay adds
+   `Install-CursorExtensions.ps1`, `Apply-CursorUserConfig.ps1`, or `New-CockpitWorkspace.ps1` to
+   `scripts/machine/`. Otherwise they are listed as skipped.
+3. **Claude overlay**: `Install-ClaudeAdapter.ps1` writes `CLAUDE.md` at the workspace root.
+4. **Git hooks**: `Install-GitPushHook.ps1` sets `core.hooksPath=hooks/git-hooks`. Then `git commit`
+   refuses user-local `plans/` files and `git push` runs `Assert-AgenticFlow.ps1`. Do not use
+   `--no-verify`.
 
-1. Edit `profile.json` and [CUSTOMIZE.md](CUSTOMIZE.md).
-2. Fill `environments/local-dev.md`.
-3. `/start-ticket TICKET-1 feature`
+Slash commands in Cursor: `scripts/machine/Install-UserCursorCommands.ps1` links each skill in
+`profile.slashCommands`. Recommended settings and keybindings are in [user/](user/README.md).
 
-## 5. Optional
+## 4. MCP servers
 
-- GitHub CLI (`gh`) if `ticketSystem` is `github-issues`.
-- MCP servers: copy examples from `mcp.json` and fill secrets locally — do not commit tokens.
+`mcp.json` ships empty. Add the servers your tracker and tools need. Keep tokens in user
+environment variables, never in the file. Restart the IDE completely after setting a variable.
+
+## 5. Models (tiers)
+
+Policy is [_shared/model-routing.md](_shared/model-routing.md). Each IDE maps tiers to models in
+`adapters/<ide>/model-usage.md` ([Cursor](adapters/cursor/model-usage.md),
+[Claude Code](adapters/claude/model-usage.md), [Codex](adapters/codex/model-usage.md)).
+
+| Work | Tier |
+|---|---|
+| Plans | deep |
+| Work Plan steps | fast / standard / deep by the step's `[low]` / `[med]` / `[high]` tag |
+| Subagents | fast or standard by role |
+
+After setup, run `/doctor --lanes` once and record what each tier honored in your IDE's
+`model-usage.md`.
+
+### Claude Code
+
+Install the CLI if missing (`irm https://claude.ai/install.ps1 | iex` on Windows). Then either run
+`claude --plugin-dir <this folder>` from the workspace root, or install the plugin once for every
+runtime, desktop app included:
+
+```bash
+claude plugin marketplace add <absolute path to this folder>
+claude plugin install agentic@agentic
+```
+
+The installed plugin is a copy keyed to the HEAD commit. Commit, then update it
+([adapters/claude/README.md](adapters/claude/README.md#installed-plugins-are-a-snapshot-not-a-live-link)).
+Also add `"env": { "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet" }` to `~/.claude/settings.json` so
+unrouted subagents do not inherit the chat model.
+
+### Codex
+
+Add this folder as a Codex plugin marketplace and install `agentic`:
+[adapters/codex/README.md](adapters/codex/README.md).
+
+## 6. Day-1 checklist
+
+- [ ] `profile.json` filled (run `/start-new-project`) and `environments/local-dev.md` describes your stack
+- [ ] `git config --get core.hooksPath` prints `hooks/git-hooks`
+- [ ] `scripts/ticket/Assert-AgenticFlow.ps1` prints `[PASS]`
+- [ ] `/` in chat lists `start-ticket` once (Cursor) or `/agentic:start-ticket` (Claude Code)
+- [ ] `/doctor` reports no hook errors and the lane probe recorded each tier
+- [ ] (Optional) `node adapters/claude/hooks/tests/claude-hooks.test.js` passes
+
+## 7. Common failures
+
+| Symptom | Likely cause |
+|---|---|
+| Gate or test scripts fail with "Access ... denied" or a parse error | Running under Windows PowerShell 5.1, or a managed device blocks scripts outside approved folders. Use `pwsh`, and keep this folder under your normal source tree |
+| Push blocked by the agentic-flow gate | Read the `[FAIL]` lines. In Claude Code, a stale plugin snapshot can run an old push hook: update the plugin |
+| Commit blocked on a `plans/` path | Intended: plans and the ledger are user-local. `git rm --cached` the file |
+| Every slash command shows twice in Cursor | A `.cursor` folder and a plugin copy of this folder both load. Keep one |
+| Close gate says the review no longer matches | Something was committed after the review. Run `/review-changes` again, then close |

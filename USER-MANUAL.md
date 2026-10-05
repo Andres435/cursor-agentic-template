@@ -1,60 +1,151 @@
-# User Manual
+# User manual
 
-Day-to-day ticket workflow for humans. Agents: see [AGENTS.md](AGENTS.md).
+Day-to-day ticket workflow for humans. Agents: [AGENTS.md](AGENTS.md). First clone: run
+`/start-new-project` (fills [profile.json](profile.json) and [CUSTOMIZE.md](CUSTOMIZE.md)), then
+`/onboard` for the machine script ([MACHINE-SETUP.md](MACHINE-SETUP.md)). After that, commands run
+from the profile and do not re-ask for repos or start commands.
 
-**First clone:** run `/start-new-project`. It fills [profile.json](profile.json) and
-[CUSTOMIZE.md](CUSTOMIZE.md). Then `/onboard` for the machine script. After that, slash commands
-run from the profile — they do not re-ask for repos or start commands.
+Branch mode is three chats. Pin engineering mode, then type only `/start-ticket`.
 
-## Three-chat lifecycle (branch mode — default)
+| Chat | Type | Done when |
+| --- | --- | --- |
+| 1 | `/start-ticket <ticket> bug\|feature\|spike` | The change is in the working tree. Stage what you want reviewed. |
+| 2 | `/review-changes` | The staged set has a verdict, stamped on the manifest. |
+| 3 | `/complete-task`, then `/prep-pr` after you approve | Only the actions you approved ran. |
 
-Branch mode is three chats.
+`/start-stack` runs the local apps. It is not a chat. If chat 1 runs out of context, open a fresh
+chat and type `/implement <ticket>`: the approved plan is already on disk.
 
-| Chat | What happens |
-|---|---|
-| **Chat 1 `/start-ticket`** | Plan → approve → **build in the same chat** |
-| **Chat 2 `/review-changes`** | Staged review; stamps `reviewReady` |
-| **Chat 3 `/complete-task`** | Verify → retrospective → ledger row → PR package |
+In Claude Code, commands are namespaced (`/agentic:start-ticket`). After changing plugin files,
+commit and update the plugin: Claude reads a snapshot, not the working tree
+([adapters/claude/README.md](adapters/claude/README.md)).
 
-`/prep-pr` runs after you approve the package. `/implement` is only for worktree mode or a
-start-ticket chat that ran out of context.
+## Before you start
 
-Worktree mode (`--worktree`) is opt-in and only if `profile.worktreeSupported` is true.
+1. Open the workspace root (the folder that contains this one), not this folder alone.
+2. Confirm `/` lists `start-ticket` **once**.
+3. Pass the ticket id on every command that takes one (`TICKET-42`, not a paragraph).
+4. Type slash commands. Free-form "please start this ticket" skips intake, branch setup, and the plan.
 
-## Slash commands
+`/start-ticket` also searches prior closeouts (`plans/closeout-index.md`) and puts matching lessons on
+the manifest as `priorFindings`, at most eight. You see those in the plan, not every old ticket.
 
-| Command | When |
-|---|---|
-| `/start-new-project` | Interview that fills profile, checklist, env card, and specialist |
-| `/onboard` | Machine setup after the profile exists |
-| `/engineering-mode` | Pin, then type only the ticket command |
-| `/doctor` | Health check (profile, hooks, gates) |
-| `/start-ticket TICKET-42 feature` | New work (feature, bug, spike, refactor) |
-| `/start-ticket TICKET-42 bug --worktree` | Isolated worktree (optional) |
-| `/implement TICKET-42` | Resume / worktree build |
-| `/review-changes` | Staged review before PR |
-| `/complete-task` | Close a finished ticket (new chat) |
-| `/prep-pr` | Commit / push / PR / tracker write-back |
-| `/start-stack TICKET-42` | Start `profile.stacks.startCommand` |
-| `/address-pr-comments TICKET-42` | Address reviewer comments |
-| `/peer-review <id>` | Draft comments; post only what you approve |
-| `/swap-stack <id>` | Give the stack to another ticket |
-| `/stop-stack` | Release the stack owner |
+## Ticket lifecycle
 
-## Model selection
+```text
+Chat 1 — Plan and build
+  /start-ticket <ticket> bug|feature|spike
+  Deep tier drafts the plan. Question it; it revises only the section you asked about.
+  Say "approved" in chat. Approval is that statement, never an IDE button.
+  It writes the plan, then builds in this same chat. Each Work Plan step's [low]|[med]|[high]
+  tag sets its tier.
+  /start-stack <ticket>   when you need the local apps
+  Done when: the change is in your working tree and you staged what you want reviewed.
 
-Tiers are `fast`, `standard`, `deep`, and `frontier`. The map for this IDE is under `adapters/`.
-`/engineering-mode` routes each step to its tier. A local login file, gitignored, is optional for a browser pass — do not commit it.
+Chat 2 — Review
+  /review-changes         new chat; reviews the staged set and stamps the verdict
 
+Chat 3 — Close
+  /complete-task          new chat; skips review-diff when chat 2 was Ready on the same staged set
+  You review the approval package.
+  /prep-pr                only after you approve
+  Then three short questions (did the plan hold? any friction? anything durable?). It writes only
+  what you pick. One ledger row is the only automatic output.
+```
+
+Later PR feedback: new chat, `/address-pr-comments <ticket>`. A coworker's PR: `/peer-review <id>`.
+
+**Close gate.** Close fails until each affected repo has a passing verify receipt and a review stamp
+whose reviewed work is still what got committed. A base-branch merge before push is fine. Any
+other commit after the review means `/review-changes` again. A spike skips both.
+
+### Engineering mode
+
+Pin it, then type only the ticket command. The plan and every Work Plan step run on the model its
+tier calls for. How to pin it is in your IDE's adapter ([Cursor](adapters/cursor/model-usage.md),
+[Claude Code](adapters/claude/model-usage.md)). Say "exit engineering mode" to turn it off. Typing
+`/engineering-mode` and `/start-ticket` in one message attaches only the first skill.
+
+```text
+Engineering mode on — orchestrator: <model> (<tier>)
+step N/M [<tag>] → inline | lane (<model>)
+```
+
+### Worktree mode (opt-in)
+
+Only when `profile.worktreeSupported` is true and your overlay ships the worktree scripts. Add
+`--worktree` to run a ticket beside another one. That is four chats: plan, `/implement` in the
+ticket window, review, close. Later commands read the mode from the manifest.
+
+## Commands
+
+| You want | Type |
+| --- | --- |
+| Fill the profile for a new project | `/start-new-project` |
+| Machine setup after the profile exists | `/onboard` |
+| Pin model routing for the chat | `/engineering-mode` |
+| Health check (profile, hooks, gates, lanes) | `/doctor` |
+| Start a ticket | `/start-ticket <ticket> bug\|feature\|spike` |
+| Build the approved plan (resume / worktree) | `/implement <ticket>` |
+| Run the local apps | `/start-stack <ticket>` |
+| Give the stack to another ticket / stop it | `/swap-stack <ticket>` / `/stop-stack` |
+| Review staged changes | `/review-changes` |
+| Closeout and approval package | `/complete-task` |
+| Commit / push / PR / tracker write-back, after you approve | `/prep-pr` |
+| Address PR comments | `/address-pr-comments <ticket>` |
+| Peer-review a coworker's PR | `/peer-review <id>` |
+
+`bug-fix`, `feature-plan`, and `tech-spike` are plan shapes `/start-ticket` reads, not commands.
+
+### What "done" means
+
+| Command | Done when | Next |
+| --- | --- | --- |
+| `/start-ticket` | Artifact gate passes; plan approved; build continues in the same chat | New chat `/review-changes` |
+| `/implement` | Work Plan steps complete, tests run | New chat `/review-changes`, then `/complete-task` |
+| `/review-changes` | Verdict on screen and `reviewReady` stamped | New chat `/complete-task` |
+| `/start-stack` | Script printed URLs, or `[FAIL]` after one recycle | You use the apps |
+| `/complete-task` | Approval package is on screen; verify receipt written | You approve, then `/prep-pr` |
+| `/prep-pr` | Only the actions you approved ran | Retrospective, then stop |
+| `/peer-review` | Draft on screen; after approval, comments posted | Stop |
+
+## Models (tiers)
+
+| Work | Tier |
+| --- | --- |
+| Drafting the plan | deep |
+| `[low]` / `[med]` / `[high]` steps | fast / standard / deep |
+| Subagents: explore, branch, verify | fast |
+| Subagents: review | standard (plus a deep second opinion when the plan has a `[high]` step) |
+
+Each adapter maps tiers to real models: [Cursor](adapters/cursor/model-usage.md),
+[Cursor GPT chat](adapters/gpt/model-usage.md), [Claude Code](adapters/claude/model-usage.md),
+[Codex](adapters/codex/model-usage.md).
+
+## Local apps
+
+One stack at a time. `/start-stack <ticket>` runs `profile.stacks.startCommand`. When it fails with
+"another ticket owns the stack", "port in use", or leftover processes, run `/stop-stack`, then
+`/start-stack <ticket>` once. If it still fails, fix the machine yourself; do not ask the agent to
+inspect ports.
+
+The agent does not open the browser on its own. Ask for a smoke pass ("smoke test the UI"). It asks
+you whether it passed and stamps Tested only if you approve. Review and closeout show Never tested /
+Tested / Untested latest changes. Close never needs it.
+
+## Staging and review
+
+The staged set is the approval record. Stage hunks yourself, then `/review-changes` or
+`/complete-task`. Unstaged work is awareness only unless you include it.
 
 ## Done table
 
 | Phase | Artifact | Script gate |
-|---|---|---|
+| --- | --- | --- |
 | Start | `plans/<ticket>-manifest.json`, `plans/<ticket>-<type>-plan.md` (Plan Digest + Engineering Decisions) | `Assert-TicketArtifacts -Phase start` |
-| Review | `reviewReady` + `ctxPct.review` on the manifest | `Set-ReviewReady` / `Set-TicketCtxPct` |
-| Close | Ledger row (`CtxS%` / `CtxR%` / `Ctx%`) | `Assert-TicketArtifacts -Phase close` |
+| Review | `reviewReady` (verdict, headSha, fingerprint) + `ctxPct.review` on the manifest | `Set-ReviewReady` / `Set-TicketCtxPct` |
+| Close | `plans/<ticket>-verify.json` (pass per repo), review still matching, ledger row | `Assert-TicketArtifacts -Phase close` |
 
-## Customize this manual
+## Project notes
 
-Add project-specific notes below (stack-specific commands, auth steps, known gotchas).
+Add project-specific notes below (stack commands, auth steps, known gotchas).

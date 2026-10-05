@@ -2,10 +2,10 @@
 "use strict";
 
 /**
- * User-level workspaceOpen hook. Returns the live tmo-agentic repo as a
- * Cursor plugin path so rules, skills, commands, and hooks load without
- * the folder being named .cursor. One path only — a ticket junction and
- * the canonical clone are the same tree.
+ * User-level workspaceOpen hook. Returns the live workflow folder as a
+ * Cursor plugin path so rules, skills, and hooks load when the folder is not
+ * named .cursor. A folder named .cursor is skipped: Cursor already loads it.
+ * One path only — a ticket junction and the canonical clone are the same tree.
  */
 
 const fs = require("fs");
@@ -19,28 +19,34 @@ function hasPlugin(dir) {
   }
 }
 
+// First child folder (not .cursor) that carries .cursor-plugin/plugin.json.
+function pluginChild(dir) {
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  for (const e of entries) {
+    if (!e.isDirectory() && !e.isSymbolicLink()) continue;
+    if (e.name.toLowerCase() === ".cursor") continue;
+    const candidate = path.join(dir, e.name);
+    if (hasPlugin(candidate)) return path.resolve(candidate);
+  }
+  return null;
+}
+
 function canonicalFromRoot(root) {
   const normalized = path.resolve(root);
-  const base = path.basename(normalized);
-
-  if (base.toLowerCase() === "repos") {
-    const candidate = path.join(normalized, "tmo-agentic");
-    return hasPlugin(candidate) ? path.resolve(candidate) : null;
-  }
-
-  if (/^WI\d+$/i.test(base)) {
-    const parent = path.basename(path.dirname(normalized));
-    if (parent.toLowerCase() === "worktrees") {
-      const source = path.dirname(path.dirname(normalized));
-      const candidate = path.join(source, "repos", "tmo-agentic");
-      if (hasPlugin(candidate)) return path.resolve(candidate);
-      const junction = path.join(normalized, "tmo-agentic");
-      if (hasPlugin(junction)) return path.resolve(junction);
-    }
-  }
-
+  if (path.basename(normalized).toLowerCase() === ".cursor") return null;
   if (hasPlugin(normalized)) return normalized;
-  return null;
+
+  // A ticket worktree root (<source>/worktrees/<ticket>): prefer the canonical clone.
+  if (path.basename(path.dirname(normalized)).toLowerCase() === "worktrees") {
+    const canonical = pluginChild(path.join(path.dirname(path.dirname(normalized)), "repos"));
+    if (canonical) return canonical;
+  }
+  return pluginChild(normalized);
 }
 
 let raw = "";
