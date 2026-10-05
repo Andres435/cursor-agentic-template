@@ -10,6 +10,11 @@
   "affectedRepos": [{ "repo": "app", "local": true }],
   "startedAtUtc": "2026-09-01T10:00:00Z",
   "completedAtUtc": "2026-09-01T14:00:00Z",
+  "ctxPct": {
+    "start": 40,
+    "review": 50,
+    "close": 45
+  },
   "adrIndex": null,
   "reviewReady": {
     "mode": "staged",

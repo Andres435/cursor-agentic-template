@@ -14,6 +14,7 @@
       _shared/*.md       <= 150 lines  (cross-phase contracts; phase-only docs live in skill references/)
       environments/*.md  <= 120 lines
       rules/*.mdc        <= 120 lines  (stub rules <= 60; triggered convention rules <= 120)
+      adapters/claude/model-usage.md <= 70 lines (always-on import into every Claude session)
 
     INDEX.md and human docs (USER-MANUAL.md, README.md, MACHINE-SETUP.md) are
     excluded — they grow with the workspace, not with individual tickets.
@@ -21,7 +22,7 @@
     Exit 0 = pass, 1 = at least one budget exceeded.
 
 .PARAMETER Root
-    Workspace root (the .cursor repo dir). Defaults to the parent of $PSScriptRoot.
+    Workspace root (the workflow repo dir). Defaults to the parent of $PSScriptRoot.
 
 .PARAMETER WarnOnly
     Print violations but exit 0 (advisory mode, suitable for CI comments).
@@ -53,21 +54,32 @@ $budgets = @(
     @{ RelDir = 'rules';        Filter = '*.mdc';    Recurse = $false; Budget = 120 }
     @{ RelDir = 'commands';     Filter = '*.md';     Recurse = $false; Budget = 40 }
     @{ RelDir = 'skills';       Filter = 'SKILL.md';    Recurse = $true;  Budget = 500 }
-    @{ RelDir = 'skills';       Filter = 'PLAYBOOK.md'; Recurse = $true;  Budget = 500 }
-    @{ RelDir = 'playbooks';    Filter = '*.md';       Recurse = $false; Budget = 500 }
+    @{ RelDir = 'skills';       Filter = '*.md';       Recurse = $true;  Budget = 500; PathLike = '*/playbooks/*' }
     @{ RelDir = '_shared';      Filter = '*.md';     Recurse = $false; Budget = 150 }
     @{ RelDir = 'environments'; Filter = '*.md';     Recurse = $false; Budget = 120 }
     @{ RelDir = 'agents';       Filter = '*.md';     Recurse = $false; Budget = 150 }
+    # Single-file budget: this doc is `@`-imported into every Claude Code session
+    # (see CLAUDE.md), unlike the rest of adapters/*, which the blanket 'adapters/*'
+    # exclusion below still covers.
+    @{ RelDir = 'adapters/claude'; Filter = 'model-usage.md'; Recurse = $false; Budget = 70 }
 )
 
 # Docs excluded from budget checks (human docs, the catalog itself, this script's README)
 # Patterns use '/' — compared after normalizing '\' → '/' so Windows and Unix match.
+# NOTE: 'adapters/*' would also swallow adapters/claude/model-usage.md (-like treats
+# '*' as spanning '/', so it matches subdirectories too) — that file is carved out of
+# the blanket adapters exclusion below so its dedicated budget rule above actually runs.
 $excluded = @(
     'INDEX.md', 'README.md', 'USER-MANUAL.md', 'MACHINE-SETUP.md', 'AGENTS.md', 'CLAUDE.md',
     'CUSTOMIZE.md', 'TEMPLATE.md',
-    'plans/*.md', 'tmp/*', 'scripts/*', 'user/*', 'adapters/*',
+    'plans/*.md', 'tmp/*', 'scripts/*', 'user/*',
     'environments/README.md', 'commands/_README.md', 'scripts/README.md'
 )
+# adapters/* stays excluded for every file except the one with its own budget rule
+# above -- keep this filter list separate from $excluded so a plain '-like' match
+# can't accidentally swallow the single file we DO want checked.
+$adaptersExcluded = @('adapters/*')
+$adaptersBudgeted = @('adapters/claude/model-usage.md')
 
 $violations = [System.Collections.Generic.List[object]]::new()
 $checked    = 0
@@ -86,7 +98,13 @@ foreach ($rule in $budgets) {
         foreach ($ex in $excluded) {
             if ($relative -like $ex -or ([IO.Path]::GetFileName($relative) -eq $ex)) { $skip = $true; break }
         }
+        if (-not $skip -and $adaptersBudgeted -notcontains $relative) {
+            foreach ($ex in $adaptersExcluded) {
+                if ($relative -like $ex) { $skip = $true; break }
+            }
+        }
         if ($skip) { continue }
+        if ($rule.ContainsKey('PathLike') -and $relative -notlike $rule.PathLike) { continue }
 
         $lineCount = @(Get-Content -LiteralPath $file.FullName -Encoding UTF8 -ErrorAction SilentlyContinue).Count
         $checked++
@@ -114,7 +132,7 @@ foreach ($v in ($violations | Sort-Object Over -Descending)) {
     Write-Host ("  {0,-60} {1,4} lines  (budget {2}, over by {3})" -f $v.File, $v.Lines, $v.Budget, $v.Over) -ForegroundColor $color
 }
 Write-Host "  Move over-budget detail to skill references/ or split into slices." -ForegroundColor DarkGray
-Write-Host "  Budgets: SKILL.md <=500, commands/*.md <=40, _shared/*.md <=150, environments/*.md <=120, rules/*.mdc <=120" -ForegroundColor DarkGray
+Write-Host "  Budgets: SKILL.md <=500, commands/*.md <=40, _shared/*.md <=150, environments/*.md <=120, rules/*.mdc <=120, adapters/claude/model-usage.md <=70" -ForegroundColor DarkGray
 
 if ($WarnOnly) { exit 0 }
 exit 1

@@ -87,7 +87,7 @@ function Test-InsideRepo {
     return $FullPath.StartsWith($RootFull + [IO.Path]::DirectorySeparatorChar) -or $FullPath -eq $RootFull
 }
 
-$docs = @(Get-ChildItem -LiteralPath $RootFull -Recurse -File -Include '*.md', '*.mdc' -ErrorAction SilentlyContinue |
+$docs = @(Get-ChildItem -LiteralPath $RootFull -Recurse -File -Include '*.md', '*.mdc', '*.markdown' -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' })
 
 foreach ($doc in $docs) {
@@ -103,7 +103,7 @@ foreach ($doc in $docs) {
 
     $dir     = $doc.DirectoryName
     $isStub  = $text -match '(?m)^Canonical:'
-    $isIndex = [IO.Path]::GetFileName($relative) -in @('README.md', 'INDEX.md')
+    $isIndex = [IO.Path]::GetFileName($relative) -in @('README.md', 'README.markdown', 'INDEX.md')
 
     foreach ($m in [regex]::Matches($text, $linkPattern)) {
         $label  = $m.Groups[1].Value

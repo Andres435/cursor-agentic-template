@@ -126,6 +126,12 @@ Describe 'Mode-precedence assertions against fixture manifests' {
         $resolved.modeSource | Should -Be 'default'
     }
 
+    It 'mode precedence: manifest investigate stays investigate so a spike does not become a branch' {
+        $resolved = Resolve-TicketMode -ManifestMode 'investigate'
+        $resolved.mode | Should -Be 'investigate'
+        $resolved.modeSource | Should -Be 'manifest'
+    }
+
     It 'mode precedence: manifest worktree still wins so --worktree tickets keep working' {
         $src = Join-Path $script:FixtureDir 'manifest-worktree.json'
         $m   = Get-Content $src -Raw | ConvertFrom-Json

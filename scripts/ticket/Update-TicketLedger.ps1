@@ -26,7 +26,7 @@
     Close date (yyyy-MM-dd). Defaults to today.
 
 .PARAMETER Mode
-    branch | worktree. Defaults to whatever Resolve-TicketRoot.ps1 reports.
+    branch | worktree | investigate. Defaults to whatever Resolve-TicketRoot.ps1 reports. A spike records investigate.
 
 .PARAMETER Hours
     Calculated session hours (see skills/complete-task/references/session-time-tracking.md).
@@ -54,7 +54,7 @@
     PR number or URL, if one was created.
 
 .PARAMETER Root
-    Override the .cursor repo root (tests).
+    Override the workflow repo root (tests).
 
 .PARAMETER Rewrite
     Re-read the ledger, migrate old 11-column rows, and write the current header
@@ -64,6 +64,10 @@
     Delete this ticket's row. For a row entered by mistake -- the file itself must
     never be hand-edited, so removal has to be a switch, not a manual delete.
 
+.PARAMETER MarkRated
+    Record that the workflow was re-rated under the current epoch ("Rated: <id>" in
+    the header), which clears the re-rate prompt from /doctor and the retrospective.
+
 .PARAMETER SeedFromCloseouts
     One-time migration: build the ledger from every existing WI*-closeout.md
     (front matter + scorecard) instead of from the parameters above. Additive:
@@ -71,7 +75,7 @@
     can never destroy a row whose closeout file is gone.
 
 .EXAMPLE
-    .\Update-TicketLedger.ps1 -Ticket WI22132 -Type feature -Hours 6 -Points 3 -Efficiency 4 -Contextualization 4 -CostTokens 3 -ContextPct 78
+    .\Update-TicketLedger.ps1 -Ticket TICKET-42 -Type feature -Hours 6 -Points 3 -Efficiency 4 -Contextualization 4 -CostTokens 3 -ContextPct 78
 
 .EXAMPLE
     .\Update-TicketLedger.ps1 -SeedFromCloseouts
@@ -93,7 +97,7 @@ param(
     [string]$Closed,
 
     [Parameter(ParameterSetName = 'Row')]
-    [ValidateSet('branch', 'worktree')]
+    [ValidateSet('branch', 'worktree', 'investigate')]
     [string]$Mode,
 
     [Parameter(ParameterSetName = 'Row')]
@@ -130,12 +134,18 @@ param(
     [string]$Pr,
 
     [Parameter(ParameterSetName = 'Row')]
+    [string]$Lanes,
+
+    [Parameter(ParameterSetName = 'Row')]
     [switch]$Remove,
 
     [string]$Root,
 
     [Parameter(ParameterSetName = 'Rewrite')]
     [switch]$Rewrite,
+
+    [Parameter(Mandatory, ParameterSetName = 'Rated')]
+    [switch]$MarkRated,
 
     [Parameter(Mandatory, ParameterSetName = 'Seed')]
     [switch]$SeedFromCloseouts
@@ -157,16 +167,22 @@ $TICKET_PREFIX = Get-TicketPrefix
 # Match any prefix+digits row so a rewrite still migrates WI / TICKET- / # ledgers.
 $TICKET_ROW_PATTERN = '^\|\s*[A-Za-z]+-?\d+'
 
+. (Join-Path (Join-Path $PSScriptRoot 'lib') 'WorkflowEpoch.ps1')
+
 $RepoRoot = if ($Root) { $Root } else { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
 $PlansDir = Join-Path $RepoRoot 'plans'
 $OutPath  = Join-Path $PlansDir 'ticket-ledger.md'
+if (-not (Test-Path -LiteralPath $PlansDir)) { New-Item -ItemType Directory -Path $PlansDir -Force | Out-Null }
 
-$Columns = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'CtxS%', 'CtxR%', 'Ctx%', 'PR')
+# The epoch comes from the workflow that ran the close (this script's own clone), not -Root.
+$EpochId = Get-WorkflowEpochId -Root (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent)
+
+$Columns = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'CtxS%', 'CtxR%', 'Ctx%', 'PR', 'Lanes', 'Epoch')
 
 function New-LedgerRow {
     param([string]$Ticket, [string]$Type, [string]$Closed, [string]$Mode,
           [string]$Hours, [string]$Pts, [string]$E, [string]$C, [string]$Tok,
-          [string]$CtxS, [string]$CtxR, [string]$Ctx, [string]$Pr)
+          [string]$CtxS, [string]$CtxR, [string]$Ctx, [string]$Pr, [string]$Lanes, [string]$Epoch)
     [pscustomobject]@{
         Ticket = $Ticket
         Type   = $Type
@@ -181,6 +197,8 @@ function New-LedgerRow {
         CtxR   = $CtxR
         Ctx    = $Ctx
         PR     = $Pr
+        Lanes  = $Lanes
+        Epoch  = $Epoch
     }
 }
 
@@ -191,7 +209,7 @@ function Convert-LedgerCells {
     if ($c.Count -eq 11) {
         $c = @($c[0..8]) + @('', '') + @($c[9], $c[10])
     }
-    elseif ($c.Count -lt $Columns.Count) {
+    if ($c.Count -lt $Columns.Count) {
         $c = @($c) + @('') * ($Columns.Count - $c.Count)
     }
     return ,$c
@@ -219,7 +237,28 @@ function Get-ManifestCtx {
         if (-not ($ctx.PSObject.Properties.Name -contains $Phase)) { return $null }
         $v = $ctx.$Phase
         if ($null -eq $v -or [string]::IsNullOrWhiteSpace([string]$v)) { return $null }
+        # A value the agent typed (not hook-measured) shows as ~NN.
+        $src = $null
+        if ($mf.PSObject.Properties.Name -contains 'ctxPctSource' -and $mf.ctxPctSource -and
+            $mf.ctxPctSource.PSObject.Properties.Name -contains $Phase) { $src = [string]$mf.ctxPctSource.$Phase }
+        if ($src -eq 'reported') { return '~' + [int]$v }
         return [int]$v
+    } catch {
+        return $null
+    }
+}
+
+function Get-ManifestLanes {
+    param([string]$TicketKey)
+    $mfPath = Join-Path $PlansDir "$TicketKey-manifest.json"
+    if (-not (Test-Path -LiteralPath $mfPath)) { return $null }
+    try {
+        $mf = Get-Content -LiteralPath $mfPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $mf) { return $null }
+        if (-not ($mf.PSObject.Properties.Name -contains 'lanes')) { return $null }
+        $v = [string]$mf.lanes
+        if ([string]::IsNullOrWhiteSpace($v)) { return $null }
+        return $v
     } catch {
         return $null
     }
@@ -238,8 +277,15 @@ if (Test-Path -LiteralPath $OutPath) {
         $cells = Convert-LedgerCells -Cells $cells
         $rows.Add((New-LedgerRow -Ticket $cells[0] -Type $cells[1] -Closed $cells[2] -Mode $cells[3] `
             -Hours $cells[4] -Pts $cells[5] -E $cells[6] -C $cells[7] -Tok $cells[8] `
-            -CtxS $cells[9] -CtxR $cells[10] -Ctx $cells[11] -Pr $cells[12]))
+            -CtxS $cells[9] -CtxR $cells[10] -Ctx $cells[11] -Pr $cells[12] -Lanes $cells[13] -Epoch $cells[14]))
     }
+}
+$ratedEpochs = @(Get-LedgerRatedEpochs -LedgerPath $OutPath)
+
+if ($MarkRated) {
+    if (-not $EpochId) { throw "No workflow epoch id: this workflow folder is not a git checkout." }
+    if ($ratedEpochs -notcontains $EpochId) { $ratedEpochs += $EpochId }
+    Write-Host "Marked epoch $EpochId as rated." -ForegroundColor Green
 }
 
 # ------------------------------------------------------------------ build a row
@@ -276,12 +322,12 @@ if ($SeedFromCloseouts) {
         $existing = $rows | Where-Object { $_.Ticket -eq $key } | Select-Object -First 1
         if ($existing) { [void]$rows.Remove($existing) }
         $rows.Add((New-LedgerRow -Ticket $key -Type $ty -Closed $cl -Mode 'worktree' `
-            -Hours '' -Pts '' -E $e -C $c -Tok $k -CtxS '' -CtxR '' -Ctx '' -Pr ''))
+            -Hours '' -Pts '' -E $e -C $c -Tok $k -CtxS '' -CtxR '' -Ctx '' -Pr '' -Lanes '' -Epoch ''))
         $seeded++
     }
     Write-Host "Seeded $seeded row(s) from WI*-closeout.md." -ForegroundColor Cyan
 }
-elseif (-not $Rewrite) {
+elseif (-not $Rewrite -and -not $MarkRated) {
     $digits = $Ticket -replace '[^\d]', ''
     if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
     $key = $TICKET_PREFIX + $digits
@@ -315,9 +361,10 @@ elseif (-not $Rewrite) {
         [void]$rows.Remove($existing)
     }
 
-    $ctxClose = if ($PSBoundParameters.ContainsKey('ContextPct')) { $ContextPct } else { $null }
+    $ctxClose = if ($PSBoundParameters.ContainsKey('ContextPct')) { $ContextPct } else { Get-ManifestCtx -TicketKey $key -Phase 'close' }
     $ctxS = if ($PSBoundParameters.ContainsKey('ContextPctStart')) { $ContextPctStart } else { Get-ManifestCtx -TicketKey $key -Phase 'start' }
     $ctxR = if ($PSBoundParameters.ContainsKey('ContextPctReview')) { $ContextPctReview } else { Get-ManifestCtx -TicketKey $key -Phase 'review' }
+    $lanesValue = if ($PSBoundParameters.ContainsKey('Lanes')) { $Lanes } else { Get-ManifestLanes -TicketKey $key }
 
     $rows.Add((New-LedgerRow -Ticket $key -Type (Get-Blank $Type) -Closed $closedDate `
         -Mode $resolvedMode -Hours (Get-Blank $Hours) -Pts (Get-Blank $Points) `
@@ -326,7 +373,9 @@ elseif (-not $Rewrite) {
         -Tok (Get-Blank $(if ($PSBoundParameters.ContainsKey('CostTokens')) { $CostTokens } else { $null })) `
         -CtxS (Get-Blank $ctxS) -CtxR (Get-Blank $ctxR) `
         -Ctx (Get-Blank $ctxClose) `
-        -Pr (Get-Blank $Pr)))
+        -Pr (Get-Blank $Pr) `
+        -Lanes (Get-Blank $lanesValue) `
+        -Epoch $EpochId))
     }
 }
 
@@ -340,7 +389,7 @@ function Measure-Axis {
 
 function Measure-Ctx {
     param([string]$Property)
-    $vals = @($rows | ForEach-Object { $_.$Property } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+    $vals = @($rows | ForEach-Object { $_.$Property } | Where-Object { $_ -match '^~?\d+$' } | ForEach-Object { [int]($_ -replace '^~', '') })
     if (-not $vals.Count) { return 'n/a' }
     return [string]([math]::Round((($vals | Measure-Object -Average).Average), 0)) + '%'
 }
@@ -362,16 +411,31 @@ $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine('[closeout-index.md](closeout-index.md); a full closeout page is written only when a')
 [void]$sb.AppendLine('retrospective earns one. Scorecard scale 1-5 (5 = excellent). `CtxS%` is the')
 [void]$sb.AppendLine('/start-ticket chat, `CtxR%` is `/review-changes`, `Ctx%` is `/complete-task`.')
-[void]$sb.AppendLine('`/implement` is not recorded. Do not backfill old rows.')
+[void]$sb.AppendLine('`/implement` is not recorded. This file is user-local (never committed); see')
+[void]$sb.AppendLine('`plans/examples/ticket-ledger.example.md` for its shape.')
 [void]$sb.AppendLine('')
 [void]$sb.AppendLine('| Tickets | Scored | Avg E | Avg C | Avg $tok | Avg CtxS% | Avg CtxR% | Avg Ctx% |')
 [void]$sb.AppendLine('|---|---|---|---|---|---|---|---|')
 [void]$sb.AppendLine("| $($rows.Count) | $scoredCount | $(Measure-Axis 'E') | $(Measure-Axis 'C') | $(Measure-Axis 'Tok') | $avgCtxS | $avgCtxR | $avgCtx |")
+$branchScored = @($sorted | Where-Object { $_.Mode -eq 'branch' -and $_.E -match '^\d$' })
+$coverageWindow = @($branchScored | Select-Object -Last 11)
+$coverageHave = @($coverageWindow | Where-Object { $_.CtxS -match '^~?\d+$' }).Count
+$coverageOf = $coverageWindow.Count
+$coverageLabel = if ($coverageOf -ge 11) { "last $coverageOf" } else { "$coverageOf" }
+[void]$sb.AppendLine('')
+[void]$sb.AppendLine("CtxS on $coverageHave of $coverageLabel scored branch rows. Context percents are hook-measured; ~NN was typed by the agent; a blank was not measured. Never invent one.")
+[void]$sb.AppendLine('')
+# Epoch: the workflow contract a row closed under. Compare rows within one epoch only.
+[void]$sb.AppendLine('`Epoch` is the workflow contract a row closed under; compare rows within one epoch. Blank = before epochs were recorded.')
+if ($ratedEpochs.Count) {
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('Rated: ' + ($ratedEpochs -join ', '))
+}
 [void]$sb.AppendLine('')
 [void]$sb.AppendLine('| ' + ($Columns -join ' | ') + ' |')
 [void]$sb.AppendLine('|' + ('---|' * $Columns.Count))
 foreach ($r in $sorted) {
-    [void]$sb.AppendLine("| $($r.Ticket) | $($r.Type) | $($r.Closed) | $($r.Mode) | $($r.Hours) | $($r.Pts) | $($r.E) | $($r.C) | $($r.Tok) | $($r.CtxS) | $($r.CtxR) | $($r.Ctx) | $($r.PR) |")
+    [void]$sb.AppendLine("| $($r.Ticket) | $($r.Type) | $($r.Closed) | $($r.Mode) | $($r.Hours) | $($r.Pts) | $($r.E) | $($r.C) | $($r.Tok) | $($r.CtxS) | $($r.CtxR) | $($r.Ctx) | $($r.PR) | $($r.Lanes) | $($r.Epoch) |")
 }
 
 # UTF-8 with NO BOM. Set-Content -Encoding utf8 on PS 5.1 emits a BOM, which then

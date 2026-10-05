@@ -17,6 +17,7 @@ $script:_ticketPrefix = $null
 function Write-LauncherFail  { param($msg) Write-Host "   [FAIL] $msg" -ForegroundColor Red }
 function Write-LauncherOk    { param($msg) Write-Host "   [OK]   $msg" -ForegroundColor Green }
 function Write-LauncherSkip  { param($msg) Write-Host "   [SKIP] $msg" -ForegroundColor DarkGray }
+function Write-LauncherDoing { param($msg) Write-Host "   ...    $msg" -ForegroundColor Yellow }
 
 # ---- ticket prefix --------------------------------------------------------
 function Get-WorkflowTicketPrefix {
@@ -95,7 +96,7 @@ function Get-LauncherManifestValue {
 #>
 function Resolve-TicketMode {
     param([string]$ManifestMode)
-    if ($ManifestMode -and $ManifestMode -in @('branch', 'worktree')) {
+    if ($ManifestMode -and $ManifestMode -in @('branch', 'worktree', 'investigate')) {
         return [pscustomobject]@{ mode = $ManifestMode; modeSource = 'manifest' }
     }
     return [pscustomobject]@{ mode = 'branch'; modeSource = 'default' }
