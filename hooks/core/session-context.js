@@ -4,7 +4,8 @@
  * Session-start packet: compact profile + ticket-tree hydration. Names no IDE.
  *
  * Always carries { profileId, ticketSystem, layout } from profile.json when present.
- * Detects a ticket from the given folder hints using profile.ticketPrefix (default WI),
+ * Detects a ticket from the given folder hints using profile.ticketPrefix (default WI), or
+ * else from the profile repos' current branches (one open ticket only),
  * runs Resolve-TicketRoot.ps1 -Ticket <id> -Json, and adds mode, root, rootExists, repos[]
  * and the next action. Adapters turn { label, compact, env } into their own output.
  */
@@ -42,6 +43,47 @@ function detectTicket(hints, profile) {
     if (match) return prefix + match[1];
   }
   return null;
+}
+
+/**
+ * Branch-mode fallback for a chat opened at the workspace root: read each profile repo's
+ * current branch and keep the one ticket whose manifest is still open. Anything else
+ * (no ticket branch, a closed ticket, two open tickets) returns null and the commands ask.
+ */
+function detectTicketFromBranches(profile, reposRoot, plansDir) {
+  const prefix = String((profile && profile.ticketPrefix) || "WI");
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp("(?:^|[/_-])" + escaped + "(\\d+)$", "i");
+  const repos = Array.isArray(profile && profile.repos) ? profile.repos : [];
+  const open = new Set();
+  for (const repo of repos) {
+    const name = typeof repo === "string" ? repo : repo && repo.name;
+    if (!name) continue;
+    const repoPath = path.join(reposRoot, name);
+    if (!fs.existsSync(repoPath)) continue;
+    let branch = "";
+    try {
+      branch = execFileSync("git", ["-C", repoPath, "branch", "--show-current"], {
+        encoding: "utf8",
+        timeout: 3000,
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+    } catch {
+      continue;
+    }
+    const match = branch.match(pattern);
+    if (!match) continue;
+    const key = prefix + match[1];
+    try {
+      const manifest = JSON.parse(fs.readFileSync(path.join(plansDir, key + "-manifest.json"), "utf8"));
+      // A reopen keeps completedAtUtc; it is open again until reclosedAtUtc is set.
+      const reopened = manifest.reopenedAtUtc && !manifest.reclosedAtUtc;
+      if (!manifest.completedAtUtc || reopened) open.add(key);
+    } catch {
+      // no manifest: not a started ticket, so not a hint
+    }
+  }
+  return open.size === 1 ? [...open][0] : null;
 }
 
 function resolveScript() {
@@ -114,7 +156,9 @@ function buildPacket(hints) {
   const slice = profile
     ? { profileId: profile.id || null, ticketSystem: profile.ticketSystem || null, layout: profile.layout || null }
     : null;
-  const ticket = detectTicket(hints, profile);
+  const ticket =
+    detectTicket(hints, profile) ||
+    detectTicketFromBranches(profile, path.join(REPO_ROOT, ".."), process.env.TMO_PLANS_DIR || path.join(REPO_ROOT, "plans"));
   if (!ticket && !slice) return null;
 
   const compact = {};
@@ -142,4 +186,4 @@ function buildPacket(hints) {
   return { label, compact, env, text: label + ": " + JSON.stringify(compact) };
 }
 
-module.exports = { buildPacket, detectTicket, loadProfile, resolveNextAction };
+module.exports = { buildPacket, detectTicket, detectTicketFromBranches, loadProfile, resolveNextAction };

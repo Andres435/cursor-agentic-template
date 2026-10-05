@@ -8,18 +8,16 @@ keywords: feature, acceptance criteria, user story, feature plan, work plan
 
 ## Purpose
 
-Create a feature plan from requirements through behavior slices, affected repos, implementation layers, tests, verification, and confidence scoring.
+The feature (and refactor) plan's content, from requirements through behavior slices, affected repos, implementation layers, and tests. `/start-ticket` loads it at step 6 and owns intake, plan mode, approval, and the final message.
 
-## Gather Input
+## Refactor
 
-Ask for any missing essentials:
-
-- **Ticket id**: the tracker id, using `profile.ticketPrefix`
-- **Title**: feature or work item title
-- **Description**: what the feature should do
-- **Acceptance criteria**: conditions that must be met
-
-If a ticket id is present, `/start-ticket` owns intake. Do not re-ask profile fields.
+A `refactor` ticket uses this template with one rule: **behavior-preserving**. The Behaviors list is
+the current observable behavior, and each behavior's **Check** is a characterization test written
+**first**, per the Refactor Or Legacy Flow in
+[../../tdd-red-green-refactor/SKILL.md](../../tdd-red-green-refactor/SKILL.md). The Work Plan opens
+with those tests green on the old code; every later step keeps them green. A step that changes a
+behavior is not a refactor — stop and ask. Skip the Pre-Plan Gate items that do not apply.
 
 ## Pre-Plan Gate (resolve before designing)
 
@@ -43,11 +41,7 @@ Engineering Decisions before drafting the Work Plan. An answer that stays only i
 
 ## Workflow
 
-**Switch to Plan mode automatically** and build the full plan there. Follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the plan lives in Plan mode, not in the chat tab.
-
-When invoked from [/start-ticket](../SKILL.md), run `enter-plan` ([harness-verbs](../../../_shared/harness-verbs.md)) without asking the user to confirm. `/start-ticket` owns approval and the final message: Approved plan, then the copy-paste fence last ([ticket-plan-output.md](../../../_shared/ticket-plan-output.md)).
-
-Include a numbered **Work Plan** section at the end of the plan. Tag every step `[low]|[med]|[high]` per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md) — the tag is the tier the step runs on ([../../../_shared/model-routing.md](../../../_shared/model-routing.md#difficulty-rubric)).
+Structure, digest, and `[low]|[med]|[high]` step tags follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md).
 
 Each step cites the behavior it satisfies (`B1`, `B2`) or `Foundational` when it blocks every behavior. A step with no behavior id, or a behavior with no step, is a plan defect. When there are three or more behaviors, group the steps **Foundational**, then one group per behavior in priority order. Cross-repo order inside a group still follows [../../../_shared/cross-repo-workflow.md](../../../_shared/cross-repo-workflow.md).
 
@@ -164,10 +158,6 @@ Follow [../../../_shared/adr-policy.md](../../../_shared/adr-policy.md). When `a
 - If a step introduces a genuinely new pattern with no covering ADR, note it as an ADR-stub candidate.
 - No ADR index, or nothing rises to architectural-decision weight: write "None."
 
-### 12. Confidence Score
+### 12. Design certainty
 
-Fill out [../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md), using `Design certainty` as the second-row axis. If `Design certainty` is Med or Low, recommend a tech spike using [tech-spike.md](tech-spike.md).
-
-### 13. Closeout (User-Invoked)
-
-Do not run closeout automatically after planning or implementation. When the user is ready to stop and review the work, they invoke [/complete-task](../../complete-task/SKILL.md).
+Design certainty H/M/L goes on the Plan Digest Risk line; M or L → recommend a spike ([tech-spike.md](tech-spike.md)) before build. Closeout is user-invoked `/complete-task`.

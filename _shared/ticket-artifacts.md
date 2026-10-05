@@ -72,9 +72,10 @@ Do not self-assess this contract in prose. Run it:
 scripts/Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start
 ```
 
-- `start-ticket` runs it with `-Phase start` as its **last artifact action** before runtime warmup
-  and the final message. A `FAIL` means the command is not finished — write the missing file, then
-  re-run. Runtime warmup is not an artifact.
+- `start-ticket` runs it with `-Phase start` as its **last artifact action** before the final
+  message. A `FAIL` means the command is not finished — write the missing file, then re-run. A
+  runtime warmup script, when the profile has one, is started after branch-setup and awaited after
+  the start gate; it is not an artifact.
 - `implement` runs it with `-Phase implement` as its **first action**. A `FAIL` stops the chat and
   reports what start-ticket skipped; it does not silently re-plan around the gap.
 - Any chat that loads ticket state uses `-Phase implement` as its **load-time** gate — including
@@ -119,7 +120,7 @@ manifest**. Field semantics and the hours math stay in
 **Branch mode** has no handoff — `/start-ticket` plans and then builds in the same chat.
 
 **Worktree mode** ends `/start-ticket` with these lines as **chat text**, not a file. The user opens
-a new Agent chat in the ticket's workspace file (folder 0 is already the ticket root) and pastes them:
+a new chat rooted at the ticket worktree ([how, per IDE](../adapters/README.md#open-a-ticket-worktree)) and pastes them:
 
 ```
 /implement <ticket>
@@ -131,9 +132,9 @@ Constraint: <one precise line, or omit this line>
 
 The implementation window loads the manifest, plan, and doc set itself — the paste carries a
 pointer, not a copy. Do not inline the Work Plan steps, and do not tell the user to `@` or attach a
-plan file (that starts a review, not a build). An IDE cannot move an agent root onto a folder holding
-several independent git repos, so this paste is the only handoff. Worktree layout is an overlay
-blank — fill [../environments/worktrees.md](../environments/worktrees.md) if `profile.worktreeSupported`.
+plan file (that starts a review, not a build). This paste is the only handoff. Worktree layout is an
+overlay blank — fill [../environments/worktrees.md](../environments/worktrees.md) if
+`profile.worktreeSupported`.
 
 ## Rules
 

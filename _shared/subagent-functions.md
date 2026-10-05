@@ -31,8 +31,10 @@ result, so its own context window stays lean (the subagent burns its own window 
   ticket's mode (canonical clone in branch mode; the worktree path only when `mode` is worktree).
   Never construct a worktree path by hand. `peer-review-pr` uses sibling clones from
   [profile.json](../profile.json), not `Resolve-TicketRoot`.
-- Persist returned packets to `plans/<ticket>-*.json|md` when they will be reused later; reload the
-  packet instead of re-fetching.
+- A packet that later steps reuse goes on the ticket manifest, written by the **orchestrator**
+  through the stamp scripts (`Set-VerifyReceipt`, `Set-ReviewReady`, `Set-TicketFeedback`), per
+  [ticket-artifacts](ticket-artifacts.md). Never write a side file under `plans/`; reload from the
+  manifest instead of re-fetching.
 
 ## Global Guardrails
 
@@ -106,9 +108,11 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **Role:** `code-reviewer` (if the IDE rejects that type, use general-purpose with the code-reviewer prompt — do not skip the review).
 - **Use:** staged-diff or pre-merge review per repo (parallel at closeout).
 - **Inputs:** `repo`, `repoPath`, `mode` (staged | premerge), optional `branch`.
-- **Does:** follow [../skills/review-changes/SKILL.md](../skills/review-changes/SKILL.md) +
-  [review-protocol](review-protocol.md); staged diff is the findings source. For very large diffs,
-  chunk per file/module before reviewing to avoid context blowups.
+- **Does:** review per [review-protocol](review-protocol.md) and the report shape in
+  [severity-and-output](severity-and-output.md); staged diff is the findings source. For very large
+  diffs, chunk per file/module before reviewing to avoid context blowups. **Never runs a stamp
+  script** (`Set-ReviewReady`, `Set-TicketCtxPct`): it returns findings and a verdict, and the
+  calling chat stamps once for all repos.
 - **Returns (compact):** the standard report shape from [severity-and-output](severity-and-output.md)
   (Blocker + Major by default) ending with a `Change-set understanding` Confidence Score.
 

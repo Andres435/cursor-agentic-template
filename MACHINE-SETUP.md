@@ -35,6 +35,13 @@ Repos and paths come from `profile.json`. Do not hardcode product names in core 
 On a managed Windows device, install PowerShell 7 with the MSI under `Program Files`. A portable
 copy in `%LOCALAPPDATA%` can be blocked by application control.
 
+### Application allowlist
+
+If an application allowlist (for example ThreatLocker) guards the machine, keep the workspace
+clones and this template clone under the one allowed root, and never let agents write helper scripts
+to temp or a scratchpad: only scripts run from the allowed root. Each blocked run is an approval
+prompt for you.
+
 ## 3. Bootstrap
 
 ```powershell

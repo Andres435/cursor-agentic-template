@@ -48,8 +48,15 @@ That avoided reload is the point of branch mode.
 
 ## Steps
 
-1. **Resolve the ticket key.** From the invocation, using `profile.ticketPrefix`. Ask only if
-   absent and unrecoverable from the workspace folder name.
+1. **Resolve the ticket key.** From the invocation (using `profile.ticketPrefix`), else the
+   workspace folder name, else the repos' current branches:
+
+   ```powershell
+   .\.cursor\scripts\Get-TicketFromBranch.ps1 -Json
+   ```
+
+   Use its `ticket` when `reason` is `open-manifest` or `branch`; confirm with the user when it is
+   `closed-manifest`. Ask only when `ticket` is null (no ticket branch, or two open tickets).
 
 2. **Resolve the mode and root.** Do not assume either.
 
@@ -58,10 +65,9 @@ That avoided reload is the point of branch mode.
    ```
 
    - **`mode: branch`** — work happens in `profile.repos[].path`. That is the normal case.
-   - **`mode: worktree`** — work happens at the worktree root the script returns. In Cursor a new
-     Agent chat opened in the ticket window is *already* rooted there. **Never call
-     `move_agent_to_root`** on a folder of independent git repos. If this chat is in the wrong
-     window, tell the user to open a new Agent chat in the ticket `.code-workspace`.
+   - **`mode: worktree`** — work happens at the worktree root the script returns. If this chat is
+     not rooted there, stop and tell the user how to open one that is, per
+     [adapters/README.md](../../adapters/README.md#open-a-ticket-worktree).
    - **`rootExists: false`** — stop. Report it and let the user re-run `/start-ticket`.
 
 3. **Run the artifacts gate** with `-Phase implement` — for *every* calling command, closeout
@@ -97,13 +103,16 @@ That avoided reload is the point of branch mode.
 6. **Get title and tracker context from `manifest.ticket`.** Description, repro, and AC are in
    the approved plan. **Do not re-fetch the tracker** unless the user says "refresh".
 
-7. **Confirm branch state** in each resolved repo path: on the ticket branch, and merge
-   `origin/<baseBranch>` if behind. Report; do not commit.
+7. **Report branch state** in each resolved repo path: the current branch and how far it is behind
+   `origin/<baseBranch>` (`git rev-list --count HEAD..origin/<baseBranch>` after a fetch). Report
+   only; never merge here. Review and closeout run on a staged set, and git refuses a merge over
+   staged changes. The base merge belongs to `/implement` (clean index) and `/prep-pr`. Skip this
+   step for `mode: investigate`: a spike reads the clones as they are.
 
 8. **Post one compact load line**, then continue with the calling command:
 
    ```text
-   Loaded TICKET-42 — feature | branch | app | none | fullstack | plan: 4 steps | 0 prior findings | branch TICKET-42 (current)
+   Loaded TICKET-42 — feature | branch | app | none | fullstack | plan: 4 steps | 0 prior findings | on TICKET-42, 2 behind main
    ```
 
 ## Guardrails

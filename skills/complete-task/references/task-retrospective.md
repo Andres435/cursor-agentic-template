@@ -82,6 +82,7 @@ ask which to apply. Never apply them all silently.
 | Answer points at | Proposed action | Target |
 |---|---|---|
 | A durable technical lesson | one row: ticket · domain · one-line lesson | [../../../plans/closeout-index.md](../../../plans/closeout-index.md) |
+| An Engineering Decision that proved wrong | one row: ticket · the call · what was right | [../../../plans/closeout-index.md](../../../plans/closeout-index.md) |
 | Repeating setup or a first-search target | one bullet | the matching card under [../../../environments](../../../environments) |
 | A workflow/tooling improvement | one bullet (small, do-now) | a project overlay doc the user names |
 | Deferred script/CI/doc-budget work | one row the user names | park it; do not implement unless asked |

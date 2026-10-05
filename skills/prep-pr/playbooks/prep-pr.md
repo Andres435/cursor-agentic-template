@@ -71,7 +71,8 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
 4. **Tracker notes** (`profile.ticketSystem` not `none`):
    - Update only this ticket, with fields the tracker actually has: root cause (bugs), QA notes,
      acceptance-criteria coverage (features), outcome and follow-ups (spikes), and hours → story
-     points from session-time-tracking (a spike keeps hours local).
+     points from session-time-tracking. Never write actual points for a spike, even when it ships a
+     product change; its hours stay local.
    - Never fabricate required values. Ask only for fields that cannot be derived, or for hours when
      the manifest has no session timestamps.
    - If the tracker blocks a state transition on empty required fields, report the blocking fields

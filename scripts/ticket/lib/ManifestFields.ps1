@@ -25,6 +25,57 @@ function Get-TicketKeyFromRaw {
     return $prefix + $digits
 }
 
+# Open = never closed, or reopened and not yet re-closed (a reopen keeps completedAtUtc).
+function Test-TicketManifestOpen {
+    param($Manifest)
+    $names = @($Manifest.PSObject.Properties.Name)
+    $completed = ($names -contains 'completedAtUtc') -and $Manifest.completedAtUtc
+    if (-not $completed) { return $true }
+    $reopened = ($names -contains 'reopenedAtUtc') -and $Manifest.reopenedAtUtc
+    $reclosed = ($names -contains 'reclosedAtUtc') -and $Manifest.reclosedAtUtc
+    return [bool]($reopened -and -not $reclosed)
+}
+
+# Ticket keys from the current branch of each repo, for chats opened at the workspace root (no
+# ticket folder in the path). A key whose manifest is open (no completedAtUtc) wins over a repo
+# left on an old branch. Returns { ticket; candidates[]; reason }; ticket is $null when there is
+# no candidate or more than one, and the caller asks.
+function Get-TicketKeyFromBranches {
+    param(
+        [Parameter(Mandatory)][string[]]$RepoPaths,
+        [Parameter(Mandatory)][string]$Prefix,
+        [string]$PlansDir
+    )
+    $escaped = [regex]::Escape($Prefix)
+    $keys = New-Object System.Collections.Generic.List[string]
+    foreach ($path in $RepoPaths) {
+        if (-not $path -or -not (Test-Path -LiteralPath $path)) { continue }
+        $branch = Get-GitDiffText -RepoPath $path -GitArgs @('branch', '--show-current')
+        if (-not $branch) { continue }
+        if ($branch.Trim() -match "(?i)(?:^|[/_-])$escaped(\d+)$") {
+            $key = $Prefix + $Matches[1]
+            if (-not $keys.Contains($key)) { [void]$keys.Add($key) }
+        }
+    }
+    $open = @($keys | Where-Object {
+        if (-not $PlansDir) { return $false }
+        $file = Join-Path $PlansDir "$_-manifest.json"
+        if (-not (Test-Path -LiteralPath $file)) { return $false }
+        try { $m = Get-Content -LiteralPath $file -Raw | ConvertFrom-Json } catch { return $false }
+        Test-TicketManifestOpen $m
+    })
+    $pool = @(if ($open.Count -gt 0) { $open } else { $keys })
+    $hasManifest = $PlansDir -and $pool.Count -eq 1 -and (Test-Path -LiteralPath (Join-Path $PlansDir "$($pool[0])-manifest.json"))
+    # closed-manifest: the only branch belongs to a closed ticket; confirm with the user before using it.
+    $reason = if ($pool.Count -eq 1) { if ($open.Count -gt 0) { 'open-manifest' } elseif ($hasManifest) { 'closed-manifest' } else { 'branch' } }
+              elseif ($pool.Count -eq 0) { 'no-ticket-branch' } else { 'ambiguous' }
+    return [pscustomobject]@{
+        ticket     = if ($pool.Count -eq 1) { $pool[0] } else { $null }
+        candidates = @($keys)
+        reason     = $reason
+    }
+}
+
 function Get-CursorRepoRoot {
     param([string]$FromScriptRoot)
     # scripts/ticket or scripts/ticket/lib → workflow repo root

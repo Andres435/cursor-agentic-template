@@ -217,5 +217,60 @@ test("nextAction is 'closed' when completedAtUtc is set", () => {
   });
 });
 
+// Branch-mode fallback: a chat at the workspace root has no ticket in its path.
+const { detectTicketFromBranches } = require(path.join(__dirname, "..", "core", "session-context.js"));
+
+function withBranchWorkspace(branches, manifests, fn) {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "branch-ws-"));
+  const plans = path.join(ws, "plans");
+  fs.mkdirSync(plans);
+  const git = (cwd, args) => spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
+  for (const [name, branch] of Object.entries(branches)) {
+    const repo = path.join(ws, name);
+    fs.mkdirSync(repo);
+    git(repo, ["init", "-q", "-b", "main"]);
+    git(repo, ["config", "user.email", "t@example.com"]);
+    git(repo, ["config", "user.name", "t"]);
+    fs.writeFileSync(path.join(repo, "a.txt"), "one");
+    git(repo, ["add", "a.txt"]);
+    git(repo, ["commit", "-q", "-m", "init"]);
+    if (branch) git(repo, ["switch", "-q", "-c", branch]);
+  }
+  for (const [key, manifest] of Object.entries(manifests)) {
+    fs.writeFileSync(path.join(plans, key + "-manifest.json"), JSON.stringify(manifest));
+  }
+  const profile = { ticketPrefix: PREFIX, repos: Object.keys(branches).map((name) => ({ name })) };
+  try {
+    fn(profile, ws, plans);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+}
+
+test("branch fallback names the one ticket whose manifest is open", () => {
+  withBranchWorkspace({ Api: TICKET_A, Web: TICKET_B }, { [TICKET_A]: { mode: "branch" }, [TICKET_B]: { completedAtUtc: "2026-10-01T00:00:00Z" } }, (profile, ws, plans) => {
+    assert.strictEqual(detectTicketFromBranches(profile, ws, plans), TICKET_A);
+  });
+});
+
+test("branch fallback treats a reopened ticket as open", () => {
+  const reopened = { completedAtUtc: "2026-10-01T00:00:00Z", reopenedAtUtc: "2026-10-03T00:00:00Z" };
+  withBranchWorkspace({ Api: TICKET_A }, { [TICKET_A]: reopened }, (profile, ws, plans) => {
+    assert.strictEqual(detectTicketFromBranches(profile, ws, plans), TICKET_A);
+  });
+});
+
+test("branch fallback stays silent for a closed ticket, no manifest, or two open tickets", () => {
+  withBranchWorkspace({ Api: TICKET_A }, { [TICKET_A]: { completedAtUtc: "2026-10-01T00:00:00Z" } }, (profile, ws, plans) => {
+    assert.strictEqual(detectTicketFromBranches(profile, ws, plans), null);
+  });
+  withBranchWorkspace({ Api: TICKET_A }, {}, (profile, ws, plans) => {
+    assert.strictEqual(detectTicketFromBranches(profile, ws, plans), null);
+  });
+  withBranchWorkspace({ Api: TICKET_A, Web: TICKET_B }, { [TICKET_A]: {}, [TICKET_B]: {} }, (profile, ws, plans) => {
+    assert.strictEqual(detectTicketFromBranches(profile, ws, plans), null);
+  });
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

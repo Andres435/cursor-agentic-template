@@ -211,17 +211,43 @@ if (Test-Path -LiteralPath $epochScript) {
     Fail "workflow-epoch: Assert-WorkflowEpoch.ps1 not found at $epochScript"
 }
 
-# ---- 7. INDEX.md has the two contract docs ---------------------------------
+# ---- 7. INDEX.md links every tracked doc -------------------------------------
+# AGENTS.md tells every chat to grep INDEX.md first, so a doc with no row is a doc no
+# chat finds. Each tracked .md/.mdc must appear as a link target `](path` somewhere in
+# INDEX.md (grouped rows are fine). Exempt: per-ticket and example plans, fixtures,
+# scratch, user config, folder READMEs, INDEX itself, and the CLAUDE.md overlays.
 $indexPath = Join-Path $Root 'INDEX.md'
 if (Test-Path -LiteralPath $indexPath) {
-    $idx = Get-Content -LiteralPath $indexPath -Raw
-    foreach ($c in @('ticket-artifacts.md', 'severity-and-output.md')) {
-        if ($idx -notmatch [regex]::Escape($c)) {
-            Fail "index-contracts: INDEX.md is missing a row for '$c'"
-        }
+    $idx = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
+    $ticketPrefixForPlans = 'TICKET-'
+    if ((Test-Path -LiteralPath $profilePath)) {
+        try {
+            $pp = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+            if ($pp.PSObject.Properties.Name -contains 'ticketPrefix' -and $pp.ticketPrefix) { $ticketPrefixForPlans = [string]$pp.ticketPrefix }
+        } catch { }
+    }
+    $indexExempt = @("plans/$ticketPrefixForPlans*", 'plans/examples/*', '*/fixtures/*', 'tmp/*', 'user/*', 'INDEX.md',
+        'CLAUDE.md', '*/CLAUDE.md', 'adapters/*/workspace-*', '*/README.md', '*/README.markdown', '*/_README.md')
+    $tracked = @()
+    Push-Location -LiteralPath $Root
+    # --others --exclude-standard: a new doc is checked before its first commit, not after.
+    # Minus --deleted: a doc removed from the tree needs no row even before the removal is staged.
+    try {
+        $deleted = @(& git ls-files --deleted -- '*.md' '*.mdc' '*.markdown' 2>$null)
+        $tracked = @(& git ls-files --cached --others --exclude-standard -- '*.md' '*.mdc' '*.markdown' 2>$null |
+            Where-Object { $deleted -notcontains $_ })
+    } finally { Pop-Location }
+    if (-not $tracked.Count) { Fail "index-coverage: git ls-files returned no docs (run from a git checkout)" }
+    $unindexed = @(foreach ($doc in $tracked) {
+        $doc = $doc -replace '\\', '/'
+        if (@($indexExempt | Where-Object { $doc -like $_ }).Count) { continue }
+        if ($idx -notmatch ('\]\(' + [regex]::Escape($doc) + '[)#]')) { $doc }
+    })
+    foreach ($doc in $unindexed) {
+        Fail "index-coverage: INDEX.md has no row linking $doc"
     }
 } else {
-    Fail "index-contracts: INDEX.md not found"
+    Fail "index-coverage: INDEX.md not found"
 }
 
 # ---- 10. Command/skill surface = Claude plugin + catalogs ------------------
@@ -309,9 +335,6 @@ if (-not (Test-Path -LiteralPath $pluginManifest)) {
             $slash = "/$stem"
             if ($readmeText -and ($readmeText -notmatch [regex]::Escape($slash)) -and ($readmeText -notmatch [regex]::Escape("$stem.md"))) {
                 Fail "plugin-surface: commands/_README.md does not mention $slash or $stem.md"
-            }
-            if ($indexText -and ($indexText -notmatch [regex]::Escape("commands/$stem.md"))) {
-                Fail "plugin-surface: INDEX.md has no row linking commands/$stem.md"
             }
         }
     }
@@ -455,6 +478,7 @@ if (Test-Path -LiteralPath $skillsLayoutRoot) {
         $skillMd = Join-Path $_.FullName 'SKILL.md'
         if (-not (Test-Path -LiteralPath $skillMd)) {
             Fail "skill-layout: skills/$($_.Name) has no SKILL.md -- category folders and skills nested two deep are not discovered"
+            return  # nothing below can be read without it; keep checking the other skills
         }
         $playbookAtRoot = Join-Path $_.FullName 'PLAYBOOK.md'
         if (Test-Path -LiteralPath $playbookAtRoot) {
@@ -607,6 +631,39 @@ foreach ($name in $slashListed) {
     if ($requiredSlash -notcontains $name) {
         Fail "slash-menu: '$name' is not a path command. Keep it on disk; do not put it in slashCommands"
     }
+}
+
+# ---- 12c. Every work type has a plan template ---------------------------------
+# The router accepts a fixed set of workTypes; each must map to a start-ticket template
+# that exists, or the plan step has nothing to follow and the agent improvises.
+$routerPath = Join-Path $Root 'skills/ticket-router/SKILL.md'
+if (Test-Path -LiteralPath $routerPath) {
+    $routerText = Get-Content -LiteralPath $routerPath -Raw -Encoding UTF8
+    $typesMatch = [regex]::Match($routerText, '`workType`:\s*((?:`[a-z]+`\s*\|?\s*)+)')
+    $workTypes = @([regex]::Matches($typesMatch.Groups[1].Value, '`([a-z]+)`') | ForEach-Object { $_.Groups[1].Value })
+    $mapMatch = [regex]::Match($routerText, '(?s)work-type template:(.+?)(?:\r?\n\s*\r?\n|$)')
+    if (-not $workTypes.Count -or -not $mapMatch.Success) {
+        Fail "worktype-templates: ticket-router/SKILL.md must list ``workType``: values and a 'work-type template:' map"
+    } else {
+        $templateFor = @{}
+        foreach ($segment in ($mapMatch.Groups[1].Value -split ';')) {
+            $pathMatch = [regex]::Match($segment, '`(skills/[^`]+\.md)`')
+            if (-not $pathMatch.Success) { continue }
+            $left = ($segment -split '→')[0]
+            foreach ($t in $workTypes) {
+                if ($left -match "\b$t\b") { $templateFor[$t] = $pathMatch.Groups[1].Value }
+            }
+        }
+        foreach ($t in $workTypes) {
+            if (-not $templateFor.ContainsKey($t)) {
+                Fail "worktype-templates: workType '$t' has no plan template in ticket-router/SKILL.md"
+            } elseif (-not (Test-Path -LiteralPath (Join-Path $Root $templateFor[$t]))) {
+                Fail "worktype-templates: workType '$t' maps to missing $($templateFor[$t])"
+            }
+        }
+    }
+} else {
+    Fail "worktype-templates: skills/ticket-router/SKILL.md not found"
 }
 
 # ---- 13. Agents surface ----------------------------------------------------
