@@ -50,6 +50,15 @@ function resolveScript() {
   return fs.existsSync(nextToScripts) ? nextToScripts : ticketFolder;
 }
 
+function parsesAsJson(text) {
+  try {
+    JSON.parse(String(text || "").trim());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function runResolve(ticket) {
   const scriptPath = resolveScript();
   if (!fs.existsSync(scriptPath)) return null;
@@ -66,7 +75,11 @@ function runResolve(ticket) {
       return JSON.parse(String(result).trim());
     } catch (err) {
       if (!err || err.code !== "ENOENT") {
-        writeHookError("session-context", err);
+        // Exit 1 with JSON on stdout is Resolve-TicketRoot reporting a missing root (for
+        // example a removed worktree). That is ticket state, not a hook error.
+        if (!(err && err.status === 1 && parsesAsJson(err.stdout))) {
+          writeHookError("session-context", err);
+        }
         return null;
       }
     }

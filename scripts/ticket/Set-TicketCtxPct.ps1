@@ -15,7 +15,7 @@
     not. ctxPctSource.<phase> records measured or reported.
 
 .PARAMETER Ticket
-    Work item, with or without the WI prefix.
+    Work item, with or without the ticket prefix.
 
 .PARAMETER Phase
     start | review | close
@@ -24,10 +24,10 @@
     0–100 occupancy, only when you can read a real number. Recorded as reported.
 
 .PARAMETER Root
-    Override the tmo-agentic repo root (tests).
+    Override the workflow repo root (tests).
 
 .EXAMPLE
-    .\Set-TicketCtxPct.ps1 -Ticket WI21961 -Phase start
+    .\Set-TicketCtxPct.ps1 -Ticket TICKET-42 -Phase start
 #>
 
 [CmdletBinding()]

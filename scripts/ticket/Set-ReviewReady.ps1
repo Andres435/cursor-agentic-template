@@ -3,19 +3,24 @@
     Stamp reviewReady (verdict + staged fingerprint) onto a ticket manifest.
 
 .DESCRIPTION
-    Called at the end of /review-changes. Computes SHA256 of git diff --staged
-    per repo and merges reviewReady so /complete-task can skip a duplicate
-    review-diff when the verdict is still Ready on the same staged set.
+    Called at the end of /review-changes, and by /complete-task after its own
+    review-diff. Per repo it records the verdict, mode, HEAD (headSha), and the
+    SHA256 of the canonical staged diff (fpVersion 2). Entries are upserted, so
+    stamping one repo keeps the others. /complete-task skips a duplicate
+    review-diff while the verdict is Ready on the same staged set, and
+    Assert-TicketArtifacts -Phase close checks the committed work still matches.
 
 .PARAMETER Ticket
-    Work item, with or without the WI prefix.
+    Work item, with or without the ticket prefix.
 
 .PARAMETER Mode
-    staged (working-tree /review-changes) or pre-merge (branch token). Complete-task
-    only skips on staged.
+    staged (working-tree /review-changes) or pre-merge (work already committed;
+    records headSha, no fingerprint). Complete-task only skips on staged.
 
 .PARAMETER Verdicts
-    JSON object mapping repo name to verdict, e.g. '{"TmoPro":"Ready"}'.
+    JSON object mapping repo name to verdict, e.g. '{"app":"Ready"}'.
+    Verdicts: Ready, Ready with fixes, Not ready, or No change (an affected repo
+    with nothing to review; refused when something is staged).
     When omitted, -Verdict is applied to every resolved affected repo.
 
 .PARAMETER Verdict
@@ -26,10 +31,10 @@
     Resolve-TicketRoot for those repos (tests, or when resolution fails).
 
 .PARAMETER Root
-    Override the tmo-agentic repo root (tests).
+    Override the workflow repo root (tests).
 
 .EXAMPLE
-    .\Set-ReviewReady.ps1 -Ticket WI21961 -Mode staged -Verdicts '{"TmoPro":"Ready"}'
+    .\Set-ReviewReady.ps1 -Ticket TICKET-42 -Mode staged -Verdicts '{"app":"Ready"}'
 #>
 
 [CmdletBinding()]
@@ -89,23 +94,56 @@ if ($RepoPaths) {
     foreach ($p in ($RepoPaths | ConvertFrom-Json).PSObject.Properties) { $pathMap[$p.Name] = [string]$p.Value }
 }
 
+# Upsert: a later stamp (for example complete-task re-reviewing one repo) keeps the other
+# repos' entries from /review-changes.
+$existing = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $reposObj = New-Object PSObject
+if (($existing.PSObject.Properties.Name -contains 'reviewReady') -and $existing.reviewReady -and
+    ($existing.reviewReady.PSObject.Properties.Name -contains 'repos') -and $existing.reviewReady.repos) {
+    $oldMode = Get-StampEntryValue $existing.reviewReady 'mode'
+    foreach ($p in $existing.reviewReady.repos.PSObject.Properties) {
+        $old = $p.Value
+        # Older entries took their mode from the stamp; pin it so a new top-level mode cannot change them.
+        if ($old -and $oldMode -and -not (Get-StampEntryValue $old 'mode')) {
+            $old | Add-Member -NotePropertyName 'mode' -NotePropertyValue $oldMode -Force
+        }
+        $reposObj | Add-Member -NotePropertyName $p.Name -NotePropertyValue $old
+    }
+}
+
 foreach ($name in ($verdictMap.Keys | Sort-Object)) {
     $path = $pathMap[$name]
     if (-not $path) {
         $hit = $repoEntries | Where-Object { $_.repo -eq $name } | Select-Object -First 1
         if ($hit) { $path = [string]$hit.path }
     }
+    $where = if ($path) { $path } else { 'an unresolved path' }
+    $entryVerdict = [string]$verdictMap[$name]
+    $noChange = ($entryVerdict.Replace('*', '').Trim() -ieq 'No change')
     $fp = if ($path) { Get-StagedDiffFingerprint -RepoPath $path } else { $null }
-    # A staged stamp over nothing would let /complete-task skip a review that never saw code.
-    if ($Mode -eq 'staged' -and -not $fp) {
-        $where = if ($path) { $path } else { 'an unresolved path' }
-        throw "Nothing staged in $name ($where). Stage the reviewed change before stamping Ready."
+    $headSha = if ($path) { Get-GitHeadSha -RepoPath $path } else { $null }
+    if ($noChange) {
+        if ($fp) { throw "$name has staged changes ($where). 'No change' is only for a repo with nothing to review." }
+        if (-not $headSha) { throw "No HEAD in $name ($where). 'No change' needs a resolvable repo." }
+    } elseif ($Mode -eq 'staged') {
+        # A staged stamp over nothing would let /complete-task skip a review that never saw code.
+        if (-not $fp) { throw "Nothing staged in $name ($where). Stage the reviewed change before stamping Ready." }
+    } else {
+        if (-not $headSha) { throw "No HEAD in $name ($where). A pre-merge stamp records the reviewed commit." }
+        $fp = $null
     }
-    $reposObj | Add-Member -NotePropertyName $name -NotePropertyValue ([pscustomobject]@{
-        verdict     = [string]$verdictMap[$name]
+    $entry = [pscustomobject]@{
+        verdict     = $entryVerdict
+        mode        = $Mode
+        headSha     = $headSha
         fingerprint = $fp
-    })
+        fpVersion   = 2
+    }
+    if ($null -ne $reposObj.PSObject.Properties[$name]) {
+        $reposObj.$name = $entry
+    } else {
+        $reposObj | Add-Member -NotePropertyName $name -NotePropertyValue $entry
+    }
 }
 
 $stamp = [pscustomobject]@{
