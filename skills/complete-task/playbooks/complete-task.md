@@ -113,8 +113,9 @@ spike's story-point or timebox field.
    - After the approval package, and after any approved `prep-pr` actions, run
      [../references/task-retrospective.md](../references/task-retrospective.md). Record this chat's
      occupancy with `report-context` (`Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close`; omit
-     `-Percent` to use the measured value), then pass `-ContextPct` to the ledger write. Never
-     estimate — a blank is honest ([harness-verbs](../../../_shared/harness-verbs.md)).
+     `-Percent` to use the measured value). The ledger script copies `Ctx%`, `CtxS%`, and `CtxR%`
+     from the manifest, so do not pass `-ContextPct`. Never estimate — a blank is honest
+     ([harness-verbs](../../../_shared/harness-verbs.md)).
    - It **asks three questions** (did the plan hold · any agentic-flow friction · anything durable),
      proposes actions for the answers, and lets the user choose. The only unconditional output is one
      ledger row via `Update-TicketLedger.ps1`; a full closeout page only when a finding earns one.

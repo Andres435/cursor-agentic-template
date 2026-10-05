@@ -19,6 +19,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 
 | Doc | Load when | Keywords |
 |---|---|---|
+| [_shared/glossary.md](_shared/glossary.md) | a workflow term is unclear (mode, manifest, epoch, ctxPct, lanes, receipts) | glossary, terms, jargon, receipt, epoch |
 | [_shared/ticket-artifacts.md](_shared/ticket-artifacts.md) | which files each phase writes; what the gates check | artifacts, manifest, verify receipt, reviewReady, close gate |
 | [_shared/ticket-plan-output.md](_shared/ticket-plan-output.md) | plan and closeout structure | plan digest, work plan, deviations, enter-plan |
 | [_shared/engineering-decisions.md](_shared/engineering-decisions.md) | the plan's decision gate | engineering decision, TBD, out of scope |
@@ -65,6 +66,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | Doc | Load when | Keywords |
 |---|---|---|
 | [skills/start-ticket/references/feature-plan.md](skills/start-ticket/references/feature-plan.md) | feature plan shape | feature, behaviors, clarify |
+| [skills/start-ticket/references/worktree-handoff.md](skills/start-ticket/references/worktree-handoff.md) | worktree mode only: provision, runtime heal, handoff message | worktree, handoff, paste block |
 | [skills/start-ticket/references/bug-fix.md](skills/start-ticket/references/bug-fix.md) | bug plan shape | bug, root cause, fix layer |
 | [skills/start-ticket/references/tech-spike.md](skills/start-ticket/references/tech-spike.md) | spike plan shape | spike, investigate, findings |
 | [skills/start-ticket/references/document-spike.md](skills/start-ticket/references/document-spike.md) · [skill](skills/document-spike/SKILL.md) | writing a spike page, only when asked | document spike |

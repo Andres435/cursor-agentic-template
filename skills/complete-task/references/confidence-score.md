@@ -31,8 +31,8 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
 
 | Consumer | `<axis>` value |
 |----------|----------------|
-| `skills/start-ticket/references/bug-fix.md` | Root-cause certainty |
-| `skills/start-ticket/references/feature-plan.md` | Design certainty |
+| `skills/start-ticket/references/bug-fix.md` | Root-cause certainty (H/M/L on the Plan Digest Risk line at plan time; scored here at close) |
+| `skills/start-ticket/references/feature-plan.md` | Design certainty (same: Risk line at plan time, scored at close) |
 | `skills/start-ticket/references/tech-spike.md` | Findings certainty |
 | `skills/review-changes/SKILL.md` | Change-set understanding. Optional **Stack smoke** row from `Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes). |
 | `skills/ticket-workflow` | Whichever axis matches the underlying ticket type (bug -> Root-cause certainty, feature -> Design certainty, spike -> Findings certainty, change-set review -> Change-set understanding) |

@@ -20,11 +20,9 @@ Before researching, take from the ticket or ask once if missing:
 - **Question** this spike must answer
 - **Spike points** already on the ticket (timebox or story points), when the tracker has them. That number is how long a developer should spend investigating. Repeat it. If it is empty, recommend one and write it only after the user agrees. Do not replace it with session hours or with the build estimate.
 
-If the tracker blocks the start transition because required fields are empty, report the blocking fields and continue the spike.
-
 ## Local plan
 
-**Switch to Plan mode** and follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md). When invoked from `/start-ticket`, run `enter-plan` ([harness-verbs](../../../_shared/harness-verbs.md)) without asking. Approval and the final message stay with `/start-ticket`.
+Structure follows [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md); plan mode, approval, and the final message stay with `/start-ticket`.
 
 The persisted plan keeps:
 

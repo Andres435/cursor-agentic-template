@@ -10,7 +10,7 @@ disable-model-invocation: true
 Executes an approved plan in a **fresh chat**. Reasons to be here:
 
 1. **Worktree mode** — `/start-ticket --worktree` planned in one window; this is the build chat, run
-   in the ticket window it opened.
+   in a chat rooted at the ticket worktree it created.
 2. **Resuming branch mode** — `/start-ticket` normally plans *and* builds in one chat. If that chat
    ran out of context or was closed, this command picks the plan back up.
 
@@ -45,9 +45,13 @@ is missing.
    - Run [../../ticket-context-load/SKILL.md](../../ticket-context-load/SKILL.md) with
      `-Phase implement`. It resolves the ticket's mode and root, runs the artifacts gate, and loads
      the manifest, approved plan, `docSet`, environment card, and `priorFindings`.
-   - In **worktree** mode this must run in the ticket window, whose root is already the worktree. If
-     it was pasted into the main-tree chat, say so and stop — there is no agent-root move to fall
-     back on ([../../../environments/worktrees.md](../../../environments/worktrees.md)).
+   - In **worktree** mode this chat must be rooted at the ticket worktree. If it is not, say so and
+     stop; the user opens one that is, per
+     [adapters/README.md](../../../adapters/README.md#open-a-ticket-worktree)
+     ([../../../environments/worktrees.md](../../../environments/worktrees.md)).
+   - If context-load reported a repo behind `origin/<baseBranch>`, merge it now, before the first
+     edit, while the index is clean. Stop and report on a conflict. This is the only build chat that
+     merges the base before `/prep-pr` (branch-setup may already have merged it at start).
    - If the gate fails, stop. Report what is missing and offer to reconstruct it. Do not substitute
      a plan of your own.
 

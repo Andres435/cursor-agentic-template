@@ -62,18 +62,12 @@ None — <one clause saying why, e.g. "single-file fix, AC unambiguous, no ADR i
   - **Rejected:** A shared enum package — the vendors never share a payload.
 ```
 
-## Where it goes
+## After approval
 
-| Surface | What it carries |
-|---|---|
-| Plan file section | The full entries above, placed before the Work Plan |
-| Plan Digest `Judgment calls` line | One clause per decision, or `None` ([ticket-plan-output.md](ticket-plan-output.md)) |
-| [../plans/closeout-index.md](../plans/closeout-index.md) | Only a decision that proved wrong, recorded at closeout |
+The section sits before the Work Plan; the Plan Digest carries one clause per decision
+([ticket-plan-output.md](ticket-plan-output.md)). A decision changed after approval is a **new
+plan**; one refined with the intent intact is a Deviations entry. A decision that proved wrong goes
+to the closeout index at close ([task-retrospective.md](../skills/complete-task/references/task-retrospective.md)).
 
-A decision that changes after approval is a **new plan**. A decision refined during implementation
-with the intent intact is a Deviations entry ([ticket-plan-output.md](ticket-plan-output.md)).
-
-## Work-type candidates
-
-Each work-type template (`bug-fix`, `feature-plan`, `tech-spike`) lists what usually needs deciding.
-This file does not restate them. Paths are in [../INDEX.md](../INDEX.md).
+Each work-type template lists its usual candidates; this contract does not link down into them.
+Paths are in [../INDEX.md](../INDEX.md).

@@ -15,22 +15,24 @@ such ticket is already in the index.
 
 ## When
 
-During [../SKILL.md](../SKILL.md), after classification
-axes are filled and **before** writing the manifest. Also re-run if scope changes (new repo or
-integration).
+In the `/start-ticket` step 5 fan-out, once the manifest (written at step 3 with
+`priorFindings: []`) has `affectedRepos`; update `priorFindings` on the manifest when the results
+land. The rule is the router's [Prior closeouts](../SKILL.md#prior-closeouts) section; this file is
+the detail and the fallback. Re-run if scope changes (new repo or integration).
 
 ## How
 
-1. Build a query from the work-item title, area, `integration`, `affectedRepos`, and obvious
-   keywords from the ticket's title, area, integration, and affected repos.
-2. Prefer the script (compact JSON):
+1. Build a query from the ticket's title, area, integration, and affected repos.
+2. Prefer the script (compact JSON) — once per affected repo, plus one integration-only pass when
+   `integration` ≠ `none`:
 
    ```powershell
-   .\.cursor\scripts\ticket\Search-CloseoutMemory.ps1 -Query "<title keywords>" -MaxResults 8
+   .\.cursor\scripts\ticket\Search-CloseoutMemory.ps1 -Query "<title keywords>" -Repos <repo> -MaxResults 4
+   .\.cursor\scripts\ticket\Search-CloseoutMemory.ps1 -Query "<title keywords>" -Integration <name> -MaxResults 4
    ```
 
-   Fallback: `Grep` `plans/closeout-index.md` directly.
-3. Copy the returned bullets into manifest `priorFindings[]` (`ticket` + one-line `lesson`).
+   Fallback when the script fails: `Grep` `plans/closeout-index.md` directly.
+3. Union, dedupe by ticket id, cap 8, and copy into manifest `priorFindings[]` (`ticket` + one-line `lesson`).
 4. Do **not** add closeout files to `docSet`. If a lesson needs detail and that ticket happens to
    have a `WI<n>-closeout.md`, read **only** its **Other findings** slice.
 

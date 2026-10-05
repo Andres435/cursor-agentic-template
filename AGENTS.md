@@ -5,8 +5,12 @@ description: Index of workspace agents and routing guidance for ticket work.
 
 # Agents Index
 
-**Looking for a doc? Grep [INDEX.md](INDEX.md) first.** One row per doc with its keywords; cheaper
-than searching the tree.
+**Looking for a doc? Grep [INDEX.md](INDEX.md) first.** One row per doc with its keywords; a gate
+keeps it complete. Terms (mode, manifest, epoch, ctxPct, lanes, receipts): [_shared/glossary.md](_shared/glossary.md).
+
+**Running scripts:** run the repo's own scripts or inline commands; never write a helper script to
+temp or a scratchpad and run it, and edit files with the edit tools. If an application allowlist
+guards the machine, see [MACHINE-SETUP.md](MACHINE-SETUP.md#application-allowlist).
 
 Developer overview: [README.md](README.md). How to run tickets: [USER-MANUAL.md](USER-MANUAL.md).
 What to customize first: [CUSTOMIZE.md](CUSTOMIZE.md). Before broad searching, check `profile.json`

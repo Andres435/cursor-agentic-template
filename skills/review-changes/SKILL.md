@@ -14,9 +14,12 @@ Review code changes before creating PRs. Read and execute
 
 ## Modes
 
-- **Working-tree** (default) — review staged changes across workspace repos.
+- **Working-tree** (default) — review staged changes across workspace repos. The ticket key comes
+  from the folder name or the repos' current branches (`Get-TicketFromBranch.ps1`), so branch mode
+  needs no token.
 - **Pre-merge** — supply a branch token (e.g. `review-changes <ticket>`) to review the three-dot
-  diff vs `origin/<base>` (`profile.baseBranchDefault`).
+  diff vs `origin/<base>` (`profile.baseBranchDefault`). A token naming the current branch while
+  changes are staged stays working-tree.
 
 ## Key steps (summary)
 

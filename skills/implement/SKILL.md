@@ -20,7 +20,7 @@ Read and execute that playbook now. Do not ask for confirmation before reading i
 ```
 
 Use this command when:
-1. **Worktree mode** — building in the ticket window.
+1. **Worktree mode** — building in a chat rooted at the ticket worktree.
 2. **Resuming branch mode** — the `/start-ticket` chat ran out of context.
 
 A spike (`mode: investigate`) resumes here only to finish read-only research on the clones as they

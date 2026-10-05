@@ -43,7 +43,9 @@
 [CmdletBinding()]
 param(
     [string]$Root = (Split-Path $PSScriptRoot -Parent),
-    [switch]$WarnOnly
+    [switch]$WarnOnly,
+    # Print the always-loaded word count per IDE and the /start-ticket Load-map total.
+    [switch]$Report
 )
 
 Set-StrictMode -Version Latest
@@ -120,6 +122,124 @@ foreach ($rule in $budgets) {
     }
 }
 
+# ---- Word budgets: what a chat actually pays for, not how many lines a file has ----
+
+function Get-WordCount([string]$Text) { return @($Text -split '\s+' | Where-Object { $_ }).Count }
+
+# GitHub heading slug: lower case, punctuation dropped (except - and _), spaces to '-'.
+function Get-HeadingSlug([string]$Heading) {
+    return (($Heading.Trim().ToLowerInvariant() -replace '[^\p{L}\p{N} _-]', '') -replace ' ', '-')
+}
+
+# Words in a file, or only in the section under #anchor (until the next heading of the same or a
+# higher level). $null when the file or the anchor is missing.
+function Get-DocWords([string]$Path, [string]$Anchor) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    $lines = @(Get-Content -LiteralPath $Path -Encoding UTF8)
+    if (-not $Anchor) { return (Get-WordCount ($lines -join "`n")) }
+    # A '#' line inside a ``` fence is code (a PowerShell comment), not a heading.
+    $inFence = $false
+    $isHeading = @(foreach ($l in $lines) {
+        if ($l -match '^\s*```') { $inFence = -not $inFence; $false; continue }
+        (-not $inFence) -and ($l -match '^#{1,6}\s')
+    })
+    $start = -1; $level = 0
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($isHeading[$i] -and $lines[$i] -match '^(#{1,6})\s+(.+?)\s*#*\s*$' -and (Get-HeadingSlug $Matches[2]) -eq $Anchor) {
+            $start = $i; $level = $Matches[1].Length; break
+        }
+    }
+    if ($start -lt 0) { return $null }
+    $end = $lines.Count
+    for ($j = $start + 1; $j -lt $lines.Count; $j++) {
+        if ($isHeading[$j] -and $lines[$j] -match '^(#{1,6})\s' -and $Matches[1].Length -le $level) { $end = $j; break }
+    }
+    return (Get-WordCount ($lines[$start..($end - 1)] -join "`n"))
+}
+
+# 1. Always-loaded set per IDE: every word here is paid by every chat.
+# Claude Code: the workspace CLAUDE.md (this repo's root CLAUDE.md, or the adapter template that
+# is written next to the clones) plus each `@import` it names, `{{folder}}/` stripped.
+$alwaysCap = 1500
+$alwaysSets = [ordered]@{}
+$claudeEntry = if (Test-Path -LiteralPath (Join-Path $Root 'CLAUDE.md')) { 'CLAUDE.md' } else { 'adapters/claude/workspace-CLAUDE.md' }
+$claudeFiles = @($claudeEntry) + @(Get-Content -LiteralPath (Join-Path $Root $claudeEntry) -Encoding UTF8 -ErrorAction SilentlyContinue |
+    Where-Object { $_ -match '^@(\S+)' } | ForEach-Object { $Matches[1] -replace '^\{\{folder\}\}/', '' })
+$alwaysSets['Claude Code'] = $claudeFiles
+$cursorRules = @(Get-ChildItem -LiteralPath (Join-Path $Root 'rules') -Filter '*.mdc' -File -ErrorAction SilentlyContinue |
+    Where-Object { (Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8) -match '(?m)^alwaysApply:\s*true' } |
+    ForEach-Object { "rules/$($_.Name)" })
+$alwaysSets['Cursor'] = @('AGENTS.md') + $cursorRules
+$alwaysSets['Codex'] = @('AGENTS.md')
+$alwaysReport = [System.Collections.Generic.List[string]]::new()
+foreach ($ide in $alwaysSets.Keys) {
+    $total = 0
+    foreach ($rel in $alwaysSets[$ide]) {
+        $w = Get-DocWords (Join-Path $Root $rel) $null
+        if ($null -ne $w) { $total += $w }
+    }
+    $checked++
+    $alwaysReport.Add(("{0,-12} {1,5} words  ({2})" -f $ide, $total, ($alwaysSets[$ide] -join ', ')))
+    if ($total -gt $alwaysCap) {
+        $violations.Add([pscustomobject]@{ File = "always-loaded set ($ide)"; Lines = $total; Budget = $alwaysCap; Over = $total - $alwaysCap; Unit = 'words' })
+    }
+}
+
+# 2. Skill references: loaded whole unless the doc offers slices.
+$refCap = 1500
+$refAllowlist = @()  # a reference that is loaded by section may be listed here instead of adding '## Slices'
+foreach ($ref in @(Get-ChildItem -LiteralPath (Join-Path $Root 'skills') -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { ($_.FullName -replace '\\', '/') -like '*/references/*' })) {
+    $relative = ($ref.FullName.Substring($Root.Length).TrimStart('\', '/') -replace '\\', '/')
+    if ($refAllowlist -contains $relative) { continue }
+    $text = Get-Content -LiteralPath $ref.FullName -Raw -Encoding UTF8
+    if ($text -match '(?m)^## Slices') { continue }
+    $checked++
+    $w = Get-WordCount $text
+    if ($w -gt $refCap) {
+        $violations.Add([pscustomobject]@{ File = $relative; Lines = $w; Budget = $refCap; Over = $w - $refCap; Unit = 'words' })
+    }
+}
+
+# 3. /start-ticket before plan approval: the skill, its playbook, and every `always` Load-map row.
+$startCap = 7000
+$playbook = Join-Path $Root 'skills/start-ticket/playbooks/start-ticket.md'
+$startTotal = $null
+$startRows = [System.Collections.Generic.List[string]]::new()
+if (Test-Path -LiteralPath $playbook) {
+    $startTotal = (Get-DocWords (Join-Path $Root 'skills/start-ticket/SKILL.md') $null) + (Get-DocWords $playbook $null)
+    $inMap = $false
+    foreach ($line in (Get-Content -LiteralPath $playbook -Encoding UTF8)) {
+        if ($line -match '^## Load map') { $inMap = $true; continue }
+        if ($inMap -and $line -match '^## ') { break }
+        if (-not $inMap -or $line -notmatch '^\|\s*\[[^\]]*\]\(([^)#]+)(?:#([^)]+))?\)\s*\|\s*([^|]+?)\s*\|') { continue }
+        $relPath = $Matches[1]
+        $target = Join-Path (Split-Path $playbook -Parent) $relPath
+        $anchor = if ($Matches.Count -gt 2) { $Matches[2] } else { $null }
+        $when = $Matches[3]
+        $w = Get-DocWords $target $anchor
+        if ($null -eq $w) {
+            $violations.Add([pscustomobject]@{ File = "start-ticket Load map: $relPath#$anchor"; Lines = 0; Budget = 0; Over = 0; Unit = 'missing file or anchor' })
+            continue
+        }
+        $startRows.Add(("  {0,-10} {1,5}  {2}{3}" -f $when, $w, $relPath, $(if ($anchor) { "#$anchor" } else { '' })))
+        if ($when -eq 'always') { $startTotal += $w }
+    }
+    $checked++
+    if ($startTotal -gt $startCap) {
+        $violations.Add([pscustomobject]@{ File = 'start-ticket chat before plan approval'; Lines = $startTotal; Budget = $startCap; Over = $startTotal - $startCap; Unit = 'words' })
+    }
+}
+
+if ($Report) {
+    Write-Host "Always-loaded words per IDE (cap $alwaysCap):"
+    $alwaysReport | ForEach-Object { Write-Host "  $_" }
+    if ($null -ne $startTotal) {
+        Write-Host "start-ticket before plan approval: $startTotal words (cap $startCap; skill + playbook + 'always' rows)"
+        $startRows | ForEach-Object { Write-Host $_ }
+    }
+}
+
 if ($violations.Count -eq 0) {
     Write-Host "[PASS] Doc budget: $checked file(s) checked, all within budget." -ForegroundColor Green
     exit 0
@@ -129,10 +249,12 @@ $label = if ($WarnOnly) { "[WARN]" } else { "[FAIL]" }
 $color = if ($WarnOnly) { "Yellow" } else { "Red" }
 Write-Host "$label Doc budget: $($violations.Count) file(s) over budget (of $checked checked):" -ForegroundColor $color
 foreach ($v in ($violations | Sort-Object Over -Descending)) {
-    Write-Host ("  {0,-60} {1,4} lines  (budget {2}, over by {3})" -f $v.File, $v.Lines, $v.Budget, $v.Over) -ForegroundColor $color
+    $unit = if ($v.PSObject.Properties.Name -contains 'Unit') { $v.Unit } else { 'lines' }
+    Write-Host ("  {0,-60} {1,5} {2}  (budget {3}, over by {4})" -f $v.File, $v.Lines, $unit, $v.Budget, $v.Over) -ForegroundColor $color
 }
 Write-Host "  Move over-budget detail to skill references/ or split into slices." -ForegroundColor DarkGray
-Write-Host "  Budgets: SKILL.md <=500, commands/*.md <=40, _shared/*.md <=150, environments/*.md <=120, rules/*.mdc <=120, adapters/claude/model-usage.md <=70" -ForegroundColor DarkGray
+Write-Host "  Budgets: SKILL.md <=500, commands/*.md <=40, _shared/*.md <=150, environments/*.md <=120, rules/*.mdc <=120, adapters/claude/model-usage.md <=70 lines;" -ForegroundColor DarkGray
+Write-Host "  always-loaded set <=$alwaysCap words per IDE, skills/*/references <=$refCap words (unless sliced), start-ticket before approval <=$startCap words" -ForegroundColor DarkGray
 
 if ($WarnOnly) { exit 0 }
 exit 1

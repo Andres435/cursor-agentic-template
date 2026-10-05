@@ -32,7 +32,7 @@ Fill each axis from the ticket context and `profile.json`. Do not guess repos ou
 
 - `mode`: `profile.defaultMode` unless the caller passed `--worktree` and
   `profile.worktreeSupported` is true.
-- `workType`: `bug` | `feature` | `spike` | `refactor`.
+- `workType`: `bug` | `feature` | `spike` | `refactor`. Each has a plan template (see Doc Set Selection).
 - `affectedRepos[]`: subset of `profile.repos` in `profile.dependencyOrder`. Mark any repo not
   cloned locally as `{ "repo": "...", "local": false }`.
 - `integration`: one of `profile.integrations` or `none`. `environmentCard` = matched path under
@@ -51,15 +51,26 @@ Emit `docSet[]` = only the slices this ticket may load, loaded at the step that 
 - Always: ticket intake reference, [../../_shared/ticket-plan-output.md](../../_shared/ticket-plan-output.md).
 - Include [../../_shared/cross-repo-workflow.md](../../_shared/cross-repo-workflow.md)
   **only** when `affectedRepos` has 2+ repos or `integration != none`.
-- `workType` selects the plan shape: `references/bug-fix.md` | `feature-plan.md` | `tech-spike.md`.
+- `workType` selects the plan shape, the work-type template: bug → `skills/start-ticket/references/bug-fix.md`;
+  feature and refactor → `skills/start-ticket/references/feature-plan.md` (refactor uses its
+  Refactor section); spike → `skills/start-ticket/references/tech-spike.md`.
 - Include `_shared/adr-policy.md` **only** when `adrIndex` is non-null.
 - Include `_shared/test-verification.md` whenever code changes are expected.
 - Include `_shared/engineering-decisions.md` on start-ticket (the plan step needs it).
 - Include the matched `environmentCard` whenever one is matched.
-- **Prior closeouts:** `Search-CloseoutMemory.ps1` **once per affected repo**, `-MaxResults 4`,
-  cap 8 `priorFindings`. A row describing a call that went wrong last time is an Engineering
-  Decisions candidate ([../../_shared/engineering-decisions.md](../../_shared/engineering-decisions.md)).
-  Do not put closeout files in `docSet`.
+- Prior closeouts: see the next section. Never put closeout files in `docSet`.
+
+## Prior closeouts
+
+`Search-CloseoutMemory.ps1` **once per affected repo** with `-MaxResults 4` — one multi-repo call
+folds every repo name into one score and pulls unrelated rows — plus one `integration`-only pass when
+`integration` ≠ `none`. Union, dedupe by ticket id, cap **8** `priorFindings`. `/start-ticket`
+dispatches it in its step 5 fan-out: write `priorFindings: []` at step 3, then update the manifest
+when the results land. Script failure: [references/closeout-search.md](references/closeout-search.md).
+
+A row describing a call that went wrong last time is an Engineering Decisions candidate
+([../../_shared/engineering-decisions.md](../../_shared/engineering-decisions.md)), not just
+background.
 
 ## Parallel Plan
 
