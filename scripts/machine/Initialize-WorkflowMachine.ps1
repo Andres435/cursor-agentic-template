@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
-    First-time (or refresh) setup for this Cursor agentic workflow on the current machine.
+    First-time (or refresh) setup for this agentic workflow on the current machine.
 
 .DESCRIPTION
-    Git does not install Cursor extensions, user settings, or user-level command links.
-    Run this once after cloning/pulling cursor-agentic-workspace into source\repos\.cursor.
+    Git does not install IDE extensions, user settings, or user-level command links.
+    Run this once after placing this folder at <app>/.cursor or source/repos/.cursor.
 
-    Phases:
+    Phases (1-3 are skipped when their script is not in scripts/machine/; a project
+    adds them in its overlay):
       0. Preflight   - report which prerequisites this machine has (never blocks)
       1. Extensions  - Install-CursorExtensions.ps1
       2. User config - Apply-CursorUserConfig.ps1 (settings + keybindings +
@@ -106,10 +107,17 @@ function Add-Result {
 function Invoke-Phase {
     param(
         [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][scriptblock]$Body
+        [Parameter(Mandatory)][scriptblock]$Body,
+        # A phase script the template does not ship (a project adds it in its overlay).
+        [string]$Script
     )
     Write-Host ""
     Write-Host "--- $Name ---" -ForegroundColor Cyan
+    if ($Script -and -not (Test-Path -LiteralPath (Join-Path $here $Script))) {
+        Add-Result -Phase $Name -Status 'SKIPPED' -Detail "$Script is not in this checkout"
+        Write-Host "Skipped: $Script is not in scripts/machine/ (add it in your overlay to enable this phase)." -ForegroundColor DarkGray
+        return
+    }
     $global:LASTEXITCODE = 0
     try {
         & $Body
@@ -150,18 +158,14 @@ if (-not $SkipPreflight) {
     Write-Host "--- 0. Preflight (prerequisite report) ---" -ForegroundColor Cyan
 
     $checks = @(
-        @{ Name = 'cursor CLI'; Present = (Test-ToolPresent 'cursor'); Required = (-not $SkipExtensions)
-           Why = 'installs extensions; ships with Cursor'; Fix = 'Open Cursor once, or add its bin\ folder to PATH' }
+        @{ Name = 'cursor CLI'; Present = (Test-ToolPresent 'cursor'); Required = $false
+           Why = 'Cursor only: installs extensions; ships with Cursor'; Fix = 'Open Cursor once, or add its bin\ folder to PATH' }
         @{ Name = 'git';        Present = (Test-ToolPresent 'git');    Required = $true
-           Why = 'repos + per-ticket worktrees'; Fix = 'https://git-scm.com' }
-        @{ Name = 'node / npx'; Present = (Test-ToolPresent 'npx');    Required = $true
-           Why = 'ado + sonarqube MCP servers start via npx'; Fix = 'Install Node.js LTS' }
-        @{ Name = 'az CLI';     Present = (Test-ToolPresent 'az');     Required = $true
-           Why = 'ADO MCP auth, Tmo NuGet feed token, Key Vault'; Fix = 'Install Azure CLI, then: az login' }
-        @{ Name = 'dotnet SDK'; Present = (Test-ToolPresent 'dotnet'); Required = $true
-           Why = 'TmoPro builds / tests / warning sweep'; Fix = 'Install the .NET SDK matching TmoPro global.json' }
-        @{ Name = 'mkcert';     Present = (Test-ToolPresent 'mkcert'); Required = $false
-           Why = 'local HTTPS certs for the React wrapper stack'; Fix = 'winget install FiloSottile.mkcert' }
+           Why = 'repos, review fingerprints, push gate'; Fix = 'https://git-scm.com' }
+        @{ Name = 'pwsh';       Present = (Test-ToolPresent 'pwsh');   Required = $true
+           Why = 'ticket gates and Pester tests need PowerShell 7'; Fix = 'https://aka.ms/powershell' }
+        @{ Name = 'node';       Present = (Test-ToolPresent 'node');   Required = $true
+           Why = 'IDE hooks run on Node; npx starts most MCP servers'; Fix = 'Install Node.js LTS' }
     )
 
     foreach ($c in $checks) {
@@ -223,7 +227,7 @@ if (-not $SkipPreflight) {
 # 1. Extensions
 # ---------------------------------------------------------------------------
 if (-not $SkipExtensions) {
-    Invoke-Phase -Name '1. Extensions' -Body {
+    Invoke-Phase -Name '1. Extensions' -Script 'Install-CursorExtensions.ps1' -Body {
         $extArgs = @{}
         if ($IncludeOptionalExtensions) { $extArgs['IncludeOptional'] = $true }
         if ($WhatIf) { $extArgs['WhatIf'] = $true }
@@ -239,7 +243,7 @@ if (-not $SkipExtensions) {
 # 2. User settings, keybindings, slash commands
 # ---------------------------------------------------------------------------
 if (-not $SkipUserConfig) {
-    Invoke-Phase -Name '2. User config' -Body {
+    Invoke-Phase -Name '2. User config' -Script 'Apply-CursorUserConfig.ps1' -Body {
         $cfgArgs = @{}
         if ($ForceKeybindings) { $cfgArgs['ForceKeybindings'] = $true }
         if ($SkipUserCommands) { $cfgArgs['SkipUserCommands'] = $true }
@@ -265,7 +269,7 @@ if (-not $SkipUserConfig) {
 # 3. Cockpit workspace (opt-in)
 # ---------------------------------------------------------------------------
 if ($GenerateCockpit) {
-    Invoke-Phase -Name '3. Cockpit workspace' -Body {
+    Invoke-Phase -Name '3. Cockpit workspace' -Script 'New-CockpitWorkspace.ps1' -Body {
         $cockpitArgs = @{ Open = $true }
         if ($WhatIf) { $cockpitArgs['WhatIf'] = $true }
         & (Join-Path $here 'New-CockpitWorkspace.ps1') @cockpitArgs
@@ -273,7 +277,7 @@ if ($GenerateCockpit) {
 } else {
     Add-Result -Phase '3. Cockpit workspace' -Status 'SKIPPED' -Detail 'pass -GenerateCockpit'
     Write-Host ""
-    Write-Host "Skipped cockpit (pass -GenerateCockpit to create tmo-cockpit.code-workspace)." -ForegroundColor DarkGray
+    Write-Host "Skipped cockpit (pass -GenerateCockpit to create a cockpit .code-workspace)." -ForegroundColor DarkGray
 }
 
 # ---------------------------------------------------------------------------
@@ -411,26 +415,12 @@ if ($WhatIf) {
 if (-not $WhatIf) {
     $todo = @()
 
-    # az login state. `az account show` writes to stderr and exits non-zero when
-    # logged out, so it needs the same EAP guard as every other native call here.
-    if (Test-ToolPresent 'az') {
-        $prevEap = $ErrorActionPreference
-        $ErrorActionPreference = 'SilentlyContinue'
-        $null = & az account show 2>$null
-        $azOk = ($LASTEXITCODE -eq 0)
-        $ErrorActionPreference = $prevEap
-        if (-not $azOk) { $todo += 'az login            (ADO MCP, NuGet feed, Key Vault)' }
-    } else {
-        $todo += 'Install Azure CLI, then az login'
-    }
-
-    # A user env var set in another process is not visible here, so read the
-    # registry-backed User scope rather than $env: - otherwise this nags about
-    # a token that is already set.
-    $sonarToken = [Environment]::GetEnvironmentVariable('SONARQUBE_TOKEN', 'User')
-    if (-not $sonarToken) { $sonarToken = $env:SONARQUBE_TOKEN }
-    if (-not $sonarToken) {
-        $todo += 'Set user env SONARQUBE_TOKEN, then fully restart Cursor  (TmoPro Sonar MCP)'
+    $mcp = Join-Path $RepoRoot 'mcp.json'
+    if (Test-Path -LiteralPath $mcp) {
+        $servers = (Get-Content -LiteralPath $mcp -Raw | ConvertFrom-Json).mcpServers
+        if ($servers -and @($servers.PSObject.Properties).Count) {
+            $todo += 'Set any tokens your mcp.json servers read, then fully restart the IDE'
+        }
     }
 
     $todo += 'Developer: Reload Window   (settings, keybindings, / commands)'

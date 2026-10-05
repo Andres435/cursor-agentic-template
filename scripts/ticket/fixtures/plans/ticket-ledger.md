@@ -13,6 +13,6 @@ retrospective earns one. Scorecard scale 1-5 (5 = excellent). `CtxS%` is the
 |---|---|---|---|---|---|---|---|
 | 1 | 1 | 4 | 4 | 3 | n/a | n/a | 45% |
 
-| Ticket | Type | Closed | Mode | Hours | Pts | E | C | $tok | CtxS% | CtxR% | Ctx% | PR |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| WI00001 | feature | 2026-09-01 | branch | 4 | 2 | 4 | 4 | 3 |  |  | 45 | |
+| Ticket | Type | Closed | Mode | Hours | Pts | E | C | $tok | CtxS% | CtxR% | Ctx% | PR | Lanes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| WI00001 | feature | 2026-09-01 | branch | 4 | 2 | 4 | 4 | 3 | 40 | 50 | 45 | | |

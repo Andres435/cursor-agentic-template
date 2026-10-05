@@ -8,10 +8,12 @@ What is **core** (stable across products) vs **overlay** (per project).
 |---|---|
 | `skills/<name>/SKILL.md` | One folder per skill. `playbooks/` and `references/` sit beside it |
 | `skills/start-new-project/` | Fills `profile.json` for a new product |
-| `scripts/ticket/` | Artifact gate, epoch, ledger, review stamp, measured Ctx% |
-| `scripts/machine/` | Machine init and user-level slash links |
+| `skills/architect/`, `skills/blast-radius/` | Design lanes and what-could-break proof for shared changes |
+| `scripts/ticket/` | Artifact gate, epoch, ledger, review stamp, verify receipt, stack smoke, lanes, measured Ctx% |
+| `scripts/machine/` | Machine init, user-level slash links, git hooks, Claude overlay |
 | `scripts/runtime/Set-ActiveStack.ps1` | One stack owner file |
-| `hooks/core/` + `hooks.json` | Shared hook logic; IDE bridges live under `adapters/` |
+| `hooks/core/` + `hooks.json` | Shared hook logic; IDE bridges live under `adapters/`. `hook-log.js` writes swallowed errors to `scripts/.hook-errors.log` |
+| `hooks/git-hooks/` | pre-commit (no user-local `plans/`) and pre-push (Assert-AgenticFlow) |
 | `hooks/tests/` | Hook smoke tests |
 | `_shared/ticket-artifacts.md` | Phase gate contract |
 | `_shared/ticket-plan-output.md` | Plan and closeout structure |
@@ -20,7 +22,9 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `_shared/harness-verbs.md` | IDE-neutral verbs |
 | `_shared/severity-and-output.md` | Token-class law |
 | `commands/_README.md` | Menu notes. No slash shim that duplicates a skill |
-| `.cursor-plugin/`, `.claude-plugin/`, `.codex-plugin/` | Same skills, three hosts |
+| `.cursor-plugin/`, `.claude-plugin/`, `.codex-plugin/` | Same skills, three hosts. A new skill goes in each `skills` list |
+| `adapters/`, `output-styles/` | Per-IDE tier maps, hook bridges, engineering-mode output style |
+| `local-test-login.example.json` | Shape for a gitignored `local-test-login.local.json` used by browser passes |
 
 ## Overlay
 
@@ -33,6 +37,7 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `scripts/runtime/` besides the stack owner | The profile start command |
 | `USER-MANUAL.md` | Project notes below the core section |
 | `mcp.json` | Project MCP servers |
+| `scripts/machine/Install-CursorExtensions.ps1`, `Apply-CursorUserConfig.ps1`, `New-CockpitWorkspace.ps1` | Optional bootstrap phases. Machine init skips each one that is absent |
 
 ## Versioning
 
@@ -44,3 +49,4 @@ Do not `git merge` a product repo into this template.
 1. Zero product strings (`TmoPro`, `IIS Express`, `Custom.StoryPointsActual`). The template-vanilla check scans `skills/` and `_shared/`.
 2. A hook test or a doc-budget check.
 3. `skills/<name>/SKILL.md` with `icon` and `color`. Playbooks live in `playbooks/`, not a repo-root folder and not `PLAYBOOK.md` beside `SKILL.md`.
+4. Porting from a product repo: diff its workflow commits since the last port, apply the generic hunks, and keep the template's profile-driven pieces (ticket prefix, `adrIndex`, ledger row pattern). Name the source commits in the port commit message.

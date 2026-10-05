@@ -36,10 +36,10 @@ than skipping silently.
 - **Architecture** — service boundaries, DI registration, dependency direction.
 - **Security** — parameterized queries, no secrets, no PII in logs, authorization on sensitive endpoints.
 - **Tests** — new behavior has focused tests; bug fixes have regression tests or a clear reason tests
-  are not practical.
+  are not practical. For UI/auth/host-bound diffs, cite `scripts/Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes) instead of a generic "needs a runtime test" finding. Missing smoke is residual risk, not a Blocker.
 - **Database alignment** — when schema changes, verify all affected migration/query paths stay aligned.
 
-**Overlay:** add project-specific focus areas below (e.g. C-class guards, parity alignment, SSDT rules).
+**Overlay:** add project-specific focus areas below (e.g. shared-core guards, parity alignment, schema rules).
 
 ## Output
 

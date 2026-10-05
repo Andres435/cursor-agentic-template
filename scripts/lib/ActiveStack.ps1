@@ -8,10 +8,18 @@
 
 Set-StrictMode -Version Latest
 
+# Fallbacks when _ServiceLauncherLib.ps1 is not loaded. Checked one by one: that lib defines
+# the Write-* helpers but not Use-LauncherLock.
 if (-not (Get-Command Write-LauncherSkip -ErrorAction SilentlyContinue)) {
     function Write-LauncherSkip { param([string]$Message) Write-Host $Message }
+}
+if (-not (Get-Command Write-LauncherOk -ErrorAction SilentlyContinue)) {
     function Write-LauncherOk { param([string]$Message) Write-Host $Message }
+}
+if (-not (Get-Command Write-LauncherFail -ErrorAction SilentlyContinue)) {
     function Write-LauncherFail { param([string]$Message) Write-Host $Message -ForegroundColor Red }
+}
+if (-not (Get-Command Use-LauncherLock -ErrorAction SilentlyContinue)) {
     function Use-LauncherLock {
         param([string]$Name, [int]$TimeoutMs, $OnTimeoutAction, [scriptblock]$Body)
         & $Body

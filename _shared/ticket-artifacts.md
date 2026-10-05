@@ -1,12 +1,12 @@
 ---
 name: ticket-artifacts
 description: The one contract for per-ticket files — what each phase must produce, and the gate that verifies it. Authoritative over any prose restatement elsewhere.
-keywords: artifacts, manifest, plan file, ledger, gate, Assert-TicketArtifacts, branch mode, worktree mode, scratch, plans folder
+keywords: artifacts, manifest, plan file, ledger, gate, Assert-TicketArtifacts, branch mode, worktree mode, scratch, plans folder, reviewReady, stackSmoke
 ---
 
 # Ticket Artifacts Contract
 
-Single source of truth for the ticket-keyed files under `.cursor/plans/`. When any command,
+Single source of truth for the ticket-keyed files under `plans/`. When any command,
 skill, or doc appears to restate a rule from this file, **this file wins** — fix the other doc
 rather than following it.
 
@@ -14,38 +14,53 @@ rather than following it.
 
 | Location | Holds | Committed |
 |---|---|---|
-| `.cursor/plans/` | Durable, ticket-keyed artifacts — the manifest and the approved plan | Yes |
-| `.cursor/tmp/tickets/` | Per-ticket scratch — commit/PR-body drafts, temporary exports | No (gitignored) |
+| `plans/` | Ticket-keyed artifacts for the user who ran the ticket — the manifest, the approved plan, and `ticket-ledger.md` | **Never** (gitignored, user-local) |
+| `plans/examples/` | One sanitized example per artifact shape, plus `ticket-ledger.example.md` | Yes |
+| `plans/closeout-index.md` | Lessons shared by the team | Yes |
+| `tmp/tickets/` | Per-ticket scratch — commit/PR-body drafts, temporary exports | No (gitignored) |
 
-Nothing that is regenerable from ADO or from git belongs in `plans/`. If you are about to write a
-one-off draft there, it goes in `tmp/tickets/`.
+Ticket files are durable on the user's machine, not in git. **Hard stop:** the `user-plans` check
+in `Assert-AgenticFlow.ps1` (CI, pre-push, `/doctor`), the commit hook, and
+`hooks/git-hooks/pre-commit` fail any tracked or staged `plans/` path outside `README.md`,
+`closeout-index.md`, `workflow-template-plan.md`, and `examples/`. Editing those is the only
+allowed change to `plans/`. Moving computers: copy your `plans/` folder yourself.
+
+Nothing that is regenerable from the tracker or from git belongs in `plans/`. If you are about to
+write a one-off draft there, it goes in `tmp/tickets/`.
 
 ## Ticket mode
 
-Every ticket runs in one of two modes, recorded as the manifest's `mode`:
+Every ticket runs in one mode, recorded as the manifest's `mode`:
 
-- **`branch`** (default) — branches in the canonical clones under `source\repos`. Planning and
-  implementation happen in **one chat**.
-- **`worktree`** (`/start-ticket … --worktree`) — repos mirrored under `source\worktrees\WI<n>`,
-  planning and implementation in **separate chats/windows**.
+- **`branch`** — branches in the canonical clones. Planning and implementation happen in **one
+  chat**. Chosen only when the user picks the main tree, or the same message already says main tree
+  / branch mode.
+- **`worktree`** — repos mirrored under a per-ticket worktree root, planning and implementation in
+  **separate chats/windows**. Chosen when the user picks a worktree, or the invocation passes
+  `--worktree`.
+- **`investigate`** — spike only. Read the canonical clones as they are. No ticket branch and no
+  worktree.
+
+`/start-ticket` asks branch vs worktree before writing `mode`, except a spike, which records
+`investigate` without asking. `profile.defaultMode` does not skip that question.
 
 Never hardcode a path for either. Ask:
 
 ```powershell
-.\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket WI<number> -Json
+scripts/Resolve-TicketRoot.ps1 -Ticket <ticket> -Json
 ```
 
 It returns `{ ticket, mode, modeSource, root, rootExists, canonicalRoot, worktreeRoot, repos[] }`.
-The manifest's `mode` wins over filesystem detection, and `rootExists: false` means **stop** — do not
-work in the other tree.
+The manifest's `mode` wins. A leftover populated worktree folder does **not** flip default branch
+mode to worktree. `rootExists: false` means **stop** — do not work in the other tree.
 
 ## Phase outputs
 
 | Phase | Command | Must exist when the command reports success |
 |---|---|---|
-| `start` | [start-ticket](../skills/start-ticket/SKILL.md) | `WI<n>-manifest.json` (with `mode`, non-null `startedAtUtc`, and `ticket` object), `WI<n>-<type>-plan.md` |
+| `start` | [start-ticket](../skills/start-ticket/SKILL.md) | `<ticket>-manifest.json` (with `mode`, non-null `startedAtUtc`, and `ticket` object), `<ticket>-<type>-plan.md` |
 | `implement` | [implement](../skills/implement/SKILL.md) | inputs above must already exist; no new required output |
-| `close` | [complete-task](../skills/complete-task/SKILL.md) | manifest close timestamp, one `WI<n>` row in `plans/ticket-ledger.md` |
+| `close` | [complete-task](../skills/complete-task/SKILL.md) | manifest close timestamp, one `<ticket>` row in `plans/ticket-ledger.md` |
 
 `<type>` is the manifest `workType` (`bug`, `feature`, `spike`, `refactor`).
 
@@ -54,21 +69,28 @@ work in the other tree.
 Do not self-assess this contract in prose. Run it:
 
 ```powershell
-.\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket WI<number> -Phase start
+scripts/Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start
 ```
 
-- `start-ticket` runs it with `-Phase start` as its **last artifact action** before
-  `Initialize-TicketRuntime.ps1` and the final message. A `FAIL` means the command is not
-  finished — write the missing file, then re-run. Runtime warmup is not an artifact.
+- `start-ticket` runs it with `-Phase start` as its **last artifact action** before runtime warmup
+  and the final message. A `FAIL` means the command is not finished — write the missing file, then
+  re-run. Runtime warmup is not an artifact.
 - `implement` runs it with `-Phase implement` as its **first action**. A `FAIL` stops the chat and
   reports what start-ticket skipped; it does not silently re-plan around the gap.
 - Any chat that loads ticket state uses `-Phase implement` as its **load-time** gate — including
   `/complete-task`. Do **not** run `-Phase close` at chat start: the close timestamp and the ledger
   row are written *during* `complete-task`, so a load-time close gate always fails.
-- `complete-task` runs `-Phase close` after the ledger row is written, before the retrospective.
-  A non-spike close also requires `plans/<ticket>-verify.json` with `pass: true` and a non-empty
-  `reviewReady` fingerprint for each local affected repo. When that repo path exists, the
-  fingerprint must match the staged diff, or the last commit when nothing is staged. A spike skips both.
+- `complete-task` runs `-Phase close` inside the retrospective, after the ledger row is written.
+  A non-spike close also requires, for each local affected repo:
+  - `verify.repos.<repo>` on the manifest with boolean `pass: true` (`scripts/Set-VerifyReceipt.ps1`);
+  - a `reviewReady` entry (`scripts/Set-ReviewReady.ps1`) with verdict Ready, Ready with fixes, or
+    No change. When the repo path exists, the reviewed work must still be there: the staged diff,
+    or the first-parent commits since the stamp's `headSha`. A later merge of the base branch is
+    ignored; any other commit after the review fails, so review again and re-stamp. Conflict edits
+    inside that merge commit are not checked.
+
+  A spike skips both. Optional `stackSmoke` is Never tested when absent; `passed` is Tested; `stale`
+  is Untested latest changes (logic moved after a pass). `failed` / `skipped` as recorded. Not a fail.
 
 Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, missing[], found[] }`.
 
@@ -76,50 +98,48 @@ Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, 
 
 | File | Written by | Purpose |
 |---|---|---|
-| `WI<n>-manifest.json` | [ticket-router](../skills/ticket-router/SKILL.md) | Classification **and** session state: `mode`, `workType`, `ticket` (title/adoType/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `sonarRepos`, `adrIndex`, `dbChange`, `needsDacpac`, `featureFlag`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, and the session timestamps. Drives what every later chat loads. |
-| `WI<n>-<type>-plan.md` | start-ticket | The approved plan. Opens with `## Plan Digest` and `## Engineering Decisions` (structure in [ticket-plan-output.md](ticket-plan-output.md) and [engineering-decisions.md](engineering-decisions.md)); the `-Phase start` gate checks those headings. Durable, and the only plan `implement` follows. |
-| `WI<n>-feedback.md` | address-pr-comments | Compact PR + Sonar triage packet. Conditional. |
-| `WI<n>-verify.json` | complete-task | Compact `verify-repo` packets. Required at `-Phase close` unless `workType` is `spike`. `pass` must be true. |
-| `WI<n>-review.md` | complete-task / review-changes | Compact `review-diff` output. Conditional. |
-| `plans/ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, `CtxS%` / `CtxR%` / `Ctx%`. Shared, append-only. |
-| `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([../skills/ticket-router/references/closeout-search.md](../skills/ticket-router/references/closeout-search.md)). |
-| `WI<n>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](../skills/complete-task/references/task-retrospective.md)). Not required by any gate. |
+| `<ticket>-manifest.json` | `ticket-router` skill, then the stamp scripts | **The one record per ticket.** Classification **and** session state: `mode`, `workType`, `ticket` (title/type/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `adrIndex`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, session timestamps, plus later `reviewReady` (verdict, `headSha`, fingerprint, and up to ten Blocker/Major `findings` per repo, from `Set-ReviewReady.ps1`), `verify` (per-repo `pass`, `tests`, `sonar`, `failing`, `reason`, from `Set-VerifyReceipt.ps1`), `feedback` (PRs, analysis gate, triaged items, from `Set-TicketFeedback.ps1`), optional `stackSmoke` (from the stack smoke pass, the `/review-changes` residual-risk cite, or `/complete-task`; **not** a close or Ready gate), `ctxPct` (`start` / `review` / `close`, with `ctxPctSource` measured or reported), and `lanes`. Each `ctxPct` is the hook-measured value or blank; close fails only on a present value outside 0–100. |
+| `<ticket>-<type>-plan.md` | start-ticket | The approved plan. Opens with a `## Plan Digest` and carries an **Engineering Decisions** section before the Work Plan (structure in [ticket-plan-output.md](ticket-plan-output.md), shape in [engineering-decisions.md](engineering-decisions.md)). The `-Phase start` gate checks both headings and rejects a plan still carrying `TBD` or "resolve during implement". The only plan `implement` follows. |
+| `plans/ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, `CtxS%` / `CtxR%` / `Ctx%` (measured, `~NN` when the agent typed it, blank when nothing was measured), `Lanes`, and `Epoch`. Do not invent rows for older tickets. The summary states CtxS coverage on recent scored branch rows. |
+| `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([closeout-search.md](../skills/ticket-router/references/closeout-search.md)). |
+| `<ticket>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](../skills/complete-task/references/task-retrospective.md)). Not required by any gate. |
 
-Keep these small and durable. Summarize subagent packets into the relevant file; do not paste raw
-JSON into chat.
+Keep these small. Subagent packets land on the manifest through the stamp scripts, never as their own
+files; do not paste raw JSON into chat. Older side files (`<ticket>-verify.json`, `<ticket>-review.md`,
+`<ticket>-feedback.md`) are not read; delete them.
 
 ## Session timestamps
 
 `startedAtUtc`, `completedAtUtc`, `reopenedAtUtc`, `reclosedAtUtc`, and `timezone` live **on the
-manifest**. The retired `WI<n>-session.json` is still read as a fallback so tickets started before
-this change can close; nothing writes it any more. Field semantics and the hours math stay in
-[../skills/complete-task/references/session-time-tracking.md](../skills/complete-task/references/session-time-tracking.md).
+manifest**. Field semantics and the hours math stay in
+[session-time-tracking.md](../skills/complete-task/references/session-time-tracking.md).
 
 ## Handoff between chats
 
 **Branch mode** has no handoff — `/start-ticket` plans and then builds in the same chat.
 
 **Worktree mode** ends `/start-ticket` with these lines as **chat text**, not a file. The user opens
-a new Agent chat in `WI<n>.code-workspace` (folder 0 is already the ticket root) and pastes them:
+a new Agent chat in the ticket's workspace file (folder 0 is already the ticket root) and pastes them:
 
 ```
-/implement WI<number>
+/implement <ticket>
 
-Approved plan: .cursor/plans/WI<number>-<type>-plan.md
-Worktree: <absolute path to source\worktrees\WI<number>>
+Approved plan: plans/<ticket>-<type>-plan.md
+Worktree: <absolute worktree path>
 Constraint: <one precise line, or omit this line>
 ```
 
 The implementation window loads the manifest, plan, and doc set itself — the paste carries a
 pointer, not a copy. Do not inline the Work Plan steps, and do not tell the user to `@` or attach a
-plan file (that starts a review, not a build). Cursor cannot move an agent root onto a folder holding
-several independent git repos, so `move_agent_to_root` fails on every ticket root — this paste is the
-only handoff. Worktree layout is an overlay blank — fill [../environments/worktrees.md](../environments/worktrees.md) if `profile.worktreeSupported`.
+plan file (that starts a review, not a build). An IDE cannot move an agent root onto a folder holding
+several independent git repos, so this paste is the only handoff. Worktree layout is an overlay
+blank — fill [../environments/worktrees.md](../environments/worktrees.md) if `profile.worktreeSupported`.
 
 ## Rules
 
 - Write each phase's files **as they are produced**, not batched at the end of the command.
-- The manifest is written immediately after ticket intake, before branch setup — it carries `startedAtUtc`, so a lost manifest loses the session clock.
+- The manifest is written immediately after ticket intake, before branch setup — it carries
+  `startedAtUtc`, so a lost manifest loses the session clock.
 - Never overwrite `startedAtUtc` after the first write.
 - One ledger row per ticket; a reopen updates that row in place (re-run `Update-TicketLedger.ps1`).
 - Never hand-edit `plans/ticket-ledger.md` — the script owns its format.

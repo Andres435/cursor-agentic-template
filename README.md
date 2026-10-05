@@ -1,98 +1,123 @@
 # cursor-agentic-template
 
-A Cursor AI workflow template for ticket-driven development. Clone or use this as a GitHub template,
-then customize for your project — no TMO or project-specific content included.
+A ticket-driven agentic workflow for any product. Cursor, Claude Code, and Codex each load it as a
+plugin (`.cursor-plugin/`, `.claude-plugin/`, `.codex-plugin/`). The shared core names verbs and
+model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specifics live in
+[profile.json](profile.json), not in the core.
 
-> **This repo is the `.cursor` folder** — place it at `<your-app>/.cursor` or at
-> `source/repos/.cursor` in a multi-repo workspace.
+**Day-to-day usage:** [USER-MANUAL.md](USER-MANUAL.md). **First clone:** [CUSTOMIZE.md](CUSTOMIZE.md).
+**New laptop:** [MACHINE-SETUP.md](MACHINE-SETUP.md). **Maintainers:** [TEMPLATE.md](TEMPLATE.md)
+(core vs overlay). **Finding a doc:** [INDEX.md](INDEX.md).
 
----
+> Place this folder at `<your-app>/.cursor`, or at `source/repos/.cursor` (or any sibling name) in a
+> multi-repo workspace. Paths in the docs are relative to this folder.
 
 ## What you get
 
-- **Ticket workflow** — `/start-ticket`, `/implement`, `/complete-task`, `/prep-pr` slash commands
-  with planning, code review, and retrospective built in.
-- **Hook suite** — `sessionStart` (context hydration), `closeout-read-guard`, `git-commit-ticket-id`,
-  `preCompact` nudge, `ticket-command-nudge`.
-- **Smart routing** — ticket router reads `profile.json` and loads only the docs this ticket needs.
-- **Subagent fan-out** — parallel repo scope, branch setup, verify, and review per the plan.
-- **Generic core** — no stack-specific defaults. Start with `npm run dev`; replace as needed.
-
----
+- **Ticket workflow:** `/start-ticket`, `/review-changes`, `/complete-task`, `/prep-pr`, plus
+  `/implement`, `/address-pr-comments`, `/peer-review`, and the stack commands. Each one is a
+  skill under `skills/<name>/`, with its body in `playbooks/` and its detail in `references/`.
+- **One record per ticket:** `plans/<ticket>-manifest.json` holds the routing, timestamps, and every
+  later result: review stamp and findings, verify results, PR feedback, stack smoke, context %, and
+  lanes. Small `Set-*` scripts write it; no step writes a side file.
+- **Mechanical gates:** `scripts/ticket/Assert-TicketArtifacts.ps1` checks each phase. The close
+  gate needs a passing verify result per repo (`Set-VerifyReceipt.ps1`) and a review stamp
+  (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed. A base-branch
+  merge is fine; any later commit means review again.
+- **Routing and tiers:** `ticket-router` writes a manifest so later steps load only the docs the
+  ticket needs. Work runs on fast / standard / deep / frontier tiers
+  ([_shared/model-routing.md](_shared/model-routing.md)). Engineering mode routes each step to its
+  tier's model.
+- **Hooks, written once:** `hooks/core/` holds session context, the commit guard, the push gate,
+  the ticket nudge, the closeout guard, and context usage. IDE adapters call it. Swallowed hook
+  errors go to `scripts/.hook-errors.log`, and `/doctor` warns when it is not empty.
+- **Optional stack smoke:** `/start-stack` runs `profile.stacks.startCommand`. A smoke pass you ask
+  for is stamped with `Set-StackSmoke.ps1` and shown at review and closeout. It never blocks close.
+- **Retrospective ledger:** each close leaves one row in `plans/ticket-ledger.md` (user-local),
+  with E / C / $tok scores, measured context %, lanes, and the workflow epoch.
 
 ## Quick start
 
-### New project (use this template)
+1. Use this repo as a GitHub template (or clone it and delete `.git`), and place it as above.
+2. Run `/start-new-project`. It fills `profile.json`, the [CUSTOMIZE.md](CUSTOMIZE.md) checklist,
+   and `environments/local-dev.md`.
+3. Bootstrap the machine once: `scripts/machine/Initialize-WorkflowMachine.ps1`
+   ([MACHINE-SETUP.md](MACHINE-SETUP.md)).
+4. Run tickets:
 
-1. Click **Use this template** on GitHub (or `git clone` + delete `.git`).
-2. Place the folder at `<your-app>/.cursor` (or `source/repos/.cursor` for multi-repo).
-3. Run `/start-new-project`. It fills `profile.json`, `CUSTOMIZE.md`, and `environments/local-dev.md`.
-4. Bootstrap your machine once:
-   ```powershell
-   .\.cursor\scripts\machine\Initialize-WorkflowMachine.ps1
-   ```
-5. Start your first ticket:
-   ```
-   /start-ticket TICKET-1 feature
-   ```
+```text
+Chat 1  /start-ticket <ticket> bug|feature|spike   → approve plan → build in this chat
+Chat 2  /review-changes
+Chat 3  /complete-task → /prep-pr
+```
 
-### Existing project (copy `.cursor/`)
+Branch mode is three chats. Worktree mode (`--worktree`, only when `profile.worktreeSupported`)
+adds `/implement` in the ticket window. Pin engineering mode before `/start-ticket`.
+
+## Folder map
+
+| Folder | What it is | Core or overlay |
+|---|---|---|
+| [skills/](skills/) | One folder per skill: `SKILL.md`, `playbooks/`, `references/` | Core (add your own beside them) |
+| [_shared/](_shared/) | Contracts: artifacts, plan output, tiers, verbs, output budgets | Core |
+| [scripts/ticket/](scripts/ticket/) | Artifact gate, receipts, review stamp, ledger, epoch | Core |
+| [scripts/machine/](scripts/machine/) | Machine bootstrap, slash links, git hooks, Claude overlay | Core |
+| [hooks/core/](hooks/core/) + `hooks.json` | Hook logic. `hooks/git-hooks/` holds pre-commit and pre-push | Core |
+| [adapters/](adapters/README.md) | Per-IDE tier maps and hook bridges | Core |
+| [output-styles/](output-styles/engineering-mode.md) | Engineering mode output style (Claude Code) | Core |
+| [commands/](commands/_README.md) | Menu notes. No shim duplicates a skill | Core |
+| [profile.json](profile.json) | Repos, tracker, prefix, stack command, slash list | **Overlay** |
+| [agents/](agents/README.markdown) | Specialists (stub: `fullstack-specialist.md`) | **Overlay** |
+| [environments/](environments/README.md) | Setup cards (stub: `local-dev.md`) | **Overlay** |
+| [rules/](rules/) | Cursor rules (stub pointers) | Overlay |
+| [plans/](plans/README.md) | Per-ticket artifacts and the ledger. User-local, never committed | Runtime |
+| [user/](user/README.md) | Recommended IDE settings and keybindings | Optional |
+
+## IDEs
+
+- **Cursor:** `scripts/machine/Install-UserCursorCommands.ps1` links the skills in
+  `profile.slashCommands` so slash badges keep their icons. [adapters/cursor/README.md](adapters/cursor/README.md).
+- **Claude Code:** `scripts/machine/Install-ClaudeAdapter.ps1` writes `CLAUDE.md` at the workspace
+  root, then run `claude --plugin-dir <this folder>`. Commands are namespaced
+  (`/agentic:start-ticket`). [adapters/claude/README.md](adapters/claude/README.md).
+- **Codex:** add this folder as a plugin marketplace. [adapters/codex/README.md](adapters/codex/README.md).
+
+## Doc budgets and the flow gate
+
+```powershell
+scripts/ticket/Assert-AgenticFlow.ps1   # every check CI runs; exit 1 on a violation
+scripts/Assert-DocBudget.ps1 -WarnOnly  # line budgets only
+```
+
+| File kind | Budget | When over |
+|---|---|---|
+| `SKILL.md` body | 500 lines | Move detail to `references/` |
+| `skills/*/playbooks/*.md` | 500 lines | Split by phase |
+| `_shared/*.md` | 150 lines | Move into the owning skill's `references/` |
+| `environments/*.md` | 120 lines | Split setup vs gotchas |
+| `adapters/claude/model-usage.md` | 70 lines | It is imported into every Claude session |
+
+Human docs (`README.md`, `USER-MANUAL.md`, `MACHINE-SETUP.md`, `CUSTOMIZE.md`) and `AGENTS.md` are
+exempt. Before adding any always-on doc or MCP tool, read the token-class law in
+[_shared/severity-and-output.md](_shared/severity-and-output.md).
+
+## Upgrading core in a project
+
+Core files can be copied from this repo without touching your overlay:
 
 ```bash
-cp -r cursor-agentic-template/.cursor your-project/.cursor
-# Then run /start-new-project in that clone. It fills profile.json and CUSTOMIZE.md.
-```
-
----
-
-## File map
-
-```
-profile.json          ← YOUR config (repos, ticket system, stack command)
-CUSTOMIZE.md          ← Start here — the only checklist you need
-TEMPLATE.md           ← Maintainer map: core vs overlay
-agents/               ← YOUR specialist agents (stub: fullstack-specialist.md)
-environments/         ← YOUR env cards (stub: local-dev.md)
-skills/domain/        ← YOUR domain skills (empty by default)
-skills/workflow/      ← CORE: do not edit unless upgrading
-playbooks/            ← CORE: start-ticket body (not a slash command)
-scripts/ticket/       ← CORE: do not edit unless upgrading
-hooks/                ← CORE: do not edit unless upgrading
-_shared/              ← CORE contracts: do not edit unless upgrading
-```
-
----
-
-## Ticket lifecycle
-
-```
-/start-ticket TICKET-42 feature   → plan → approve → build (branch mode)
-/complete-task                    → verify → retrospective → ledger row
-/prep-pr                          → PR description + ADO write-back
-```
-
-See `USER-MANUAL.md` for the full two-chat lifecycle and model guidance.
-
----
-
-## Upgrading core
-
-Core files (`skills/workflow/`, `scripts/ticket/`, `hooks/`, `_shared/ticket-artifacts.md`) can be
-cherry-picked or copied from the template repo without touching your overlay:
-
-```bash
-# From your project .cursor folder, with template added as upstream remote:
+git remote add upstream https://github.com/Andres435/cursor-agentic-template.git
 git fetch upstream
-git checkout upstream/main -- skills/workflow/ scripts/ticket/ hooks/
+git checkout upstream/main -- skills/ _shared/ scripts/ticket/ scripts/machine/ hooks/ adapters/ output-styles/
 ```
 
-Your overlay (`profile.json`, `environments/`, `agents/`, `skills/domain/`) is never overwritten.
-
----
+Then re-add any project skills you keep under `skills/`, and run `Assert-AgenticFlow.ps1`. Do not
+`git merge` the template into a project: it would overwrite `profile.json`, `agents/`, and
+`environments/`. Versioning notes: [TEMPLATE.md](TEMPLATE.md).
 
 ## Projects using this template
 
 | Project | Repo | Notes |
 |---|---|---|
-| TMO (cursor-agentic-workspace) | https://github.com/Andres435/cursor-agentic-workspace | ADO, IIS/React stack, multi-repo |
+| TMO | https://github.com/Andres435/tmo-agentic-workspace | ADO, multi-repo, worktrees, IIS and React stacks |
 | _(your project here)_ | — | — |

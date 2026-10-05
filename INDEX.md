@@ -1,45 +1,105 @@
 # Index
 
-One row per doc. Search here before Grep. Add your overlay docs to the bottom table.
+One row per doc. Search here before Grep. Add your overlay docs to the last table.
 
-## Core docs (do not edit paths)
+## Start here
 
-| Doc | Purpose | Keywords |
+| Doc | Load when | Keywords |
 |---|---|---|
-| [CUSTOMIZE.md](CUSTOMIZE.md) | Checklist `/start-new-project` fills | customize, profile, setup, first ticket |
-| [skills/start-new-project/SKILL.md](skills/start-new-project/SKILL.md) | New product interview — writes profile.json | start-new-project, profile, local-dev |
-| [TEMPLATE.md](TEMPLATE.md) | Maintainer map: core vs overlay | core, overlay, upgrade, versioning |
-| [README.md](README.md) | What this is; quick start | template, clone, start, overview |
-| [MACHINE-SETUP.md](MACHINE-SETUP.md) | First-time machine bootstrap | setup, extensions, folder layout |
-| [AGENTS.md](AGENTS.md) | Agent index and routing | agents, specialists, routing, manifest |
-| [USER-MANUAL.md](USER-MANUAL.md) | Day-to-day ticket lifecycle | start-ticket, implement, complete-task, prep-pr, chat lifecycle |
-| [profile.json](profile.json) | Project config | repos, ticketSystem, specialists, startCommand |
-| [_shared/ticket-artifacts.md](_shared/ticket-artifacts.md) | Phase gate contract — what files each phase produces | artifacts, gate, manifest, plan, closeout |
-| [_shared/ticket-plan-output.md](_shared/ticket-plan-output.md) | Plan and closeout structure | plan digest, work plan, deviations, startup message |
-| [_shared/severity-and-output.md](_shared/severity-and-output.md) | Severity labels, finding format, token-class law | blocker, major, findings, token, instruction |
-| [_shared/subagent-functions.md](_shared/subagent-functions.md) | Subagent fan-out contracts | subagent, explore-repo, branch-setup, verify-repo, review-diff |
-| [_shared/review-protocol.md](_shared/review-protocol.md) | Review focus areas and rule sources | code review, conventions, security, tests |
-| [_shared/model-usage.md](_shared/model-usage.md) | Pointer to the tier contract | tier, adapter |
-| [_shared/model-routing.md](_shared/model-routing.md) | Tier contract for plans and lanes | tier, fast, standard, deep |
-| [_shared/harness-verbs.md](_shared/harness-verbs.md) | IDE-neutral verbs | ask-user, dispatch, enter-plan |
-| [_shared/engineering-principles.md](_shared/engineering-principles.md) | Principles cited from a plan | principles |
-| [_shared/adr-policy.md](_shared/adr-policy.md) | ADR consult/cite policy — load when adrIndex is set | ADR, architecture decision, consult, cite |
-| [_shared/runtime-verify.md](_shared/runtime-verify.md) | Token rails for stack and UI verify | stack recycle, UI verify, retry policy |
-| [_shared/engineering-decisions.md](_shared/engineering-decisions.md) | Plan decision gate — open calls stop the plan | engineering decision, TBD, out of scope |
-| [_shared/test-verification.md](_shared/test-verification.md) | Scoped tests | tests, regression |
-| [_shared/cross-repo-workflow.md](_shared/cross-repo-workflow.md) | Multi-repo order from profile.dependencyOrder | multi-repo, dependency order |
-| [playbooks/start-ticket.md](skills/start-ticket/playbooks/start-ticket.md) | Start-ticket full steps | intake, plan, branch, worktree |
-| [skills/ticket-router/SKILL.md](skills/ticket-router/SKILL.md) | Ticket classifier — emits the work manifest | router, manifest, affectedRepos, docSet |
-| [skills/ticket-context-load/SKILL.md](skills/ticket-context-load/SKILL.md) | Fresh-chat hydrate | load profile, complete-task, implement |
-| [skills/review-changes/PLAYBOOK.md](skills/review-changes/playbooks/review-changes.md) | Review steps | review, diff, staged, pre-merge |
-| [plans/examples/ticket-ledger.example.md](plans/examples/ticket-ledger.example.md) | One row per closed ticket (E/C/$tok/Ctx%) | ledger, scorecard, closed tickets |
-| [plans/closeout-index.md](plans/closeout-index.md) | Compact durable lessons from closeouts | memory, lessons, closeout, priorFindings |
+| [README.md](README.md) | what this is; folder map; doc budgets; upgrading core | overview, folders, budgets, upgrade |
+| [USER-MANUAL.md](USER-MANUAL.md) | running tickets day to day | chats, lifecycle, commands, close gate, tiers |
+| [CUSTOMIZE.md](CUSTOMIZE.md) | first clone; the checklist `/start-new-project` fills | customize, profile, tracker, overlay |
+| [MACHINE-SETUP.md](MACHINE-SETUP.md) | new laptop; bootstrap; IDE plugin install | setup, pwsh, hooks, Claude Code, Codex |
+| [TEMPLATE.md](TEMPLATE.md) | maintaining the template: core vs overlay | core, overlay, versioning, porting |
+| [AGENTS.md](AGENTS.md) | agent routing, subagent functions, domain router | agents, routing, engineering mode |
+| [profile.json](profile.json) | repos, tracker, prefix, stack command, slash list | repos, ticketSystem, ticketPrefix, slashCommands |
+| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | attribution for adapted ideas | notices, license |
+
+## Contracts (`_shared/`)
+
+| Doc | Load when | Keywords |
+|---|---|---|
+| [_shared/ticket-artifacts.md](_shared/ticket-artifacts.md) | which files each phase writes; what the gates check | artifacts, manifest, verify receipt, reviewReady, close gate |
+| [_shared/ticket-plan-output.md](_shared/ticket-plan-output.md) | plan and closeout structure | plan digest, work plan, deviations, enter-plan |
+| [_shared/engineering-decisions.md](_shared/engineering-decisions.md) | the plan's decision gate | engineering decision, TBD, out of scope |
+| [_shared/engineering-principles.md](_shared/engineering-principles.md) | principles cited by plans and reviews | principles |
+| [_shared/severity-and-output.md](_shared/severity-and-output.md) | severity labels, chat output budget, token-class law | blocker, major, output budget, ctxPct |
+| [_shared/subagent-functions.md](_shared/subagent-functions.md) | fan-out contracts | explore-repo, branch-setup, verify-repo, review-diff, peer-review-pr |
+| [_shared/review-protocol.md](_shared/review-protocol.md) | review focus areas and rule sources | code review, conventions, security, tests |
+| [_shared/model-routing.md](_shared/model-routing.md) | tier contract for plans and lanes | tier, fast, standard, deep, frontier |
+| [_shared/harness-verbs.md](_shared/harness-verbs.md) | IDE-neutral verbs and their per-IDE tools | ask-user, dispatch, enter-plan, report-context |
+| [_shared/adr-policy.md](_shared/adr-policy.md) | `profile.adrIndex` is set | ADR, consult, cite |
+| [_shared/runtime-verify.md](_shared/runtime-verify.md) | stack recycle, UI verify, browser pass, local login | token rails, stack smoke, CDP, local login |
+| [_shared/test-verification.md](_shared/test-verification.md) | scoped tests | tests, regression |
+| [_shared/cross-repo-workflow.md](_shared/cross-repo-workflow.md) | multi-repo order from `profile.dependencyOrder` | multi-repo, dependency order |
+
+## Ticket lifecycle (skills)
+
+| Doc | Load when | Keywords |
+|---|---|---|
+| [skills/ticket-workflow/SKILL.md](skills/ticket-workflow/SKILL.md) | map of phases and owners | lifecycle, phases |
+| [skills/start-new-project/SKILL.md](skills/start-new-project/SKILL.md) | first clone: fill the profile | start-new-project, profile |
+| [skills/onboard/SKILL.md](skills/onboard/SKILL.md) | machine setup after the profile exists | onboard, setup |
+| [skills/engineering-mode/SKILL.md](skills/engineering-mode/SKILL.md) | pin tier routing for a chat | engineering mode, orchestrator, lanes |
+| [skills/doctor/SKILL.md](skills/doctor/SKILL.md) · [playbook](skills/doctor/playbooks/doctor.md) | health check; lane probe | doctor, hooks, lanes, hook-errors |
+| [skills/start-ticket/SKILL.md](skills/start-ticket/SKILL.md) · [playbook](skills/start-ticket/playbooks/start-ticket.md) | new ticket: intake, plan, build | intake, plan, branch, worktree, investigate |
+| [skills/ticket-router/SKILL.md](skills/ticket-router/SKILL.md) | first step of start-ticket | router, manifest, docSet, parallelPlan |
+| [skills/ticket-router/references/closeout-search.md](skills/ticket-router/references/closeout-search.md) | prior lessons for the manifest | priorFindings, closeout search |
+| [skills/ticket-context-load/SKILL.md](skills/ticket-context-load/SKILL.md) | first step of complete-task, review-changes, address-pr-comments, implement when resuming | hydrate, load profile |
+| [skills/implement/SKILL.md](skills/implement/SKILL.md) · [playbook](skills/implement/playbooks/implement.md) | resume or worktree build | implement, work plan, deviations |
+| [skills/review-changes/SKILL.md](skills/review-changes/SKILL.md) · [playbook](skills/review-changes/playbooks/review-changes.md) | review the staged set; stamp the verdict | review, staged, pre-merge, reviewReady |
+| [skills/complete-task/SKILL.md](skills/complete-task/SKILL.md) · [playbook](skills/complete-task/playbooks/complete-task.md) | closeout and approval package | verify receipt, approval, retrospective |
+| [skills/complete-task/references/confidence-score.md](skills/complete-task/references/confidence-score.md) | confidence axes at closeout | confidence, certainty |
+| [skills/complete-task/references/session-time-tracking.md](skills/complete-task/references/session-time-tracking.md) | hours and points from timestamps | hours, points, timestamps |
+| [skills/complete-task/references/task-retrospective.md](skills/complete-task/references/task-retrospective.md) | the three questions and the ledger row | retrospective, ledger, E/C/$tok |
+| [skills/prep-pr/SKILL.md](skills/prep-pr/SKILL.md) · [playbook](skills/prep-pr/playbooks/prep-pr.md) | approved commit, push, PR, tracker write-back | commit, PR body, push |
+| [skills/address-pr-comments/SKILL.md](skills/address-pr-comments/SKILL.md) · [playbook](skills/address-pr-comments/playbooks/address-pr-comments.md) | PR feedback | PR comments, triage |
+| [skills/peer-review/SKILL.md](skills/peer-review/SKILL.md) · [playbook](skills/peer-review/playbooks/peer-review.md) | a coworker's PR | peer review, inline comments |
+| [skills/peer-review/references/checklist.md](skills/peer-review/references/checklist.md) | what a peer review checks | checklist |
+| [skills/peer-review/references/comment-voice.md](skills/peer-review/references/comment-voice.md) | how comments read | comment voice, tone |
+| [skills/start-stack/SKILL.md](skills/start-stack/SKILL.md) | run the local apps; optional smoke stamp | start-stack, stack smoke |
+| [skills/swap-stack/SKILL.md](skills/swap-stack/SKILL.md) · [skills/stop-stack/SKILL.md](skills/stop-stack/SKILL.md) | hand over or stop the stack | swap-stack, stop-stack, active stack |
+
+## Planning by work type
+
+| Doc | Load when | Keywords |
+|---|---|---|
+| [skills/start-ticket/references/feature-plan.md](skills/start-ticket/references/feature-plan.md) | feature plan shape | feature, behaviors, clarify |
+| [skills/start-ticket/references/bug-fix.md](skills/start-ticket/references/bug-fix.md) | bug plan shape | bug, root cause, fix layer |
+| [skills/start-ticket/references/tech-spike.md](skills/start-ticket/references/tech-spike.md) | spike plan shape | spike, investigate, findings |
+| [skills/start-ticket/references/document-spike.md](skills/start-ticket/references/document-spike.md) · [skill](skills/document-spike/SKILL.md) | writing a spike page, only when asked | document spike |
+| [skills/start-ticket/references/ticket-intake-generic.md](skills/start-ticket/references/ticket-intake-generic.md) | pattern for a tracker intake reference | intake, tracker |
+| [skills/architect/SKILL.md](skills/architect/SKILL.md) | design across a module or repo boundary | architect, design lanes |
+| [skills/architect/references/design-lane-prompt.md](skills/architect/references/design-lane-prompt.md) · [design-red-flags.md](skills/architect/references/design-red-flags.md) | architect lane prompt and red flags | design lane, red flags |
+| [skills/blast-radius/SKILL.md](skills/blast-radius/SKILL.md) | what a shared change could break | blast radius, shared module, public API |
+| [skills/tdd-red-green-refactor/SKILL.md](skills/tdd-red-green-refactor/SKILL.md) | test-first work | TDD, characterization |
+| [skills/environment-context/SKILL.md](skills/environment-context/SKILL.md) | ticket names an integration or runtime setup | environment card |
+
+## Adapters and runtime
+
+| Doc | Load when | Keywords |
+|---|---|---|
+| [adapters/README.md](adapters/README.md) | which IDE adapter applies | adapters, deepLane |
+| [adapters/cursor/README.md](adapters/cursor/README.md) · [model-usage.md](adapters/cursor/model-usage.md) | Cursor install and tier map | Cursor, slash links |
+| [adapters/gpt/model-usage.md](adapters/gpt/model-usage.md) | Cursor chat on a GPT picker | GPT, tiers |
+| [adapters/claude/README.md](adapters/claude/README.md) · [model-usage.md](adapters/claude/model-usage.md) | Claude Code install, snapshot refresh, tier map | Claude Code, plugin, marketplace |
+| [adapters/claude/workspace-CLAUDE.md](adapters/claude/workspace-CLAUDE.md) | template for the workspace `CLAUDE.md` | CLAUDE.md, overlay |
+| [adapters/codex/README.md](adapters/codex/README.md) · [model-usage.md](adapters/codex/model-usage.md) | Codex install and tier map | Codex, spawn_agent |
+| [output-styles/engineering-mode.md](output-styles/engineering-mode.md) | Claude Code engineering-mode output style | output style |
+| [rules/model-usage.mdc](rules/model-usage.mdc) · [rules/workspace-context.mdc](rules/workspace-context.mdc) | Cursor rule stubs | rules |
+| [commands/_README.md](commands/_README.md) | why commands are skills | commands, slash menu |
+| [hooks/tests/README.md](hooks/tests/README.md) | running hook tests | hooks, tests |
+| [environments/README.md](environments/README.md) · [worktrees.md](environments/worktrees.md) | env cards; worktree opt-in | environments, worktrees |
+| [user/README.md](user/README.md) | recommended IDE settings and keybindings | settings, keybindings |
+| [plans/README.md](plans/README.md) | what lives under `plans/` (user-local) | plans, artifacts |
+| [plans/examples/ticket-ledger.example.md](plans/examples/ticket-ledger.example.md) | ledger shape | ledger, Lanes, Epoch |
+| [plans/closeout-index.md](plans/closeout-index.md) | durable lessons from closeouts | lessons, priorFindings |
 
 ## Your overlay docs
 
 > Add rows here as you create project-specific files.
 
-| Doc | Purpose | Keywords |
+| Doc | Load when | Keywords |
 |---|---|---|
-| [agents/fullstack-specialist.md](agents/fullstack-specialist.md) | Fullstack specialist stub | fullstack, specialist |
-| [environments/local-dev.md](environments/local-dev.md) | Local dev env card | local dev, ports, start |
+| [agents/README.markdown](agents/README.markdown) · [agents/fullstack-specialist.md](agents/fullstack-specialist.md) | specialists | fullstack, specialist |
+| [environments/local-dev.md](environments/local-dev.md) | local dev setup | local dev, ports, start |

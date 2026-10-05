@@ -17,3 +17,5 @@ color: cyan
 ```
 
 3. Report the exit status. Do not start a second stack for a different ticket without `-Force`.
+4. A smoke pass on the new stack follows [start-stack](../start-stack/SKILL.md) step 5: ask once
+   whether it passed, then `Set-StackSmoke.ps1` only after they answer. Never stamp on swap alone.

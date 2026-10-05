@@ -1,13 +1,30 @@
 ---
 name: prep-pr
-description: Prepare changed repositories for PR submission. Use when generating commit messages, PR descriptions, testing summaries, SonarQube notes, confidence summaries, or cross-repo PR references.
+description: Only after you approve the complete-task package. Commit, push, PR, and tracker write-back.
+keywords: PR, commit message, PR description, tracker write-back, approval package, review transition
 disable-model-invocation: true
 icon: git-pull-request
 color: purple
 ---
 
-# Prep Pr
+# Prepare Pull Requests
 
-Read and execute [playbooks/prep-pr.md](playbooks/prep-pr.md) now. Do not ask for confirmation before reading the playbook.
+Full instructions (commit → push → PR → tracker write-back): [playbooks/prep-pr.md](playbooks/prep-pr.md).
 
-**PR body:** a few sentences on what changed and why, plus the test plan. Do not paste a full changelog, and do not append a generated-by trailer.
+Read and execute that playbook now. Do not ask for confirmation before reading it.
+
+## Quick reference
+
+```text
+/prep-pr <ticket>
+```
+
+Called from `/complete-task` once the user approves the package. Also usable standalone when the
+user says "create the PR" or "submit the PR".
+
+**Draft mode** (default): inventory, draft, approval package, wait.
+**Execute mode**: use only when the user already approved the package from `complete-task`.
+
+**PR body:** a few sentences on what changed and why, plus the test plan. Do not paste a full
+changelog, and do not append a generated-by trailer. The rule lives in step 3 of
+[playbooks/prep-pr.md](playbooks/prep-pr.md).

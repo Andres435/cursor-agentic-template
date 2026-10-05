@@ -16,7 +16,7 @@ Prepare all changed repos for PR submission.
 
 ## First: Gather Input
 
-Before starting, ask the user for the **Ticket Number** if not already provided in this message (e.g., `WI12345`, `AB#12345`, `JIRA-123`).
+Before starting, ask the user for the **Ticket Number** if not already provided in this message (e.g., `TICKET-42`).
 
 For tracker items, follow `profile.ticketSystem`. Load a custom adapter only if it exists
 next to `ticket-intake-generic.md`. Do not ask for hours if the manifest has session timestamps.
@@ -46,28 +46,52 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
    - Treat staged changes as the commit candidate; include unstaged/untracked changes as awareness notes so unrelated work is not committed accidentally
 
 2. **Generate Commit Messages** for each repo:
-   - Reference the ticket id in the subject: `feat|fix|refactor|docs(scope): description [<ticket>]`
+   - Reference the ticket id in the subject: `feat|fix|refactor|docs(scope): description [<ticket>]`;
+     subject under 72 characters; pick the type from the ticket and the actual changes
+   - **Body:** summarize **total work done** across the change set (what changed and why), one
+     cohesive summary
    - **Bugs:** root cause goes on the **ticket** (when the tracker has a field), not in the commit
-   - Hours and story points belong on the ticket, not in the PR body
+   - QA notes, hours, and story points belong on the ticket, not in the commit or PR body
+   - Do not include unstaged/untracked files unless the user explicitly approves staging them
 
 3. **Generate PR Descriptions** for each repo:
-   - **Title:** `<ticket>: <title>`
+   - **Title:** `<ticket>: <title>` (exact format — not conventional-commit style)
    - **Summary:** What changed and why (2-3 sentences). Do not paste a full changelog, and do not append a generated-by trailer.
-   - **Changes:** Bullet list
+   - **Changes:** Bullet list of specific modifications
    - **Ticket:** link only — hours/points stay on the tracker
-   - **Confidence:** carry forward the Confidence Score
+   - **Static analysis:** note any compliance considerations (optional; only when the project has it)
+   - **Confidence:** carry forward the Overall rating from the latest Confidence Score
+     ([../../complete-task/references/confidence-score.md](../../complete-task/references/confidence-score.md))
+   - **Related PRs:** cross-reference PRs in other repos affected by the same ticket
+   - **Deployment / ops checklist** (when applicable): items outside the code diff — config,
+     secrets, pipeline, handoffs, manual smoke in a deployed environment
+   - **Code checklist** (in-repo only): tests added/updated · no new static-analysis violations in
+     touched files · `review-changes` completed for the change set · Confidence Score recorded
 
 4. **Tracker notes** (`profile.ticketSystem` not `none`):
-   - Update only this ticket: root cause (bugs), QA notes, hours → points from session-time-tracking.
+   - Update only this ticket, with fields the tracker actually has: root cause (bugs), QA notes,
+     acceptance-criteria coverage (features), outcome and follow-ups (spikes), and hours → story
+     points from session-time-tracking (a spike keeps hours local).
+   - Never fabricate required values. Ask only for fields that cannot be derived, or for hours when
+     the manifest has no session timestamps.
+   - If the tracker blocks a state transition on empty required fields, report the blocking fields
+     and leave the ticket in its current state; the PR still stands.
    - Skip this section when `ticketSystem` is `none`.
 
 5. **Approval Package**:
-   - Staged/unstaged/untracked, commit messages, PR titles (`<ticket>: <title>`), tracker updates, hours.
-   - Wait for explicit approval.
+   - Staged files to commit · unstaged/untracked awareness · files that would be staged if the user
+     approves including them · commit messages (summary only) · PR titles (`<ticket>: <title>`) ·
+     PR descriptions · tracker updates and required-field gaps · hours and converted points · target
+     tracker state · optional PR-to-ticket link.
+   - If unstaged work should be committed, ask the user to stage it or approve including it.
+   - Wait for explicit approval; nothing is submitted before it.
 
 6. **Create PR**:
-   - Do not commit, push, or write the tracker without approval.
-   - Before push: `git fetch origin`, merge `origin/<baseBranch>` (`profile.baseBranchDefault`).
+   - Do not commit, push, create a PR, link a PR, or write the tracker without approval. In
+     execute-approved-package mode, do not rebuild the package; execute only the approved actions.
+   - Before push in each repo: `git fetch origin`, merge `origin/<baseBranch>`
+     (`profile.baseBranchDefault`). Resolve conflicts and include the merge commit; do not open or
+     update a PR against a branch that is behind base.
    - After the PR exists, apply the tracker's "in review" state if the adapter defines one.
    - Do not run the retrospective from this command — that is `/complete-task`.
 

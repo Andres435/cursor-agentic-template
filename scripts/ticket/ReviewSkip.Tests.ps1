@@ -52,9 +52,9 @@ Describe 'Get-ReviewSkipDecision' {
     It 'skips when Ready and fingerprint matches' {
         $stamp = [pscustomobject]@{
             mode  = 'staged'
-            repos = [pscustomobject]@{ TmoPro = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash } }
+            repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash; fpVersion = 2 } }
         }
-        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'TmoPro' -RepoPath $script:StagedRepo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $true
         $d.reason | Should -Be 'ready-fingerprint-match'
     }
@@ -62,9 +62,9 @@ Describe 'Get-ReviewSkipDecision' {
     It 'does not skip Ready with fixes' {
         $stamp = [pscustomobject]@{
             mode  = 'staged'
-            repos = [pscustomobject]@{ TmoPro = [pscustomobject]@{ verdict = 'Ready with fixes'; fingerprint = $script:StagedHash } }
+            repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready with fixes'; fingerprint = $script:StagedHash; fpVersion = 2 } }
         }
-        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'TmoPro' -RepoPath $script:StagedRepo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $false
         $d.reason | Should -Be 'verdict-not-ready'
     }
@@ -72,9 +72,9 @@ Describe 'Get-ReviewSkipDecision' {
     It 'does not skip when fingerprint mismatches' {
         $stamp = [pscustomobject]@{
             mode  = 'staged'
-            repos = [pscustomobject]@{ TmoPro = [pscustomobject]@{ verdict = 'Ready'; fingerprint = 'deadbeef' } }
+            repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready'; fingerprint = 'deadbeef' } }
         }
-        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'TmoPro' -RepoPath $script:StagedRepo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $false
         $d.reason | Should -Be 'fingerprint-mismatch'
     }
@@ -82,9 +82,9 @@ Describe 'Get-ReviewSkipDecision' {
     It 'does not skip a stamp of the empty diff, even when nothing is staged now' {
         $stamp = [pscustomobject]@{
             mode  = 'staged'
-            repos = [pscustomobject]@{ TmoPro = [pscustomobject]@{ verdict = 'Ready'; fingerprint = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' } }
+            repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready'; fingerprint = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' } }
         }
-        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'TmoPro' -RepoPath $script:CleanRepo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:CleanRepo
         $d.skip | Should -Be $false
         $d.reason | Should -Be 'empty-stamp'
     }
@@ -92,15 +92,15 @@ Describe 'Get-ReviewSkipDecision' {
     It 'does not skip when the staged set is now empty' {
         $stamp = [pscustomobject]@{
             mode  = 'staged'
-            repos = [pscustomobject]@{ TmoPro = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash } }
+            repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash; fpVersion = 2 } }
         }
-        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'TmoPro' -RepoPath $script:CleanRepo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:CleanRepo
         $d.skip | Should -Be $false
         $d.reason | Should -Be 'empty-staged-diff'
     }
 
     It 'does not skip a missing stamp' {
-        $d = Get-ReviewSkipDecision -Stamp $null -Repo 'TmoPro' -RepoPath ([IO.Path]::GetTempPath())
+        $d = Get-ReviewSkipDecision -Stamp $null -Repo 'app' -RepoPath ([IO.Path]::GetTempPath())
         $d.skip | Should -Be $false
         $d.reason | Should -Be 'no-stamp'
     }
@@ -108,9 +108,9 @@ Describe 'Get-ReviewSkipDecision' {
     It 'does not skip pre-merge mode' {
         $stamp = [pscustomobject]@{
             mode  = 'pre-merge'
-            repos = [pscustomobject]@{ TmoPro = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash } }
+            repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash; fpVersion = 2 } }
         }
-        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'TmoPro' -RepoPath $script:StagedRepo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $false
         $d.reason | Should -Be 'not-staged-mode'
     }
@@ -206,5 +206,183 @@ Describe 'Set-TicketCtxPct and Set-ReviewReady against a temp manifest' {
         $script = Join-Path $PSScriptRoot 'Set-ReviewReady.ps1'
         { & $script -Ticket WI00005 -Mode staged -Verdicts '{"nope":"Ready"}' -Root $root } |
             Should -Throw '*Nothing staged*'
+    }
+}
+
+Describe 'Test-ReviewedWorkPresent' {
+    BeforeAll {
+        $script:Seq = 0
+        # main with one commit, and a dev branch at the same point for the base-branch merge.
+        function New-WorkRepo([string]$Path) {
+            New-Item -ItemType Directory -Path $Path -Force | Out-Null
+            & git -C $Path init -q -b main
+            & git -C $Path config user.email 't@example.com'
+            & git -C $Path config user.name 't'
+            & git -C $Path config commit.gpgsign false
+            Set-Content -LiteralPath (Join-Path $Path 'a.txt') -Value 'one'
+            & git -C $Path add a.txt
+            & git -C $Path commit -q -m init
+            & git -C $Path branch dev
+        }
+        function Set-Staged([string]$Path, [string]$File, [string]$Text) {
+            Set-Content -LiteralPath (Join-Path $Path $File) -Value $Text
+            & git -C $Path add $File
+        }
+        function Save-Commit([string]$Path, [string]$File, [string]$Text) {
+            Set-Staged $Path $File $Text
+            & git -C $Path commit -q -m "edit $File"
+        }
+        # What Set-ReviewReady writes for the current staged set.
+        function New-StagedEntry([string]$Path) {
+            [pscustomobject]@{
+                verdict     = 'Ready'
+                mode        = 'staged'
+                headSha     = (Get-GitHeadSha -RepoPath $Path)
+                fingerprint = (Get-StagedDiffFingerprint -RepoPath $Path)
+                fpVersion   = 2
+            }
+        }
+        # prep-pr merges the base branch before push: a dev commit merged with --no-ff.
+        function Merge-BaseBranch([string]$Path) {
+            $script:Seq++
+            & git -C $Path checkout -q dev
+            Save-Commit $Path "dev$($script:Seq).txt" 'dev work'
+            & git -C $Path checkout -q main
+            & git -C $Path merge -q --no-ff dev -m 'merge dev' 2>$null | Out-Null
+        }
+    }
+
+    It 'gives the same version-2 hash under diff.mnemonicPrefix and a longer core.abbrev' {
+        $repo = Join-Path $TestDrive 'rw-stable'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $before = Get-StagedDiffFingerprint -RepoPath $repo
+        & git -C $repo config diff.mnemonicPrefix true
+        & git -C $repo config core.abbrev 20
+        Get-StagedDiffFingerprint -RepoPath $repo | Should -Be $before
+        $head = Get-GitHeadSha -RepoPath $repo
+        & git -C $repo commit -q -m change
+        Get-RangeDiffFingerprint -RepoPath $repo -From $head -To 'HEAD' | Should -Be $before
+    }
+
+    It 'passes after commit and a base-branch merge' {
+        $repo = Join-Path $TestDrive 'rw-merge'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $entry = New-StagedEntry $repo
+        & git -C $repo commit -q -m change
+        Merge-BaseBranch $repo
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeTrue
+    }
+
+    It 'fails when a commit lands after the review' {
+        $repo = Join-Path $TestDrive 'rw-edit'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $entry = New-StagedEntry $repo
+        & git -C $repo commit -q -m change
+        Merge-BaseBranch $repo
+        Save-Commit $repo 'a.txt' 'three'
+        $r = Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry
+        $r.ok | Should -BeFalse
+        $r.reason | Should -Match 'differs'
+    }
+
+    It 'fails when a new edit is staged after the review' {
+        $repo = Join-Path $TestDrive 'rw-staged-edit'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $entry = New-StagedEntry $repo
+        Set-Staged $repo 'b.txt' 'extra'
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeFalse
+    }
+
+    It 'passes when the reviewed set is split across two commits' {
+        $repo = Join-Path $TestDrive 'rw-split'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        Set-Staged $repo 'b.txt' 'new'
+        $entry = New-StagedEntry $repo
+        & git -C $repo reset -q -- b.txt
+        & git -C $repo commit -q -m 'part one'
+        & git -C $repo add b.txt
+        & git -C $repo commit -q -m 'part two'
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeTrue
+    }
+
+    It 'passes No change until a commit lands' {
+        $repo = Join-Path $TestDrive 'rw-nochange'
+        New-WorkRepo $repo
+        $entry = [pscustomobject]@{ verdict = 'No change'; mode = 'staged'; headSha = (Get-GitHeadSha -RepoPath $repo); fingerprint = $null; fpVersion = 2 }
+        Merge-BaseBranch $repo
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeTrue
+        Save-Commit $repo 'a.txt' 'surprise'
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeFalse
+    }
+
+    It 'passes a pre-merge stamp through a base merge, and fails on a new commit or a rebase' {
+        $repo = Join-Path $TestDrive 'rw-premerge'
+        New-WorkRepo $repo
+        Save-Commit $repo 'a.txt' 'two'
+        $entry = [pscustomobject]@{ verdict = 'Ready'; mode = 'pre-merge'; headSha = (Get-GitHeadSha -RepoPath $repo); fingerprint = $null; fpVersion = 2 }
+        Merge-BaseBranch $repo
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeTrue
+        Save-Commit $repo 'a.txt' 'three'
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeFalse
+        & git -C $repo reset -q --hard HEAD~3
+        Save-Commit $repo 'a.txt' 'rewritten'
+        $r = Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry
+        $r.ok | Should -BeFalse
+        $r.reason | Should -Match 'not on this branch'
+    }
+
+    It 'passes a legacy stamp (no headSha) after a base-branch merge' {
+        $repo = Join-Path $TestDrive 'rw-legacy'
+        New-WorkRepo $repo
+        Save-Commit $repo 'a.txt' 'two'
+        $entry = [pscustomobject]@{ verdict = 'Ready'; fingerprint = (Get-WorkDiffFingerprint -RepoPath $repo -Version 1) }
+        Merge-BaseBranch $repo
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeTrue
+    }
+}
+
+Describe 'Set-ReviewReady entries' {
+    It 'upserts one repo and keeps the others, with headSha and fpVersion' {
+        $root = Join-Path $TestDrive 'review-upsert'
+        $tmp = Join-Path $root 'plans'
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        $mf = Join-Path $tmp 'WI00011-manifest.json'
+        '{"mode":"branch","reviewReady":{"mode":"staged","repos":{"other":{"verdict":"Ready","fingerprint":"abc"}}}}' |
+            Set-Content -LiteralPath $mf -Encoding UTF8
+        $paths = @{ app = $script:StagedRepo } | ConvertTo-Json -Compress
+        & (Join-Path $PSScriptRoot 'Set-ReviewReady.ps1') -Ticket WI00011 -Mode staged -Verdicts '{"app":"Ready"}' -RepoPaths $paths -Root $root
+        $got = Get-Content -LiteralPath $mf -Raw | ConvertFrom-Json
+        $got.reviewReady.repos.other.verdict | Should -Be 'Ready'
+        $got.reviewReady.repos.other.mode | Should -Be 'staged'
+        $got.reviewReady.repos.app.headSha | Should -Match '^[0-9a-f]{40}$'
+        $got.reviewReady.repos.app.fpVersion | Should -Be 2
+    }
+
+    It 'refuses No change when something is staged' {
+        $root = Join-Path $TestDrive 'review-nochange-staged'
+        $tmp = Join-Path $root 'plans'
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        '{"mode":"branch"}' | Set-Content -LiteralPath (Join-Path $tmp 'WI00012-manifest.json') -Encoding UTF8
+        $paths = @{ app = $script:StagedRepo } | ConvertTo-Json -Compress
+        { & (Join-Path $PSScriptRoot 'Set-ReviewReady.ps1') -Ticket WI00012 -Mode staged -Verdicts '{"app":"No change"}' -RepoPaths $paths -Root $root } |
+            Should -Throw '*staged changes*'
+    }
+
+    It 'stamps No change on a clean repo' {
+        $root = Join-Path $TestDrive 'review-nochange'
+        $tmp = Join-Path $root 'plans'
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        $mf = Join-Path $tmp 'WI00013-manifest.json'
+        '{"mode":"branch"}' | Set-Content -LiteralPath $mf -Encoding UTF8
+        $paths = @{ app = $script:CleanRepo } | ConvertTo-Json -Compress
+        & (Join-Path $PSScriptRoot 'Set-ReviewReady.ps1') -Ticket WI00013 -Mode staged -Verdicts '{"app":"No change"}' -RepoPaths $paths -Root $root
+        $got = Get-Content -LiteralPath $mf -Raw | ConvertFrom-Json
+        $got.reviewReady.repos.app.verdict | Should -Be 'No change'
+        $got.reviewReady.repos.app.fingerprint | Should -BeNullOrEmpty
     }
 }

@@ -1,5 +1,3 @@
-Run `/start-new-project` to fill the blanks below. Hand-editing is the same result.
-
 # Customize this workflow for your project
 
 Run `/start-new-project`. It asks five short batches and fills `profile.json`, the status boxes
@@ -76,22 +74,22 @@ See `skills/start-ticket/references/ticket-intake-generic.md` for the pattern.
 
 ### Azure DevOps (ADO)
 
-Copy ADO reference files from the TMO workspace:
-- `skills/start-ticket/references/ado-ticket-workflow.md`
-- `skills/start-ticket/references/ado-field-mapping.md`
-- `skills/start-ticket/references/ado-ticket-workflow.md`
-
-Then set `ticketSystem: "ado"` and `ticketPrefix: "WI"` in `profile.json`.
+Add `skills/start-ticket/references/ado-ticket-workflow.md` (fetch, required fields, the State
+moves you allow) and, if you write fields back, `ado-field-mapping.md`. Use
+`ticket-intake-generic.md` as the pattern. Add an `ado` server to `mcp.json` (token in a user
+environment variable). Then set `ticketSystem: "ado"` and `ticketPrefix: "WI"` in `profile.json`.
 
 ---
 
 ## 5. Bootstrap the machine (one-time per machine)
 
 ```powershell
-.\.cursor\scripts\machine\Initialize-WorkflowMachine.ps1
+scripts/machine/Initialize-WorkflowMachine.ps1
 ```
 
-This installs recommended Cursor extensions and applies the recommended settings.
+This reports missing tools, writes the Claude Code overlay, and installs the git hooks. Phases for
+Cursor extensions, user settings, and a cockpit workspace run only when your overlay adds their
+scripts to `scripts/machine/`. Details: [MACHINE-SETUP.md](MACHINE-SETUP.md).
 
 ---
 
@@ -112,26 +110,22 @@ Or with GitHub Issues:
 
 These are **core** files — leave them alone unless you are upgrading the workflow:
 
-- `skills/` (except adding intake references)
-- `playbooks/`
-- `hooks/`, `hooks.json`
-- `scripts/ticket/`
-- `_shared/ticket-artifacts.md`, `_shared/severity-and-output.md`, `_shared/ticket-plan-output.md`,
-  `_shared/engineering-decisions.md`
-
-To upgrade core later: cherry-pick or copy those files from the template repo.
+- `skills/` (add your own skills beside them; add intake references under
+  `skills/start-ticket/references/`)
+- `hooks/`, `hooks.json`, `adapters/`, `output-styles/`
+- `scripts/ticket/`, `scripts/machine/`
+- `_shared/`
 
 ---
 
 ## Getting upstream updates
 
-Core files (workflow skills, ticket scripts, hooks) can be updated from the template repo:
-
 ```bash
-# From your project's .cursor folder
+# From this folder, with the template added as the upstream remote
 git fetch upstream
-git checkout upstream/main -- skills/ playbooks/ scripts/ticket/ hooks/ _shared/
+git checkout upstream/main -- skills/ _shared/ scripts/ticket/ scripts/machine/ hooks/ adapters/ output-styles/
 ```
 
-Your overlay files (`profile.json`, `environments/`, `agents/`, `skills/domain/`) are never touched
-by upstream updates.
+That overwrites core skill folders, so re-add any project skill or intake reference you keep under
+`skills/`, then run `scripts/ticket/Assert-AgenticFlow.ps1`. Your overlay (`profile.json`,
+`environments/`, `agents/`, `mcp.json`) is not touched.

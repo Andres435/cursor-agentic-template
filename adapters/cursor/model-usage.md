@@ -55,8 +55,8 @@ user to pick a model before deep work, and do not name one. Every lane's reply s
 |---|---|
 | `explore-repo` | `explore` |
 | `branch-setup` | `shell` |
-| `verify-repo` | `generalPurpose`, or `dotnet-specialist` / `vb-legacy-specialist` by repo (no `shell` type — WI22783) |
-| `review-diff`, `peer-review-pr` | `code-reviewer`; if `Task` rejects it, `generalPurpose` with the code-reviewer prompt (WI17154) |
+| `verify-repo` | `generalPurpose`, or the stack specialist from `profile.specialists` (no `shell` type) |
+| `review-diff`, `peer-review-pr` | `code-reviewer`; if `Task` rejects it, `generalPurpose` with the code-reviewer prompt (the template ships no code-reviewer agent; add one in your overlay) |
 | `pr-feedback-fetch` | `generalPurpose` |
 
 ## For agents

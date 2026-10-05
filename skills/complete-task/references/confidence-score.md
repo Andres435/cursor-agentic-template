@@ -18,6 +18,7 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
 | Scope clarity | High / Med / Low | one-line note |
 | <axis> | High / Med / Low | one-line note |
 | Fix / Implementation correctness | High / Med / Low | one-line note |
+| Stack smoke (optional) | Never tested / Tested / Untested latest changes / Failed / Skipped | one-line; omit the row when never tested and not asked |
 | Regression risk (Low = best) | Low / Med / High | one-line note |
 | **Overall confidence** | **High / Med / Low** | one-line rationale |
 
@@ -30,12 +31,12 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
 
 | Consumer | `<axis>` value |
 |----------|----------------|
-| `skills/workflow/start-ticket/references/bug-fix.md` | Root-cause certainty |
-| `skills/workflow/start-ticket/references/feature-plan.md` | Design certainty |
-| `commands/tech-spike.md` | Findings certainty |
-| `commands/review-changes.md` and `agents/code-reviewer.md` | Change-set understanding |
-| `skills/conventions/sync-tracked-conventions` | Detection coverage |
-| `skills/workflow/ticket-workflow` and `skills/domain/multi-repo-change` | Whichever axis matches the underlying ticket type (bug -> Root-cause certainty, feature -> Design certainty, spike -> Findings certainty, change-set review -> Change-set understanding) |
+| `skills/start-ticket/references/bug-fix.md` | Root-cause certainty |
+| `skills/start-ticket/references/feature-plan.md` | Design certainty |
+| `skills/start-ticket/references/tech-spike.md` | Findings certainty |
+| `skills/review-changes/SKILL.md` | Change-set understanding. Optional **Stack smoke** row from `Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes). |
+| `skills/ticket-workflow` | Whichever axis matches the underlying ticket type (bug -> Root-cause certainty, feature -> Design certainty, spike -> Findings certainty, change-set review -> Change-set understanding) |
+| `skills/complete-task` | Same axis as the ticket type. Optional **Stack smoke** row when the stack was used or offered (`manifest.stackSmoke`). |
 
 ## How to rate each dimension
 
@@ -45,11 +46,12 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
   - Low: significant ambiguity that could change the approach
 - **Domain certainty axis** (Root-cause / Design / Findings / Change-set understanding) -- Confidence the analysis is correct.
 - **Fix / Implementation correctness** -- Confidence the proposed change correctly addresses scope without unintended side effects.
+- **Stack smoke (optional)** -- Stack start plus a real-path pass of the changed flow. **Tested** (`passed`) raises implementation confidence. **Untested latest changes** (`stale`) means a prior pass no longer covers current logic (PR comments, new commits) — not the same as Never tested. Failed is a residual risk (does not fail close). Skipped / Never tested is honest, not a defect.
 - **Regression risk** (inverted -- Low is best) -- Likelihood the change breaks something else.
   - Low: isolated change, well-tested area, narrow blast radius
   - Med: touches shared code or untested paths
-  - High: touches shared owners, core flows, or DB schema with downstream consumers
-- **Overall confidence** -- Single subjective rating informed by the four dimensions above. If any one dimension is Low (or Regression risk is High), Overall should generally be Med or Low.
+  - High: touches shared modules, public APIs/DTOs, schema, or core flows with downstream consumers
+- **Overall confidence** -- Single subjective rating informed by the dimensions above. If any one dimension is Low (or Regression risk is High), Overall should generally be Med or Low.
 
 ## Risks / Unknowns
 

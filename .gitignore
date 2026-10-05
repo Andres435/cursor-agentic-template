@@ -1,9 +1,3 @@
-# Ticket plans (project data — not template content)
-plans/WI*.json
-plans/WI*-*.md
-plans/*-closeout.md
-plans/*-feedback.md
-
 # Local state files
 .active-stack.json
 *.state.json
@@ -17,7 +11,7 @@ node_modules/
 # Editor
 .vscode/
 
-# User-local ticket files. Manifests, plans, feedback, verify/review packets, and the
+# User-local ticket files. Manifests, plans, and the
 # ledger belong to whoever ran the ticket and never enter git. Only the files below
 # stay tracked. See _shared/ticket-artifacts.md.
 plans/*
@@ -31,3 +25,11 @@ scripts/.ctx-usage.json
 scripts/.active-stack.json
 # Swallowed hook errors (hooks/core/hook-log.js). /doctor warns when this is non-empty.
 scripts/.hook-errors.log
+
+# Local scratch (tmp/tickets holds cached ticket fetches and PR-body drafts), local-only
+# overrides such as local-test-login.local.json, launcher logs, and Pester -CI output.
+tmp/
+*.local.json
+*.local.md
+scripts/*.log
+testResults.xml

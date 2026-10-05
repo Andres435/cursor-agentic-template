@@ -21,16 +21,21 @@
                    content: a plan approved before those requirements existed must not
                    retroactively fail here. This is also the LOAD-TIME gate for
                    /complete-task -- see the note on -Phase close below.
-    complete-task  runs -Phase close     before the retrospective, NOT at chat start.
+    complete-task  runs -Phase close     after the ledger row, NOT at chat start.
                    The close timestamp and the ledger row are written during the
                    command, so running this at load is a guaranteed FAIL.
                    Close accepts blank context percents and fails one outside 0-100.
-                   A non-spike close also requires plans/<ticket>-verify.json with
-                   pass true, and a non-empty reviewReady fingerprint for each local
-                   affected repo. When that repo's path exists, the fingerprint must
-                   match the staged diff, or the last commit when nothing is staged.
-                   A spike skips both. ctxPct.review is required unless workType is
-                   spike or reviewSkipped is true. Estimate when the indicator is hidden.
+                   A non-spike close also requires manifest.verify.repos.<repo>
+                   (Set-VerifyReceipt.ps1) with boolean pass true for each local
+                   affected repo. Each of those repos also needs a reviewReady
+                   entry (Set-ReviewReady.ps1) with verdict Ready, Ready with fixes, or
+                   No change. When the repo path exists, the reviewed work must still be
+                   there: the staged diff, or the first-parent commits since the stamp's
+                   headSha (a later merge of the base branch is ignored; any other new
+                   commit fails). A spike skips both.
+                   Optional stackSmoke is Never tested when absent, Tested when passed,
+                   Untested latest when stale (or passed fingerprint no longer matches).
+                   Not a fail.
 
     Session timestamps live in the manifest. The retired WI<n>-session.json is still
     accepted as a fallback so tickets started before that change can close.
@@ -38,7 +43,7 @@
     Exit code 0 = pass, 1 = fail.
 
 .PARAMETER Ticket
-    Work item, with or without the WI prefix (WI21588 or 21588).
+    Work item, with or without the ticket prefix (TICKET-42 or 42).
 
 .PARAMETER Phase
     start | implement | close
@@ -47,7 +52,7 @@
     Emit { phase, ticket, mode, pass, missing[], found[] } instead of human-readable lines.
 
 .EXAMPLE
-    .\Assert-TicketArtifacts.ps1 -Ticket WI21588 -Phase start
+    .\Assert-TicketArtifacts.ps1 -Ticket TICKET-42 -Phase start
 
 .EXAMPLE
     .\Assert-TicketArtifacts.ps1 -Ticket 22132 -Phase implement -Json
@@ -438,70 +443,90 @@ function Get-ResolvedRepoPaths {
 }
 
 function Test-VerifyReceipt {
-    $name = "$Key-verify.json"
-    $path = Join-Path $PlansDir $name
-    if (-not (Test-Path -LiteralPath $path)) {
-        $missing.Add("$name -- verify-repo receipt with pass true")
+    $label = "$Key-manifest.json -- verify"
+    $repos = $null
+    if ($manifest -and ($manifest.PSObject.Properties.Name -contains 'verify') -and $manifest.verify -and
+        ($manifest.verify.PSObject.Properties.Name -contains 'repos')) {
+        $repos = $manifest.verify.repos
+    }
+    if (-not $repos) {
+        $missing.Add("$label -- no verify results; run Set-VerifyReceipt.ps1 per repo after verify-repo")
         return
     }
-    try {
-        $doc = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
-    }
-    catch {
-        $missing.Add("$name -- present but not valid JSON: $($_.Exception.Message)")
-        return
-    }
-    $packets = @($doc)
-    if ($packets.Count -eq 0) {
-        $missing.Add("$name -- verify-repo receipt has no packets")
-        return
-    }
-    foreach ($packet in $packets) {
-        $names = @()
-        if ($packet) { $names = @($packet.PSObject.Properties.Name) }
-        $ok = ($names -contains 'pass') -and [bool]$packet.pass
-        if (-not $ok) {
-            $missing.Add("$name -- pass must be true")
-            return
+    foreach ($repo in @(Get-CloseRepoNames)) {
+        $entry = $null
+        if ($repos.PSObject.Properties.Name -contains $repo.repo) { $entry = $repos.($repo.repo) }
+        if (-not $entry) {
+            $missing.Add("$label.repos.$($repo.repo) -- missing; run Set-VerifyReceipt.ps1")
+            continue
+        }
+        $names = @($entry.PSObject.Properties.Name)
+        # A JSON string "false" is truthy in PowerShell, so only a real boolean counts.
+        if (-not (($names -contains 'pass') -and ($entry.pass -is [bool]) -and $entry.pass)) {
+            $missing.Add("$label.repos.$($repo.repo).pass must be boolean true")
+            continue
+        }
+        if (($names -contains 'tests') -and ([string]$entry.tests -eq 'not-run')) {
+            $why = if ($names -contains 'reason') { [string]$entry.reason } else { '' }
+            $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): tests not run: $why)")
+        } else {
+            $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass)")
         }
     }
-    $found.Add($name)
 }
 
 function Test-ReviewFingerprints {
     $repos = @(Get-CloseRepoNames)
     $resolved = Get-ResolvedRepoPaths
     $stampRepos = $null
+    $stampMode = 'staged'
     if ($manifest -and ($manifest.PSObject.Properties.Name -contains 'reviewReady') -and $manifest.reviewReady) {
         $stamp = $manifest.reviewReady
         if ($stamp.PSObject.Properties.Name -contains 'repos') { $stampRepos = $stamp.repos }
+        if (($stamp.PSObject.Properties.Name -contains 'mode') -and $stamp.mode) { $stampMode = [string]$stamp.mode }
     }
     foreach ($repo in $repos) {
+        $label = "$Key-manifest.json -- reviewReady.repos.$($repo.repo)"
         $entry = $null
         if ($stampRepos -and ($stampRepos.PSObject.Properties.Name -contains $repo.repo)) {
             $entry = $stampRepos.($repo.repo)
         }
-        $fp = ''
-        if ($entry -and ($entry.PSObject.Properties.Name -contains 'fingerprint')) {
-            $fp = [string]$entry.fingerprint
-        }
-        $fpNorm = $fp.ToLowerInvariant()
-        if ($fpNorm -notmatch '^[0-9a-f]{64}$' -or $fpNorm -eq $script:EmptyDiffFingerprint) {
-            $missing.Add("$Key-manifest.json -- reviewReady.repos.$($repo.repo).fingerprint must be a non-empty review hash")
+        if (-not $entry) {
+            $missing.Add("$label -- no review stamp; run Set-ReviewReady.ps1 after review-diff")
             continue
+        }
+        $verdict = Get-StampEntryValue $entry 'verdict'
+        if (-not (Test-ReviewVerdict $verdict)) {
+            $missing.Add("$label.verdict is '$verdict' -- needs Ready, Ready with fixes, or No change")
+            continue
+        }
+        $mode = Get-StampEntryValue $entry 'mode'
+        if (-not $mode) { $mode = $stampMode }
+        $noChange = ($verdict.Replace('*', '').Trim() -eq 'No change')
+        if ($noChange -or $mode -eq 'pre-merge') {
+            if ((Get-StampEntryValue $entry 'headSha') -notmatch '^[0-9a-fA-F]{40}$') {
+                $missing.Add("$label.headSha must name the reviewed commit")
+                continue
+            }
+        } else {
+            $fpNorm = (Get-StampEntryValue $entry 'fingerprint').ToLowerInvariant()
+            if ($fpNorm -notmatch '^[0-9a-f]{64}$' -or $fpNorm -eq $script:EmptyDiffFingerprint) {
+                $missing.Add("$label.fingerprint must be a non-empty review hash")
+                continue
+            }
         }
         $path = $repo.path
         if (-not $path -and $resolved.ContainsKey($repo.repo)) { $path = $resolved[$repo.repo] }
         if (-not $path -or -not (Test-Path -LiteralPath $path)) {
-            $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo).fingerprint)")
+            $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo): $verdict)")
             continue
         }
-        $current = Get-WorkDiffFingerprint -RepoPath $path
-        if (-not $current -or ($current -ne $fpNorm)) {
-            $missing.Add("$Key-manifest.json -- reviewReady.repos.$($repo.repo).fingerprint does not match the staged diff or last commit")
+        $check = Test-ReviewedWorkPresent -RepoPath $path -Entry $entry -StampMode $stampMode
+        if (-not $check.ok) {
+            $missing.Add("$label -- $($check.reason); re-review, then Set-ReviewReady.ps1")
             continue
         }
-        $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo).fingerprint matches)")
+        $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo): $verdict, $($check.reason))")
     }
 }
 
@@ -569,7 +594,7 @@ else {
     else {
         Write-Host "[FAIL] $Key $Phase is incomplete -- $($missing.Count) artifact(s) missing:" -ForegroundColor Red
         foreach ($m in $missing) { Write-Host "       $m" -ForegroundColor Red }
-        Write-Host "       Contract: tmo-agentic/_shared/ticket-artifacts.md" -ForegroundColor DarkGray
+        Write-Host "       Contract: _shared/ticket-artifacts.md" -ForegroundColor DarkGray
     }
 }
 

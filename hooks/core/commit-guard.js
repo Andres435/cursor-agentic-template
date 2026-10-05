@@ -5,7 +5,7 @@
  * Cursor and Claude hooks translate { action, reason } into their own contracts.
  *
  *   deny  git add -f of a user-local plans/ file, or a commit with one staged, in a
- *         tmo-agentic clone. Ticket manifests, plans and the ledger never enter git.
+ *         workflow repo clone. Ticket manifests, plans and the ledger never enter git.
  *   ask   a commit in a product repo whose message has no work-item id.
  *   allow everything else. Workflow-repo commits carry no ticket, so they are not asked.
  */

@@ -7,16 +7,16 @@
     and git diff --staged still matches the stored fingerprint.
 
 .PARAMETER Ticket
-    Work item, with or without the WI prefix.
+    Work item, with or without the ticket prefix.
 
 .PARAMETER Json
     Emit { ticket, mode, repos: [{ repo, skip, reason, verdict }] }.
 
 .PARAMETER Root
-    Override the tmo-agentic repo root (tests).
+    Override the workflow repo root (tests).
 
 .EXAMPLE
-    .\Get-ReviewSkip.ps1 -Ticket WI21961 -Json
+    .\Get-ReviewSkip.ps1 -Ticket TICKET-42 -Json
 #>
 
 [CmdletBinding()]

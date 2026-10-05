@@ -20,7 +20,7 @@ const COMMANDS = [
   "address-pr-comments",
 ];
 
-// `/start-ticket`, `/tmo:start-ticket`, optionally after a leading `/engineering-mode`.
+// `/start-ticket`, `/<plugin>:start-ticket`, optionally after a leading `/engineering-mode`.
 const LEAD = String.raw`^\s*(?:\/(?:[\w-]+:)?engineering-mode\s+)?\/(?:[\w-]+:)?`;
 
 function leadingCommand(prompt) {

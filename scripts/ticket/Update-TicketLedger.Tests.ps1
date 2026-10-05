@@ -42,10 +42,24 @@ Describe 'Update-TicketLedger column migration' {
         $hdr | Should -Match 'CtxS%'
         $row = ($text -split "`n" | Where-Object { $_ -match '^\|\s*WI00001' } | Select-Object -First 1)
         $cells = @(($row.Trim() -replace '^\|', '' -replace '\|$', '') -split '\|' | ForEach-Object { $_.Trim() })
-        $cells.Count | Should -Be 13
+        $cells.Count | Should -Be 15
         $cells[9] | Should -Be ''
         $cells[10] | Should -Be ''
         $cells[11] | Should -Be '45'
         $cells[12] | Should -Be '123'
+        $cells[13] | Should -Be ''
+    }
+
+    It 'writes Lanes and a CtxS coverage line without backfilling older rows' {
+        $root = Join-Path $TestDrive 'lanes-root'
+        $plans = Join-Path $root 'plans'
+        New-Item -ItemType Directory -Path $plans -Force | Out-Null
+        & $script:PwshHost -NonInteractive -NoProfile -File $script:LedgerScript `
+            -Root $root -Ticket WI00002 -Type bug -Mode branch -Efficiency 4 -Contextualization 4 -CostTokens 3 `
+            -ContextPct 40 -ContextPctStart 55 -Lanes 'f1/s0/d0 inline:d2'
+        $LASTEXITCODE | Should -Be 0
+        $text = Get-Content -LiteralPath (Join-Path $plans 'ticket-ledger.md') -Raw -Encoding UTF8
+        $text | Should -Match 'f1/s0/d0 inline:d2'
+        $text | Should -Match 'CtxS on 1 of 1 scored branch rows'
     }
 }

@@ -15,7 +15,7 @@ Complements pipeline `pr-merge-review` (which already posts bot Blocker/Major). 
 Not `/review-changes` (your staged/pre-merge diff). Not `/address-pr-comments` (fix comments on
 your PR).
 
-Load [../references/comment-voice.md](../references/comment-voice.md) **before** drafting any the tracker text.
+Load [../references/comment-voice.md](../references/comment-voice.md) **before** drafting any posted text.
 Load [../references/checklist.md](../references/checklist.md) before reviewing the diff.
 Chat output budget: [../../../_shared/severity-and-output.md](../../../_shared/severity-and-output.md#chat-output-budget).
 
@@ -25,18 +25,18 @@ Chat output budget: [../../../_shared/severity-and-output.md](../../../_shared/s
   Coworker tickets usually have no local manifest.
 - Parent does not dump PR JSON, thread JSON, or full diffs. Fan out `peer-review-pr` per PR
   ([../../../_shared/subagent-functions.md](../../../_shared/subagent-functions.md)).
-- Optional scratch: `workflow/tmp/tickets/WI<n>-peer-review.md` (gitignored). Not a `plans/` artifact.
+- Optional scratch: `.cursor/tmp/tickets/<ticket>-peer-review.md` (gitignored). Not a `plans/` artifact.
 
 ## Input
 
-Prefer a work item number: `<ticket id>`, `AB#<number>`, or `<number>` when the context is an the tracker
+Prefer a ticket id (`<ticket>`) or a bare number when the context is a tracker
 item. Also accept a PR URL or `repo PR_NUMBER` (e.g. `app 12299`). Ask if missing.
 
 ## Scope
 
 - Resolve product clones from [../../../profile.json](../../../profile.json) `repos[].name` as
-  siblings of this `workflow` folder (`../app`, …). Never `Resolve-TicketRoot.ps1`.
-- If a repo is not cloned locally, review via the tracker `repo_file` only.
+  siblings of this workflow folder (`../app`, …). Never `Resolve-TicketRoot.ps1`.
+- If a repo is not cloned locally, review through the tracker or host file view only.
 - Never `git checkout` a coworker branch. Never commit, push, or vote Approve/Wait.
 - Never write the work item.
 
@@ -51,7 +51,7 @@ item. Also accept a PR URL or `repo PR_NUMBER` (e.g. `app 12299`). Ask if missin
    continuing.
 
 3. **Existing threads.** `repo_pull_request_thread` `list` (compact). Skip duplicates — same
-   file+line, or the same ask already made by Project Collection Build Service, Sonar, or a human.
+   file+line, or the same ask already made by a CI bot, a static-analysis tool, or a human.
    Also identify specific substantive comments worth endorsing with a thumbs-up. Recommend a
    thumbs-up only when the comment is correct, relevant to the changed code, and adds useful review
    value. Do not recommend reactions for policy/status messages, generic summaries, automated
@@ -59,31 +59,31 @@ item. Also accept a PR URL or `repo PR_NUMBER` (e.g. `app 12299`). Ask if missin
    ids so the user can react to the exact comment.
 
 4. **Diff without checkout.** In the local clone: `git fetch origin <sourceBranch>` then
-   `git diff origin/<target>...<source>` (usually `the profile base branch`). If fetch fails, use the tracker changed
-   files + `repo_file` `get_content` at the PR source commit.
+   `git diff origin/<target>...<source>` (usually `profile.baseBranchDefault`). If fetch fails, use the host's changed
+   files and file contents at the PR source commit.
 
 5. **Fan-out.** One `peer-review-pr` subagent per PR on the standard tier. Subagent returns proposed comments
    only. Parent merges the draft. Subagents never write the tracker.
 
-6. **Draft in chat, wait.** No the tracker writes. Include any thumbs-up recommendations as advisory items;
-   the available the tracker write tool does not apply reactions. See output shape below.
+6. **Draft in chat, wait.** No tracker writes. Include any thumbs-up recommendations as advisory items;
+   the available write tool does not apply reactions. See output shape below.
 
-7. **After approval.** For each approved id, `repo_pull_request_thread_write` `action: create`:
-   - `repositoryId` + `project` + `pullRequestId`
-   - `content` = the **approved** `Comment to post` text (verbatim)
-   - `filePath` starting with `/`
-   - `rightFileStartLine` when known
-   - `status: Active`
+7. **After approval.** For each approved id, create one inline thread with the host's PR tool
+   (GitHub: `gh api` review comment; ADO overlay: its thread-write tool):
+   - repository + pull request id
+   - body = the **approved** `Comment to post` text (verbatim)
+   - file path from the repo root, with the line when known
+   - status active / open
    If the line cannot be mapped, post a file-level thread (path, no line) — not a PR-summary
    comment. Report created thread IDs.
 
-Approval replies: `post all` | `post C1 C3` | `skip C2` | edit a comment's text. Never `create` a
+Approval replies: `post all` | `post C1 C3` | `skip C2` | edit a comment's text. Never create a
 thread before explicit approval of that id (or `post all`).
 
 ## Output shape
 
 ```markdown
-## Peer review draft — WI<n>
+## Peer review draft — <ticket>
 
 PRs:
 - <repo> #<id> — <source> -> <target> — <url>
@@ -91,7 +91,7 @@ PRs:
 ### Proposed comments
 - **C1** — <repo> #<pr> — `path/File.cs:42`
   - Why: <one line, for the user only; not posted>
-  - Comment to post: "<exact the tracker text>"
+  - Comment to post: "<exact comment text>"
 
 ### Recommended thumbs-up
 - **T1** — <repo> #<pr> — thread <thread-id>, comment <comment-id> — `path/File.cs:42`
@@ -100,7 +100,7 @@ PRs:
 ### Skipped as duplicate
 - `path:line` — existing thread <id> already covers this
 
-No the tracker comments will be posted until you approve.
+No comments will be posted until you approve.
 Reply: `post all` | `post C1 C3` | `skip C2` | edit a comment's text.
 ```
 
@@ -112,18 +112,18 @@ posting comments.
 After posting:
 
 ```markdown
-## Peer review posted — WI<n>
+## Peer review posted — <ticket>
 - <repo> #<pr> thread <id> — `path:line`
 ```
 
 ## Safety
 
 - Never `create` a thread before explicit approval of that comment id (or `post all`).
-- Never claim to have applied a thumbs-up reaction; the current the tracker write tool does not support
+- Never claim to have applied a thumbs-up reaction; the current write tool does not support
   comment reactions.
 - Never check out, commit, or push on a coworker branch.
 - Never mark threads Fixed/WontFix (that is `/address-pr-comments`).
 - Never paste full PR JSON or full diffs into chat.
-- Never put Blocker/Major/Minor/Nit (or “finding”) in posted the tracker text, and do not show those
+- Never put Blocker/Major/Minor/Nit (or “finding”) in posted comment text, and do not show those
   labels in the draft.
-- Never alter core TMO shared-owner logic; flag it in a human comment if the PR touches it.
+- Never alter shared-owner logic; flag it in a human comment if the PR touches it.

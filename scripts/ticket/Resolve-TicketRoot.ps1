@@ -23,13 +23,13 @@
     and callers stop rather than working in the canonical clones.
 
 .PARAMETER Ticket
-    Work item, with or without the WI prefix (WI21588, 21588, AB#21588).
+    Work item, with or without the WI prefix (TICKET-42, 42, AB#42).
 
 .PARAMETER Json
     Emit the resolution object as JSON instead of human-readable lines.
 
 .EXAMPLE
-    .\Resolve-TicketRoot.ps1 -Ticket WI22132
+    .\Resolve-TicketRoot.ps1 -Ticket TICKET-42
 
 .EXAMPLE
     .\Resolve-TicketRoot.ps1 -Ticket 22132 -Json
@@ -54,7 +54,7 @@ $ErrorActionPreference = 'Stop'
 
 $Key = ConvertTo-LauncherTicketId -Raw $Ticket
 if (-not $Key) {
-    throw "Could not read a work item number from '$Ticket'. Use WI21588, 21588, or AB#21588."
+    throw "Could not read a work item number from '$Ticket'. Use TICKET-42, 42, or AB#42."
 }
 
 # $PSScriptRoot is <root>\.cursor\scripts. Inside a ticket window .cursor is a
