@@ -25,9 +25,9 @@
                    The close timestamp and the ledger row are written during the
                    command, so running this at load is a guaranteed FAIL.
                    Close accepts blank context percents and fails one outside 0-100.
-                   A non-spike close also requires plans/<ticket>-verify.json
-                   (Set-VerifyReceipt.ps1): a packet with boolean pass true for each
-                   local affected repo. Each of those repos also needs a reviewReady
+                   A non-spike close also requires manifest.verify.repos.<repo>
+                   (Set-VerifyReceipt.ps1) with boolean pass true for each local
+                   affected repo. Each of those repos also needs a reviewReady
                    entry (Set-ReviewReady.ps1) with verdict Ready, Ready with fixes, or
                    No change. When the repo path exists, the reviewed work must still be
                    there: the staged diff, or the first-parent commits since the stamp's
@@ -443,49 +443,36 @@ function Get-ResolvedRepoPaths {
 }
 
 function Test-VerifyReceipt {
-    $name = "$Key-verify.json"
-    $path = Join-Path $PlansDir $name
-    if (-not (Test-Path -LiteralPath $path)) {
-        $missing.Add("$name -- verify receipt missing; run Set-VerifyReceipt.ps1 per repo after verify-repo")
+    $label = "$Key-manifest.json -- verify"
+    $repos = $null
+    if ($manifest -and ($manifest.PSObject.Properties.Name -contains 'verify') -and $manifest.verify -and
+        ($manifest.verify.PSObject.Properties.Name -contains 'repos')) {
+        $repos = $manifest.verify.repos
+    }
+    if (-not $repos) {
+        $missing.Add("$label -- no verify results; run Set-VerifyReceipt.ps1 per repo after verify-repo")
         return
     }
-    try {
-        $doc = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
-    }
-    catch {
-        $missing.Add("$name -- present but not valid JSON: $($_.Exception.Message)")
-        return
-    }
-    $packets = @($doc | Where-Object { $_ })
-    if ($packets.Count -eq 0) {
-        $missing.Add("$name -- verify-repo receipt has no packets")
-        return
-    }
-    $byRepo = @{}
-    $coversAll = $false
-    foreach ($packet in $packets) {
-        $names = @($packet.PSObject.Properties.Name)
-        $label = if ($names -contains 'repo' -and $packet.repo) { [string]$packet.repo } else { '(all repos)' }
-        # A JSON string "false" is truthy in PowerShell, so only a real boolean counts.
-        $ok = ($names -contains 'pass') -and ($packet.pass -is [bool]) -and $packet.pass
-        if (-not $ok) {
-            $missing.Add("$name -- $label pass must be boolean true")
+    foreach ($repo in @(Get-CloseRepoNames)) {
+        $entry = $null
+        if ($repos.PSObject.Properties.Name -contains $repo.repo) { $entry = $repos.($repo.repo) }
+        if (-not $entry) {
+            $missing.Add("$label.repos.$($repo.repo) -- missing; run Set-VerifyReceipt.ps1")
             continue
         }
-        if ($label -eq '(all repos)') { $coversAll = $true } else { $byRepo[$label] = $packet }
-        if (($names -contains 'tests') -and ([string]$packet.tests -eq 'not-run')) {
-            $why = if ($names -contains 'reason') { [string]$packet.reason } else { '' }
-            $found.Add("$name ($label tests not run: $why)")
+        $names = @($entry.PSObject.Properties.Name)
+        # A JSON string "false" is truthy in PowerShell, so only a real boolean counts.
+        if (-not (($names -contains 'pass') -and ($entry.pass -is [bool]) -and $entry.pass)) {
+            $missing.Add("$label.repos.$($repo.repo).pass must be boolean true")
+            continue
+        }
+        if (($names -contains 'tests') -and ([string]$entry.tests -eq 'not-run')) {
+            $why = if ($names -contains 'reason') { [string]$entry.reason } else { '' }
+            $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): tests not run: $why)")
+        } else {
+            $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass)")
         }
     }
-    if (-not $coversAll) {
-        foreach ($repo in @(Get-CloseRepoNames)) {
-            if (-not $byRepo.ContainsKey($repo.repo)) {
-                $missing.Add("$name -- no packet for $($repo.repo)")
-            }
-        }
-    }
-    $found.Add($name)
 }
 
 function Test-ReviewFingerprints {

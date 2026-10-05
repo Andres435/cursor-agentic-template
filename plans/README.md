@@ -23,11 +23,8 @@ Humans: [../USER-MANUAL.md](../USER-MANUAL.md) (reload these files instead of re
 
 | File | Written by | Purpose |
 |---|---|---|
-| `<ticket>-manifest.json` | ticket-router, at start | Routing table **and** session state: `mode`, repos, specialists, `docSet`, `priorFindings`, hours timestamps, then `reviewReady`, `ctxPct`, `lanes`, optional `stackSmoke` |
+| `<ticket>-manifest.json` | ticket-router at start, then the stamp scripts | **The one record per ticket:** mode, repos, docSet, priorFindings, timestamps, and later `reviewReady` (with findings), `verify`, `feedback`, `stackSmoke`, `ctxPct`, `lanes` |
 | `<ticket>-<type>-plan.md` | start-ticket, on approval | The approved plan. Opens with a `## Plan Digest`; the only plan implementation follows |
-| `<ticket>-verify.json` | complete-task (`scripts/Set-VerifyReceipt.ps1`) | One `verify-repo` packet per repo. **Required at close unless spike** |
-| `<ticket>-review.md` | complete-task / review-changes | Compact `review-diff` output (conditional) |
-| `<ticket>-feedback.md` | address-pr-comments | Compact PR + static-analysis triage packet (conditional) |
 | `ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | **One row per closed ticket:** type, close date, mode, hours, points, E/C/`$tok`, CtxS%/CtxR%/Ctx%, Lanes, Epoch |
 | `closeout-index.md` | complete-task, when the user picks a lesson | One-line durable lessons — the surface the next `/start-ticket` searches |
 | `<ticket>-closeout.md` | complete-task | **Only when a retrospective earns a page.** Not required by any gate |

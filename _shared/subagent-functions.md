@@ -118,10 +118,10 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **Use:** gather + compact PR threads and CI/quality feedback for one ticket (parallel per PR).
 - **Inputs:** `ticket`, optional explicit `prTargets[]`.
 - **Does:** gather PR threads for this ticket (`gh` or the profile's tracker adapter); trimmed
-  thread lists first, full thread only when needed. Persist `plans/<ticket>-feedback.md`. Do not
-  dump raw JSON.
-- **Returns (compact):** the "Compact Context For Follow-Up" packet from that command (per repo/PR:
-  thread id | status | file:line | ask | context; static-analysis gate + issues). No fixes applied.
+  thread lists first, full thread only when needed. Writes nothing; do not dump raw JSON.
+- **Returns (compact):** a JSON packet in the `manifest.feedback` shape (`prs`, `gate`, `items` with
+  `kind`, `ref`, `status`, `file`, `ask`, `context`, `triage`) — see `scripts/ticket/Set-TicketFeedback.ps1`.
+  The parent merges packets and records them with that script. No fixes applied.
 - **Guardrail:** read-only. Never marks threads resolved or replies -- that stays on the approved
   path in `address-pr-comments`.
 

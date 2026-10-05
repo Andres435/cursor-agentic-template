@@ -197,11 +197,11 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         }
         if ($ReviewSkipped) { $manifest.reviewSkipped = $true }
         if ($Ctx) { $manifest.ctxPct = $Ctx }
-        $utf8 = New-Object System.Text.UTF8Encoding($false)
-        [System.IO.File]::WriteAllText((Join-Path $plans 'WI00009-manifest.json'), ($manifest | ConvertTo-Json -Depth 5), $utf8)
         if ($WorkType -ne 'spike') {
-            [System.IO.File]::WriteAllText((Join-Path $plans 'WI00009-verify.json'), "{`n  `"pass`": true`n}`n", $utf8)
+            $manifest.verify = @{ repos = @{ app = @{ pass = $true; tests = 'pass'; sonar = 'ok' } } }
         }
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText((Join-Path $plans 'WI00009-manifest.json'), ($manifest | ConvertTo-Json -Depth 6), $utf8)
         $ledger = @(
             '# Ticket ledger'
             ''
@@ -221,9 +221,9 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         [System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8) + "`n", $utf8)
     }
 
+    # Replaces manifest.verify with the given JSON object.
     function Set-VerifyJson([string]$Root, [string]$Json) {
-        $utf8 = New-Object System.Text.UTF8Encoding($false)
-        [System.IO.File]::WriteAllText((Join-Path $Root 'plans/WI00009-verify.json'), $Json + "`n", $utf8)
+        Add-ManifestFields $Root @{ verify = ($Json | ConvertFrom-Json) }
     }
 
     # One affected repo 'app' with no local path, so the stamp is checked as JSON only.
@@ -285,10 +285,13 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $result = Invoke-Assert -Root $root -Phase 'close'
         $result.ExitCode | Should -Be 0
     }
-    It 'fails a bug close with no verify receipt' {
+    It 'fails a bug close with no verify results on the manifest' {
         $root = Join-Path $TestDrive 'close-no-verify'
         New-CloseRoot -Root $root -WorkType 'bug' -Ctx @{ start = 40; review = 50; close = 60 }
-        Remove-Item -LiteralPath (Join-Path $root 'plans/WI00009-verify.json')
+        $manifestPath = Join-Path $root 'plans/WI00009-manifest.json'
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        $manifest.PSObject.Properties.Remove('verify')
+        [System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
         $result = Invoke-Assert -Root $root -Phase 'close'
         $result.ExitCode | Should -Be 1
         $result.Output | Should -Match 'verify'
@@ -341,7 +344,7 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $result.Output | Should -Match 'does not match'
     }
 
-    It 'passes a stamped repo with a legacy receipt' {
+    It 'passes a stamped repo with a passing verify entry' {
         $root = Join-Path $TestDrive 'close-stamped'
         New-StampedCloseRoot $root
         (Invoke-Assert -Root $root -Phase 'close').ExitCode | Should -Be 0
@@ -358,31 +361,31 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $result.Output | Should -Match 'needs Ready'
     }
 
-    It 'fails a receipt whose pass is the string <value>' -ForEach @(
+    It 'fails a verify entry whose pass is the string <value>' -ForEach @(
         @{ value = 'false' }
         @{ value = 'true' }
     ) {
         $root = Join-Path $TestDrive "close-pass-string-$value"
         New-StampedCloseRoot $root
-        Set-VerifyJson $root "[{ `"repo`": `"app`", `"pass`": `"$value`" }]"
+        Set-VerifyJson $root "{ `"repos`": { `"app`": { `"pass`": `"$value`" } } }"
         $result = Invoke-Assert -Root $root -Phase 'close'
         $result.ExitCode | Should -Be 1
         $result.Output | Should -Match 'boolean true'
     }
 
-    It 'fails a receipt with no packet for an affected repo' {
+    It 'fails when verify has no entry for an affected repo' {
         $root = Join-Path $TestDrive 'close-receipt-missing-repo'
         New-StampedCloseRoot $root
-        Set-VerifyJson $root '[{ "repo": "other", "pass": true }]'
+        Set-VerifyJson $root '{ "repos": { "other": { "pass": true } } }'
         $result = Invoke-Assert -Root $root -Phase 'close'
         $result.ExitCode | Should -Be 1
-        $result.Output | Should -Match 'no packet for app'
+        $result.Output | Should -Match 'verify.repos.app -- missing'
     }
 
-    It 'passes a receipt whose tests were not run, with a reason' {
+    It 'passes a verify entry whose tests were not run, with a reason' {
         $root = Join-Path $TestDrive 'close-receipt-not-run'
         New-StampedCloseRoot $root
-        Set-VerifyJson $root '[{ "repo": "app", "pass": true, "tests": "not-run", "reason": "docs-only" }]'
+        Set-VerifyJson $root '{ "repos": { "app": { "pass": true, "tests": "not-run", "reason": "docs-only" } } }'
         (Invoke-Assert -Root $root -Phase 'close').ExitCode | Should -Be 0
     }
 

@@ -14,7 +14,7 @@ rather than following it.
 
 | Location | Holds | Committed |
 |---|---|---|
-| `plans/` | Ticket-keyed artifacts for the user who ran the ticket — the manifest, the approved plan, feedback/verify/review packets, and `ticket-ledger.md` | **Never** (gitignored, user-local) |
+| `plans/` | Ticket-keyed artifacts for the user who ran the ticket — the manifest, the approved plan, and `ticket-ledger.md` | **Never** (gitignored, user-local) |
 | `plans/examples/` | One sanitized example per artifact shape, plus `ticket-ledger.example.md` | Yes |
 | `plans/closeout-index.md` | Lessons shared by the team | Yes |
 | `tmp/tickets/` | Per-ticket scratch — commit/PR-body drafts, temporary exports | No (gitignored) |
@@ -80,9 +80,9 @@ scripts/Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start
 - Any chat that loads ticket state uses `-Phase implement` as its **load-time** gate — including
   `/complete-task`. Do **not** run `-Phase close` at chat start: the close timestamp and the ledger
   row are written *during* `complete-task`, so a load-time close gate always fails.
-- `complete-task` runs `-Phase close` after the ledger row is written, before the retrospective.
+- `complete-task` runs `-Phase close` inside the retrospective, after the ledger row is written.
   A non-spike close also requires, for each local affected repo:
-  - a `plans/<ticket>-verify.json` packet with boolean `pass: true` (`scripts/Set-VerifyReceipt.ps1`);
+  - `verify.repos.<repo>` on the manifest with boolean `pass: true` (`scripts/Set-VerifyReceipt.ps1`);
   - a `reviewReady` entry (`scripts/Set-ReviewReady.ps1`) with verdict Ready, Ready with fixes, or
     No change. When the repo path exists, the reviewed work must still be there: the staged diff,
     or the first-parent commits since the stamp's `headSha`. A later merge of the base branch is
@@ -98,16 +98,15 @@ Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, 
 
 | File | Written by | Purpose |
 |---|---|---|
-| `<ticket>-manifest.json` | `ticket-router` skill | Classification **and** session state: `mode`, `workType`, `ticket` (title/type/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `adrIndex`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, session timestamps, plus later `reviewReady` (from `/review-changes`), optional `stackSmoke` (from the stack smoke pass, the `/review-changes` residual-risk cite, or `/complete-task`; **not** a close or Ready gate), `ctxPct` (`start` / `review` / `close`, with `ctxPctSource` measured or reported), and `lanes`. Each `ctxPct` is the hook-measured value or blank; close fails only on a present value outside 0–100. |
+| `<ticket>-manifest.json` | `ticket-router` skill, then the stamp scripts | **The one record per ticket.** Classification **and** session state: `mode`, `workType`, `ticket` (title/type/state/area/priority), `affectedRepos`, `integration`, `environmentCard`, `specialists`, `adrIndex`, `baseBranch`, `priorFindings`, `docSet`, `parallelPlan`, `worktreeRoot`, session timestamps, plus later `reviewReady` (verdict, `headSha`, fingerprint, and up to ten Blocker/Major `findings` per repo, from `Set-ReviewReady.ps1`), `verify` (per-repo `pass`, `tests`, `sonar`, `failing`, `reason`, from `Set-VerifyReceipt.ps1`), `feedback` (PRs, analysis gate, triaged items, from `Set-TicketFeedback.ps1`), optional `stackSmoke` (from the stack smoke pass, the `/review-changes` residual-risk cite, or `/complete-task`; **not** a close or Ready gate), `ctxPct` (`start` / `review` / `close`, with `ctxPctSource` measured or reported), and `lanes`. Each `ctxPct` is the hook-measured value or blank; close fails only on a present value outside 0–100. |
 | `<ticket>-<type>-plan.md` | start-ticket | The approved plan. Opens with a `## Plan Digest` and carries an **Engineering Decisions** section before the Work Plan (structure in [ticket-plan-output.md](ticket-plan-output.md), shape in [engineering-decisions.md](engineering-decisions.md)). The `-Phase start` gate checks both headings and rejects a plan still carrying `TBD` or "resolve during implement". The only plan `implement` follows. |
-| `<ticket>-feedback.md` | address-pr-comments | Compact PR + static-analysis triage packet. Conditional. |
-| `<ticket>-verify.json` | complete-task, via `Set-VerifyReceipt.ps1` | Array of `{repo, pass, tests, sonar, failing, reason, headSha, atUtc}`, one per repo. Required at `-Phase close` unless `workType` is `spike`; every local affected repo needs boolean `pass: true`. |
-| `<ticket>-review.md` | complete-task / review-changes | Compact `review-diff` output. Conditional. |
 | `plans/ticket-ledger.md` | `scripts/ticket/Update-TicketLedger.ps1` | One row per closed ticket: type, close date, mode, hours, points, scorecard, `CtxS%` / `CtxR%` / `Ctx%` (measured, `~NN` when the agent typed it, blank when nothing was measured), `Lanes`, and `Epoch`. Do not invent rows for older tickets. The summary states CtxS coverage on recent scored branch rows. |
 | `plans/closeout-index.md` | complete-task | One row per durable lesson. The retrieval surface for `priorFindings` ([closeout-search.md](../skills/ticket-router/references/closeout-search.md)). |
 | `<ticket>-closeout.md` | complete-task | **Only when a retrospective earns a page** ([task-retrospective.md](../skills/complete-task/references/task-retrospective.md)). Not required by any gate. |
 
-Keep these small. Summarize subagent packets into the relevant file; do not paste raw JSON into chat.
+Keep these small. Subagent packets land on the manifest through the stamp scripts, never as their own
+files; do not paste raw JSON into chat. Older side files (`<ticket>-verify.json`, `<ticket>-review.md`,
+`<ticket>-feedback.md`) are not read; delete them.
 
 ## Session timestamps
 

@@ -12,8 +12,9 @@ focused context, and address actionable review feedback with minimal token use.
 
 ## Token contract
 
-- **Parent does not fetch threads.** `dispatch` `pr-feedback-fetch` (fast tier) per PR, or reload
-  `.cursor/plans/<ticket>-feedback.md` if it exists and the user did not ask to refresh
+- **Parent does not fetch threads.** `dispatch` `pr-feedback-fetch` (fast tier) per PR, or reuse
+  `manifest.feedback` if it is there and the user did not ask to refresh. The manifest is the only
+  record; there is no feedback file
   ([../../../_shared/subagent-functions.md](../../../_shared/subagent-functions.md)).
 - Do not paste raw review or analysis JSON into this chat.
 
@@ -32,8 +33,10 @@ missing or ambiguous, ask before continuing.
      pending — but still root at the resolved path and load the manifest.
 
 1. **Load or fetch compact feedback**
-   - Reload `<ticket>-feedback.md` unless the user asked to refresh. Otherwise `dispatch`
-     `pr-feedback-fetch` once per PR, merge packets, persist `<ticket>-feedback.md`.
+   - Reuse `manifest.feedback` unless the user asked to refresh. Otherwise `dispatch`
+     `pr-feedback-fetch` once per PR, merge the JSON packets, and record them in one write:
+     `$packet | .\.cursor\scripts\Set-TicketFeedback.ps1 -Ticket <ticket>`. Save later triage and
+     closed threads the same way (read `manifest.feedback`, change it, write it back).
    - Fetch by tracker: `github-issues` → `gh pr view --comments` / `gh api` scoped to this ticket's
      branches; `ado` → that overlay's PR tools; `none` → ask for the PR URLs.
    - Ask for PR IDs only when the ticket's relations and the prompt cannot identify the PR set.

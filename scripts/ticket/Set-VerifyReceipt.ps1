@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
-    Record one repo's verify-repo result in plans/<ticket>-verify.json.
+    Record one repo's verify-repo result on the ticket manifest (manifest.verify).
 
 .DESCRIPTION
-    /complete-task step 1 calls this once per verify-repo packet. The file is an
-    array of packets, one per repo; calling again for the same repo replaces its
-    packet. Assert-TicketArtifacts -Phase close requires a packet with boolean
-    pass true for every local affected repo (spikes are exempt).
+    /complete-task step 1 calls this once per verify-repo packet. It writes
+    manifest.verify.repos.<repo>; calling again for the same repo replaces that
+    entry and keeps the others. The manifest is the one record: there is no
+    separate verify file. Assert-TicketArtifacts -Phase close requires an entry
+    with boolean pass true for every local affected repo (spikes are exempt).
 
     pass is true only when tests passed (or were not run, with a reason) and
     Sonar did not report an error, and no failing test names were given.
@@ -63,9 +64,10 @@ if ($Tests -eq 'not-run' -and [string]::IsNullOrWhiteSpace($Reason)) {
 
 $Key = Get-TicketKeyFromRaw -Ticket $Ticket
 $RepoRoot = if ($Root) { $Root } else { Get-CursorRepoRoot -FromScriptRoot $PSScriptRoot }
-$plansDir = Join-Path $RepoRoot 'plans'
-if (-not (Test-Path -LiteralPath $plansDir)) { New-Item -ItemType Directory -Path $plansDir -Force | Out-Null }
-$receiptPath = Join-Path $plansDir "$Key-verify.json"
+$manifestPath = Get-TicketManifestFile -RepoRoot $RepoRoot -TicketKey $Key
+if (-not (Test-Path -LiteralPath $manifestPath)) {
+    throw "Manifest not found: $manifestPath"
+}
 
 if (-not $RepoPath -and -not $Root) {
     $prevEap = $ErrorActionPreference
@@ -85,8 +87,7 @@ $headSha = if ($RepoPath) { Get-GitHeadSha -RepoPath $RepoPath } else { $null }
 $failingList = @($Failing | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 $pass = ($Tests -ne 'fail') -and ($Sonar -ne 'error') -and ($failingList.Count -eq 0)
 
-$packet = [pscustomobject]@{
-    repo    = $Repo
+$entry = [pscustomobject]@{
     pass    = [bool]$pass
     tests   = $Tests
     sonar   = $Sonar
@@ -96,21 +97,17 @@ $packet = [pscustomobject]@{
     atUtc   = [DateTime]::UtcNow.ToString('o')
 }
 
-# Keep other repos' packets. A legacy single object without a repo is dropped: it cannot say
-# which repo it covered.
-$packets = New-Object System.Collections.Generic.List[object]
-if (Test-Path -LiteralPath $receiptPath) {
-    $doc = Get-Content -LiteralPath $receiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    foreach ($p in @($doc)) {
-        if (-not $p) { continue }
-        if (-not ($p.PSObject.Properties.Name -contains 'repo') -or -not $p.repo) { continue }
-        if ([string]$p.repo -eq $Repo) { continue }
-        [void]$packets.Add($p)
+# Upsert: keep the other repos' entries.
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$repos = New-Object PSObject
+if (($manifest.PSObject.Properties.Name -contains 'verify') -and $manifest.verify -and
+    ($manifest.verify.PSObject.Properties.Name -contains 'repos') -and $manifest.verify.repos) {
+    foreach ($p in $manifest.verify.repos.PSObject.Properties) {
+        if ($p.Name -ne $Repo) { $repos | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value }
     }
 }
-[void]$packets.Add($packet)
+$repos | Add-Member -NotePropertyName $Repo -NotePropertyValue $entry
 
-$json = ConvertTo-Json -InputObject @($packets.ToArray()) -Depth 10
-[System.IO.File]::WriteAllText($receiptPath, $json + "`n", (New-Object System.Text.UTF8Encoding $false))
+Merge-TicketManifestFields -ManifestPath $manifestPath -Patch @{ verify = [pscustomobject]@{ repos = $repos } }
 $color = if ($pass) { 'Green' } else { 'Yellow' }
-Write-Host "Wrote verify receipt for $Repo (pass: $pass) on $receiptPath" -ForegroundColor $color
+Write-Host "Wrote verify.repos.$Repo (pass: $pass) on $manifestPath" -ForegroundColor $color

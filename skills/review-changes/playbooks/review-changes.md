@@ -100,7 +100,7 @@ Follow [../../../_shared/severity-and-output.md](../../../_shared/severity-and-o
 8. Stamp + occupancy (no commit/push):
 
    ```powershell
-   .\.cursor\scripts\Set-ReviewReady.ps1 -Ticket <ticket> -Mode staged -Verdicts '{"Repo":"Ready"}'
+   .\.cursor\scripts\Set-ReviewReady.ps1 -Ticket <ticket> -Mode staged -Verdicts '{"Repo":"Ready"}' -Findings '{"Repo":["Major: <one line>"]}'
    .\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase review
    ```
 

@@ -26,6 +26,12 @@
 .PARAMETER Verdict
     Single verdict applied to all affected repos when -Verdicts is omitted.
 
+.PARAMETER Findings
+    JSON object mapping repo name to its Blocker/Major findings, one line each,
+    e.g. '{"app":["Major: null check missing in OrderService.Save"]}'. Stored on
+    reviewReady.repos.<repo>.findings (at most 10) so a later chat cites them from
+    the manifest. There is no separate review file. Omit when there are none.
+
 .PARAMETER RepoPaths
     JSON object mapping repo name to its working-tree path. Overrides
     Resolve-TicketRoot for those repos (tests, or when resolution fails).
@@ -43,6 +49,7 @@ param(
     [Parameter(Mandatory)][ValidateSet('staged', 'pre-merge')][string]$Mode,
     [string]$Verdicts,
     [string]$Verdict,
+    [string]$Findings,
     [string]$RepoPaths,
     [string]$Root
 )
@@ -87,6 +94,13 @@ if (-not $verdictMap.Count) {
     if (-not $Verdict) { throw "Pass -Verdicts JSON or -Verdict." }
     if (-not $repoEntries.Count) { throw "No affected repos resolved for $Key - pass -Verdicts." }
     foreach ($r in $repoEntries) { $verdictMap[$r.repo] = $Verdict }
+}
+
+$findingsMap = @{}
+if ($Findings) {
+    foreach ($p in ($Findings | ConvertFrom-Json).PSObject.Properties) {
+        $findingsMap[$p.Name] = @($p.Value | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ } | Select-Object -First 10)
+    }
 }
 
 $pathMap = @{}
@@ -138,6 +152,7 @@ foreach ($name in ($verdictMap.Keys | Sort-Object)) {
         headSha     = $headSha
         fingerprint = $fp
         fpVersion   = 2
+        findings    = if ($findingsMap.ContainsKey($name)) { @($findingsMap[$name]) } else { @() }
     }
     if ($null -ne $reposObj.PSObject.Properties[$name]) {
         $reposObj.$name = $entry

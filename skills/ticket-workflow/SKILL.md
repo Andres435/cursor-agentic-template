@@ -49,7 +49,6 @@ Coworker PR review is `/peer-review` — not on this author path.
 | PR / tracker write-back | `/prep-pr` (after approval) | [prep-pr/SKILL.md](../prep-pr/SKILL.md) → [prep-pr/playbooks/prep-pr.md](../prep-pr/playbooks/prep-pr.md) |
 | PR feedback | `/address-pr-comments` | [address-pr-comments/SKILL.md](../address-pr-comments/SKILL.md) → [address-pr-comments/playbooks/address-pr-comments.md](../address-pr-comments/playbooks/address-pr-comments.md) |
 | Coworker PR review | `/peer-review` | [peer-review/SKILL.md](../peer-review/SKILL.md) → [peer-review/playbooks/peer-review.md](../peer-review/playbooks/peer-review.md) |
-| Coworker PR review | `/peer-review` | [peer-review/SKILL.md](../peer-review/SKILL.md) → [peer-review/playbooks/peer-review.md](../peer-review/playbooks/peer-review.md) |
 | Fresh-chat hydrate | First step of implement, review-changes, complete-task, address-pr-comments | [ticket-context-load/SKILL.md](../ticket-context-load/SKILL.md) |
 | New product | `/start-new-project` | [start-new-project/SKILL.md](../start-new-project/SKILL.md) |
 | New clone / machine | `/onboard` | [onboard/SKILL.md](../onboard/SKILL.md) + [CUSTOMIZE.md](../../CUSTOMIZE.md) |

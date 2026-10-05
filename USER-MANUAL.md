@@ -144,7 +144,7 @@ The staged set is the approval record. Stage hunks yourself, then `/review-chang
 | --- | --- | --- |
 | Start | `plans/<ticket>-manifest.json`, `plans/<ticket>-<type>-plan.md` (Plan Digest + Engineering Decisions) | `Assert-TicketArtifacts -Phase start` |
 | Review | `reviewReady` (verdict, headSha, fingerprint) + `ctxPct.review` on the manifest | `Set-ReviewReady` / `Set-TicketCtxPct` |
-| Close | `plans/<ticket>-verify.json` (pass per repo), review still matching, ledger row | `Assert-TicketArtifacts -Phase close` |
+| Close | `verify` on the manifest (pass per repo), review still matching, ledger row | `Assert-TicketArtifacts -Phase close` |
 
 ## Project notes
 

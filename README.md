@@ -17,9 +17,12 @@ model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specific
 - **Ticket workflow:** `/start-ticket`, `/review-changes`, `/complete-task`, `/prep-pr`, plus
   `/implement`, `/address-pr-comments`, `/peer-review`, and the stack commands. Each one is a
   skill under `skills/<name>/`, with its body in `playbooks/` and its detail in `references/`.
-- **Mechanical gates:** `scripts/ticket/Assert-TicketArtifacts.ps1` checks each phase's files.
-  The close gate needs a passing verify receipt per repo (`Set-VerifyReceipt.ps1`) and a review
-  stamp (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed. A base-branch
+- **One record per ticket:** `plans/<ticket>-manifest.json` holds the routing, timestamps, and every
+  later result: review stamp and findings, verify results, PR feedback, stack smoke, context %, and
+  lanes. Small `Set-*` scripts write it; no step writes a side file.
+- **Mechanical gates:** `scripts/ticket/Assert-TicketArtifacts.ps1` checks each phase. The close
+  gate needs a passing verify result per repo (`Set-VerifyReceipt.ps1`) and a review stamp
+  (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed. A base-branch
   merge is fine; any later commit means review again.
 - **Routing and tiers:** `ticket-router` writes a manifest so later steps load only the docs the
   ticket needs. Work runs on fast / standard / deep / frontier tiers

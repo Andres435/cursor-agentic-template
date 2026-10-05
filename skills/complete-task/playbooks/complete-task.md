@@ -27,8 +27,8 @@ spike's story-point or timebox field.
      **`complete-task` load profile**: manifest plus Plan Digest, Engineering Decisions, and
      Deviations only. Do **not** load the Work Plan, `docSet`, or `environmentCard`.
    - Drive verification and review off the manifest's `affectedRepos` / `parallelPlan`, not a scan of
-     every repo. Do **not** `Read` `<ticket>-verify.json` or `<ticket>-review*.md` back into the
-     orchestrator — use only the compact packets the subagents return.
+     every repo. Prior results (`reviewReady`, `verify`, `feedback`) are already on the manifest you
+     loaded; do not look for side files.
 
 1. **Verification summary (parallel)**
    - **Spike:** if `mode` is `investigate` and no affected repo has staged product changes, skip.
@@ -62,8 +62,8 @@ spike's story-point or timebox field.
    - **Spike:** same skip as step 1.
    - Run `.\.cursor\scripts\Get-ReviewSkip.ps1 -Ticket <ticket> -Json`. For each repo with
      `skip: true` (prior `/review-changes` verdict **Ready**, `-Mode staged`, fingerprint still
-     matches a non-empty staged diff), **do not** dispatch `review-diff` — cite the existing review
-     and the skip `reason`. `verify-repo` still always runs.
+     matches a non-empty staged diff), **do not** dispatch `review-diff` — cite
+     `reviewReady.repos.<repo>.findings` and the skip `reason`. `verify-repo` still always runs.
    - For each remaining repo, `dispatch` `review-diff` (staged mode) concurrently; each returns a
      compact Blocker+Major report from its resolved path's staged diff. Pass the tier; when the plan
      has a `[high]` step, add the deep-tier second opinion exactly as
@@ -71,7 +71,7 @@ spike's story-point or timebox field.
      describes. A single repo that is not skipped may use
      [../../review-changes/SKILL.md](../../review-changes/SKILL.md) directly.
    - **Stamp what this step reviewed** — the close gate needs a `reviewReady` entry per affected repo:
-     `.\.cursor\scripts\Set-ReviewReady.ps1 -Ticket <ticket> -Mode staged -Verdicts '{"<repo>":"<verdict>"}'`.
+     `.\.cursor\scripts\Set-ReviewReady.ps1 -Ticket <ticket> -Mode staged -Verdicts '{"<repo>":"<verdict>"}' -Findings '{"<repo>":["Major: <one line>"]}'`. Findings go on the stamp, not a file.
      Stamping one repo keeps the others' entries. An affected repo with nothing to review gets
      `"No change"`. If the work is already committed, review the branch and stamp `-Mode pre-merge`.
      Any edit after the stamp means review again and re-stamp — close compares the committed work to it.
