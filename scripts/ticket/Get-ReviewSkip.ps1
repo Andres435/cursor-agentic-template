@@ -3,8 +3,10 @@
     Decide whether /complete-task should skip review-diff per repo.
 
 .DESCRIPTION
-    Skip only when reviewReady.mode is staged, the repo verdict is exactly Ready,
-    and git diff --staged still matches the stored fingerprint.
+    Skip when the repo's verdict is Ready or No change and the reviewed work is
+    still exactly in the repo: the same Test-ReviewedWorkPresent check that
+    Assert-TicketArtifacts -Phase close runs, so a skipped review is never
+    refused at close. Ready with fixes is never skipped.
 
 .PARAMETER Ticket
     Work item, with or without the ticket prefix.

@@ -61,8 +61,8 @@ spike's story-point or timebox field.
 2. **Review readiness (parallel)**
    - **Spike:** same skip as step 1.
    - Run `.\.cursor\scripts\Get-ReviewSkip.ps1 -Ticket <ticket> -Json`. For each repo with
-     `skip: true` (prior `/review-changes` verdict **Ready**, `-Mode staged`, fingerprint still
-     matches a non-empty staged diff), **do not** dispatch `review-diff` — cite
+     `skip: true` (prior `/review-changes` verdict **Ready** or **No change**, and the reviewed work
+     is still exactly in the repo, the same check close runs), **do not** dispatch `review-diff` — cite
      `reviewReady.repos.<repo>.findings` and the skip `reason`. `verify-repo` still always runs.
    - For each remaining repo, `dispatch` `review-diff` (staged mode) concurrently; each returns a
      compact Blocker+Major report from its resolved path's staged diff. Pass the tier; when the plan

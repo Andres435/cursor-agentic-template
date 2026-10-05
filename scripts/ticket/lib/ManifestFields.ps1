@@ -192,6 +192,43 @@ function Get-WorkDiffFingerprint {
     return (Get-RangeDiffFingerprint -RepoPath $RepoPath -From $from -To $work.sha -Version $Version)
 }
 
+# Hash of the work commits alone, replayed onto -From in a throwaway index. Used when the base
+# branch was merged between two work commits, so headSha..newest would also carry the base's
+# changes. $null when a commit does not apply cleanly (for example conflict edits in the merge).
+function Get-ReplayedWorkFingerprint {
+    param(
+        [Parameter(Mandatory)][string]$RepoPath,
+        [Parameter(Mandatory)][string]$From,
+        [Parameter(Mandatory)][object[]]$Commits,
+        [int]$Version = 2
+    )
+    $index = [IO.Path]::GetTempFileName()
+    $patch = [IO.Path]::GetTempFileName()
+    $prevIndex = $env:GIT_INDEX_FILE
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $env:GIT_INDEX_FILE = $index
+        & git -C $RepoPath read-tree $From 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        foreach ($c in $Commits) {
+            & git -C $RepoPath diff --binary --full-index --no-color --no-ext-diff --no-textconv "--output=$patch" $c.parent $c.sha 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { return $null }
+            if ((Get-Item -LiteralPath $patch).Length -eq 0) { continue }
+            & git -C $RepoPath apply --cached --binary $patch 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { return $null }
+        }
+        $gitArgs = @('diff') + @(Get-DiffArgsForVersion -Version $Version) + @('--cached', $From)
+        $diff = Get-GitDiffText -RepoPath $RepoPath -GitArgs $gitArgs
+        if ($null -eq $diff) { return $null }
+        return (Get-DiffFingerprintFromText -Diff $diff)
+    } finally {
+        if ($null -eq $prevIndex) { Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue } else { $env:GIT_INDEX_FILE = $prevIndex }
+        $ErrorActionPreference = $prev
+        Remove-Item -LiteralPath $index, $patch -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Test-ReviewVerdict {
     param([AllowNull()][AllowEmptyString()][string]$Verdict)
     $v = ([string]$Verdict).Replace('*', '').Trim()
@@ -239,8 +276,23 @@ function Test-ReviewedWorkPresent {
         if (-not (Test-GitIsAncestor -RepoPath $RepoPath -Ancestor $headSha)) {
             return [pscustomobject]@{ ok = $false; reason = 'review base is not on this branch (rebased, or another branch is checked out)' }
         }
-        $work = @(Get-FirstParentCommits -RepoPath $RepoPath -Since $headSha | Where-Object { -not $_.isMerge }) | Select-Object -First 1
-        if (-not $work) { return [pscustomobject]@{ ok = $false; reason = 'reviewed change is neither staged nor committed' } }
+        $since = @(Get-FirstParentCommits -RepoPath $RepoPath -Since $headSha)
+        $workCommits = @($since | Where-Object { -not $_.isMerge })
+        if ($workCommits.Count -eq 0) { return [pscustomobject]@{ ok = $false; reason = 'reviewed change is neither staged nor committed' } }
+        $work = $workCommits[0]
+        # A base merge older than the newest work commit sits inside headSha..work: replay the
+        # work commits alone instead of diffing across it.
+        $workIndex = [array]::IndexOf($since, $work)
+        $mergeInside = @($since | Select-Object -Skip ($workIndex + 1) | Where-Object { $_.isMerge }).Count -gt 0
+        if ($mergeInside) {
+            [array]::Reverse($workCommits)
+            $current = Get-ReplayedWorkFingerprint -RepoPath $RepoPath -From $headSha -Commits $workCommits -Version $version
+            if ($null -eq $current) {
+                return [pscustomobject]@{ ok = $false; reason = 'base merged between work commits and the work does not replay cleanly; review the branch and stamp -Mode pre-merge' }
+            }
+            if ($current -eq $fp) { return [pscustomobject]@{ ok = $true; reason = 'commit-match-replayed' } }
+            return [pscustomobject]@{ ok = $false; reason = 'committed work differs from the reviewed diff' }
+        }
         $current = Get-RangeDiffFingerprint -RepoPath $RepoPath -From $headSha -To $work.sha -Version $version
         if ($current -and $current -eq $fp) { return [pscustomobject]@{ ok = $true; reason = 'commit-match' } }
         return [pscustomobject]@{ ok = $false; reason = 'committed work differs from the reviewed diff' }
@@ -251,6 +303,8 @@ function Test-ReviewedWorkPresent {
     return [pscustomobject]@{ ok = $false; reason = 'does not match the staged diff or last commit' }
 }
 
+# Skip review-diff only when the stamp's work is still exactly what is in the repo. Uses the same
+# Test-ReviewedWorkPresent the close gate uses, so a skip can never be refused at close.
 function Get-ReviewSkipDecision {
     param(
         $Stamp,
@@ -265,36 +319,31 @@ function Get-ReviewSkipDecision {
         $names = @($Stamp.repos.PSObject.Properties.Name)
         if ($names -contains $Repo) { $entry = $Stamp.repos.$Repo }
     }
+    $stampMode = Get-StampEntryValue $Stamp 'mode'
+    if (-not $stampMode) { $stampMode = 'staged' }
     $mode = Get-StampEntryValue $entry 'mode'
-    if (-not $mode) { $mode = Get-StampEntryValue $Stamp 'mode' }
-    if ($mode -ne 'staged') {
-        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'not-staged-mode'; verdict = $null }
+    if (-not $mode) { $mode = $stampMode }
+    if ($mode -notin @('staged', 'pre-merge')) {
+        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'unknown-mode'; verdict = $null }
     }
     if (-not $entry) {
         return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'repo-not-in-stamp'; verdict = $null }
     }
-    $verdict = Get-StampEntryValue $entry 'verdict'
-    $current = Get-StagedDiffFingerprint -RepoPath $RepoPath -Version (Get-EntryFingerprintVersion $entry)
-    if ($verdict.Trim() -ieq 'No change') {
-        if ($current) {
-            return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'staged-after-no-change'; verdict = $verdict }
-        }
-        return [pscustomobject]@{ repo = $Repo; skip = $true; reason = 'no-change'; verdict = $verdict }
-    }
-    if ($verdict.Trim() -ine 'Ready') {
+    $verdict = (Get-StampEntryValue $entry 'verdict').Replace('*', '').Trim()
+    if ($verdict -inotin @('Ready', 'No change')) {
         return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'verdict-not-ready'; verdict = $verdict }
     }
-    $stored = Get-StampEntryValue $entry 'fingerprint'
-    if (-not $stored -or $stored -eq $script:EmptyDiffFingerprint) {
-        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'empty-stamp'; verdict = $verdict }
+    if ($verdict -ieq 'Ready' -and $mode -eq 'staged') {
+        $stored = Get-StampEntryValue $entry 'fingerprint'
+        if (-not $stored -or $stored -eq $script:EmptyDiffFingerprint) {
+            return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'empty-stamp'; verdict = $verdict }
+        }
     }
-    if (-not $current) {
-        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'empty-staged-diff'; verdict = $verdict }
+    $check = Test-ReviewedWorkPresent -RepoPath $RepoPath -Entry $entry -StampMode $stampMode
+    if (-not $check.ok) {
+        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = "work-changed: $($check.reason)"; verdict = $verdict }
     }
-    if ($current -ne $stored) {
-        return [pscustomobject]@{ repo = $Repo; skip = $false; reason = 'fingerprint-mismatch'; verdict = $verdict }
-    }
-    return [pscustomobject]@{ repo = $Repo; skip = $true; reason = 'ready-fingerprint-match'; verdict = $verdict }
+    return [pscustomobject]@{ repo = $Repo; skip = $true; reason = $check.reason; verdict = $verdict }
 }
 
 function Merge-TicketManifestFields {
@@ -331,12 +380,12 @@ function Get-ManifestCtxPctValue {
 }
 
 function Get-StackSmokeWorkFingerprint {
-    param([hashtable]$RepoPaths)
+    param([hashtable]$RepoPaths, [int]$Version = 2)
     if (-not $RepoPaths -or $RepoPaths.Count -eq 0) { return $null }
     $parts = New-Object System.Collections.Generic.List[string]
     foreach ($name in ($RepoPaths.Keys | Sort-Object)) {
         $path = [string]$RepoPaths[$name]
-        $fp = if ($path) { Get-WorkDiffFingerprint -RepoPath $path } else { $null }
+        $fp = if ($path) { Get-WorkDiffFingerprint -RepoPath $path -Version $Version } else { $null }
         if ($fp) { [void]$parts.Add("$name=$fp") }
     }
     if ($parts.Count -eq 0) { return $null }
@@ -378,7 +427,8 @@ function Get-StackSmokeDecision {
     if ($recorded -eq 'stale') {
         return [pscustomobject]@{ recorded = 'stale'; effective = 'stale'; reason = 'marked-stale'; label = $labels.stale; lastStatus = $lastStatus }
     }
-    $current = Get-StackSmokeWorkFingerprint -RepoPaths $RepoPaths
+    # Stamps before fpVersion hashed plain `git diff`; compare them the same way.
+    $current = Get-StackSmokeWorkFingerprint -RepoPaths $RepoPaths -Version (Get-EntryFingerprintVersion $Stamp)
     if ($recorded -in @('passed', 'failed')) {
         if ($storedFp -and $current -and ($storedFp -eq $current)) {
             return [pscustomobject]@{ recorded = $recorded; effective = $recorded; reason = 'fingerprint-match'; label = $labels[$recorded] }

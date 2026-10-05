@@ -9,6 +9,7 @@
 BeforeAll {
     $script:Verify = Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1'
     $script:Feedback = Join-Path $PSScriptRoot 'Set-TicketFeedback.ps1'
+    $script:FeedbackForwarder = Join-Path (Split-Path $PSScriptRoot -Parent) 'Set-TicketFeedback.ps1'
     function New-ManifestRoot([string]$Name) {
         $root = Join-Path $TestDrive $Name
         $plans = Join-Path $root 'plans'
@@ -60,6 +61,26 @@ Describe 'Set-VerifyReceipt' {
         $entry.reason | Should -Be 'docs-only'
     }
 
+    It 'records the work it ran on: staged fingerprint, headSha, and mode' {
+        $root = New-ManifestRoot 'work-identity'
+        $repo = Join-Path $TestDrive 'receipt-repo'
+        New-Item -ItemType Directory -Path $repo -Force | Out-Null
+        & git -C $repo init -q
+        & git -C $repo config user.email 't@example.com'
+        & git -C $repo config user.name 't'
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'one'
+        & git -C $repo add a.txt
+        & git -C $repo commit -q -m init
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'two'
+        & git -C $repo add a.txt
+        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -RepoPath $repo -Root $root
+        $entry = (Get-Manifest $root).verify.repos.app
+        $entry.mode | Should -Be 'staged'
+        $entry.fingerprint | Should -Match '^[0-9a-f]{64}$'
+        $entry.fpVersion | Should -Be 2
+        $entry.headSha | Should -Match '^[0-9a-f]{40}$'
+    }
+
     It 'refuses a ticket with no manifest' {
         $root = Join-Path $TestDrive 'no-manifest'
         New-Item -ItemType Directory -Path (Join-Path $root 'plans') -Force | Out-Null
@@ -97,6 +118,20 @@ Describe 'Set-TicketFeedback' {
         $fb.items[0].triage | Should -Be 'fix-now'
         $fb.fetchedAtUtc | Should -Not -BeNullOrEmpty
         Test-Path -LiteralPath (Join-Path $root 'plans/WI00020-feedback.md') | Should -BeFalse
+    }
+
+    It 'takes -Json through the top-level forwarder with nothing piped in' {
+        $root = New-ManifestRoot 'feedback-forwarder-param'
+        $json = '{ "prs": [], "items": [ { "kind": "thread", "ref": "1", "ask": "Rename it.", "triage": "fix-now" } ] }'
+        & $script:FeedbackForwarder -Ticket WI00020 -Json $json -Root $root
+        (Get-Manifest $root).feedback.items[0].ask | Should -Be 'Rename it.'
+    }
+
+    It 'takes piped JSON through the top-level forwarder' {
+        $root = New-ManifestRoot 'feedback-forwarder-pipe'
+        $json = '{ "prs": [], "items": [ { "kind": "thread", "ref": "2", "ask": "Add a test.", "triage": "fix-now" } ] }'
+        $json | & $script:FeedbackForwarder -Ticket WI00020 -Root $root
+        (Get-Manifest $root).feedback.items[0].ask | Should -Be 'Add a test.'
     }
 
     It 'refuses an item with an unknown triage bucket' {

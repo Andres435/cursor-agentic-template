@@ -31,8 +31,10 @@
     Required when -Tests is not-run (for example "docs-only change").
 
 .PARAMETER RepoPath
-    Repo working tree, to record the HEAD the result was taken at. Resolved
-    through Resolve-TicketRoot when omitted.
+    Repo working tree, to record the work the result was taken on: HEAD plus the
+    staged diff's fingerprint (same shape as a reviewReady entry). -Phase close
+    compares that to the repo, so a receipt taken before a later fix fails.
+    Resolved through Resolve-TicketRoot when omitted.
 
 .PARAMETER Root
     Override the workflow repo root (tests).
@@ -83,18 +85,24 @@ if (-not $RepoPath -and -not $Root) {
     }
 }
 $headSha = if ($RepoPath) { Get-GitHeadSha -RepoPath $RepoPath } else { $null }
+# Same work identity as a review stamp: staged diff when there is one, else HEAD.
+$fp = if ($RepoPath) { Get-StagedDiffFingerprint -RepoPath $RepoPath } else { $null }
+$workMode = if ($fp) { 'staged' } else { 'pre-merge' }
 
 $failingList = @($Failing | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 $pass = ($Tests -ne 'fail') -and ($Sonar -ne 'error') -and ($failingList.Count -eq 0)
 
 $entry = [pscustomobject]@{
-    pass    = [bool]$pass
-    tests   = $Tests
-    sonar   = $Sonar
-    failing = $failingList
-    reason  = if ($Reason) { $Reason } else { $null }
-    headSha = $headSha
-    atUtc   = [DateTime]::UtcNow.ToString('o')
+    pass        = [bool]$pass
+    tests       = $Tests
+    sonar       = $Sonar
+    failing     = $failingList
+    reason      = if ($Reason) { $Reason } else { $null }
+    headSha     = $headSha
+    mode        = if ($headSha) { $workMode } else { $null }
+    fingerprint = $fp
+    fpVersion   = 2
+    atUtc       = [DateTime]::UtcNow.ToString('o')
 }
 
 # Upsert: keep the other repos' entries.
