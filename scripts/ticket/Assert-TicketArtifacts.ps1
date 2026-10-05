@@ -27,7 +27,10 @@
                    Close accepts blank context percents and fails one outside 0-100.
                    A non-spike close also requires manifest.verify.repos.<repo>
                    (Set-VerifyReceipt.ps1) with boolean pass true for each local
-                   affected repo. Each of those repos also needs a reviewReady
+                   affected repo; when the receipt recorded its work and the repo path
+                   exists, that work must still be there (same rule as the review
+                   stamp below), so tests taken before a later fix fail. Each of
+                   those repos also needs a reviewReady
                    entry (Set-ReviewReady.ps1) with verdict Ready, Ready with fixes, or
                    No change. When the repo path exists, the reviewed work must still be
                    there: the staged diff, or the first-parent commits since the stamp's
@@ -77,6 +80,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'lib/ManifestFields.ps1')
+$script:ResolvedRepoPathsCache = $null
 
 # Read ticket prefix from profile.json (default 'WI' for TMO).
 # This script does not dot-source _ServiceLauncherLib.ps1.
@@ -420,7 +424,9 @@ function Get-CloseRepoNames {
 # Real closes resolve repo paths. Fixture runs pass -Root and only compare when the
 # manifest entry itself names a path, so a missing checkout stays a JSON check.
 function Get-ResolvedRepoPaths {
+    if ($null -ne $script:ResolvedRepoPathsCache) { return $script:ResolvedRepoPathsCache }
     $map = @{}
+    $script:ResolvedRepoPathsCache = $map
     if ($Root) { return $map }
     $resolveScript = Join-Path $PSScriptRoot 'Resolve-TicketRoot.ps1'
     if (-not (Test-Path -LiteralPath $resolveScript)) { return $map }
@@ -453,6 +459,7 @@ function Test-VerifyReceipt {
         $missing.Add("$label -- no verify results; run Set-VerifyReceipt.ps1 per repo after verify-repo")
         return
     }
+    $resolved = Get-ResolvedRepoPaths
     foreach ($repo in @(Get-CloseRepoNames)) {
         $entry = $null
         if ($repos.PSObject.Properties.Name -contains $repo.repo) { $entry = $repos.($repo.repo) }
@@ -469,9 +476,22 @@ function Test-VerifyReceipt {
         if (($names -contains 'tests') -and ([string]$entry.tests -eq 'not-run')) {
             $why = if ($names -contains 'reason') { [string]$entry.reason } else { '' }
             $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): tests not run: $why)")
-        } else {
-            $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass)")
+            continue
         }
+        # The receipt must describe the work that ships: same check as the review stamp.
+        # Receipts with no recorded work (no mode) or no checkout stay a JSON check.
+        $path = $repo.path
+        if (-not $path -and $resolved.ContainsKey($repo.repo)) { $path = $resolved[$repo.repo] }
+        if (-not (Get-StampEntryValue $entry 'mode') -or -not $path -or -not (Test-Path -LiteralPath $path)) {
+            $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass)")
+            continue
+        }
+        $check = Test-ReviewedWorkPresent -RepoPath $path -Entry $entry
+        if (-not $check.ok) {
+            $missing.Add("$label.repos.$($repo.repo) -- tests ran on older work ($($check.reason)); re-run verify-repo, then Set-VerifyReceipt.ps1")
+            continue
+        }
+        $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass, $($check.reason))")
     }
 }
 

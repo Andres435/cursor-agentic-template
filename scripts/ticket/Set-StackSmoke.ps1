@@ -98,7 +98,10 @@ $stamp = [pscustomobject]@{
 
 if ($Status -in @('passed', 'failed')) {
     $fp = Get-StackSmokeWorkFingerprint -RepoPaths $pathMap
-    if ($fp) { $stamp | Add-Member -NotePropertyName fingerprint -NotePropertyValue $fp }
+    if ($fp) {
+        $stamp | Add-Member -NotePropertyName fingerprint -NotePropertyValue $fp
+        $stamp | Add-Member -NotePropertyName fpVersion -NotePropertyValue 2
+    }
     $stamp | Add-Member -NotePropertyName lastStatus -NotePropertyValue $Status
 }
 elseif ($Status -eq 'stale') {
@@ -114,7 +117,11 @@ elseif ($Status -eq 'stale') {
     if ($existing -and ($existing.PSObject.Properties.Name -contains 'fingerprint')) {
         $oldFp = [string]$existing.fingerprint
     }
-    if ($oldFp) { $stamp | Add-Member -NotePropertyName fingerprint -NotePropertyValue $oldFp }
+    if ($oldFp) {
+        $stamp | Add-Member -NotePropertyName fingerprint -NotePropertyValue $oldFp
+        $oldVersion = if ($existing.PSObject.Properties.Name -contains 'fpVersion') { $existing.fpVersion } else { $null }
+        if ($oldVersion) { $stamp | Add-Member -NotePropertyName fpVersion -NotePropertyValue $oldVersion }
+    }
 }
 
 if ($Notes) { $stamp | Add-Member -NotePropertyName notes -NotePropertyValue $Notes }

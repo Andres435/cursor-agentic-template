@@ -105,7 +105,7 @@ Follow [../../../_shared/severity-and-output.md](../../../_shared/severity-and-o
    ```
 
    `-Mode staged` for working-tree reviews; `-Mode pre-merge` when a branch token was supplied
-   (complete-task will not skip on a pre-merge stamp). `-Verdicts` is JSON repo → verdict for every
+   (complete-task skips either kind while the reviewed work is unchanged). `-Verdicts` is JSON repo → verdict for every
    repo just reviewed; stamping one repo keeps the others. An affected repo with nothing to review
    gets `"No change"`. The close gate later checks the committed work still matches this stamp, so
    **any edit after the stamp needs a re-review**. `report-context`: omit `-Percent` to use the

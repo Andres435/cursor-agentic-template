@@ -98,11 +98,18 @@ Describe 'Get-StackSmokeDecision' {
 
     It 'is Tested when passed fingerprint still matches' {
         $fp = Get-StackSmokeWorkFingerprint -RepoPaths @{ app = $script:StagedRepo }
-        $stamp = [pscustomobject]@{ status = 'passed'; fingerprint = $fp }
+        $stamp = [pscustomobject]@{ status = 'passed'; fingerprint = $fp; fpVersion = 2 }
         $d = Get-StackSmokeDecision -Stamp $stamp -RepoPaths @{ app = $script:StagedRepo }
         $d.effective | Should -Be 'passed'
         $d.label | Should -Be 'Tested'
         $d.reason | Should -Be 'fingerprint-match'
+    }
+
+    It 'still reads a stamp written before fpVersion (plain git diff) as Tested' {
+        $fp = Get-StackSmokeWorkFingerprint -RepoPaths @{ app = $script:StagedRepo } -Version 1
+        $stamp = [pscustomobject]@{ status = 'passed'; fingerprint = $fp }
+        $d = Get-StackSmokeDecision -Stamp $stamp -RepoPaths @{ app = $script:StagedRepo }
+        $d.label | Should -Be 'Tested'
     }
 
     It 'is Untested latest changes when work moved after a pass' {

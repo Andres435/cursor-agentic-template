@@ -56,7 +56,7 @@ Describe 'Get-ReviewSkipDecision' {
         }
         $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $true
-        $d.reason | Should -Be 'ready-fingerprint-match'
+        $d.reason | Should -Be 'staged-match'
     }
 
     It 'does not skip Ready with fixes' {
@@ -76,7 +76,7 @@ Describe 'Get-ReviewSkipDecision' {
         }
         $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $false
-        $d.reason | Should -Be 'fingerprint-mismatch'
+        $d.reason | Should -Match '^work-changed: staged diff differs'
     }
 
     It 'does not skip a stamp of the empty diff, even when nothing is staged now' {
@@ -96,7 +96,7 @@ Describe 'Get-ReviewSkipDecision' {
         }
         $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:CleanRepo
         $d.skip | Should -Be $false
-        $d.reason | Should -Be 'empty-staged-diff'
+        $d.reason | Should -Match '^work-changed'
     }
 
     It 'does not skip a missing stamp' {
@@ -105,14 +105,14 @@ Describe 'Get-ReviewSkipDecision' {
         $d.reason | Should -Be 'no-stamp'
     }
 
-    It 'does not skip pre-merge mode' {
+    It 'does not skip a pre-merge stamp while something is staged' {
         $stamp = [pscustomobject]@{
             mode  = 'pre-merge'
             repos = [pscustomobject]@{ app = [pscustomobject]@{ verdict = 'Ready'; fingerprint = $script:StagedHash; fpVersion = 2 } }
         }
         $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $script:StagedRepo
         $d.skip | Should -Be $false
-        $d.reason | Should -Be 'not-staged-mode'
+        $d.reason | Should -Match 'staged change after the review'
     }
 }
 
@@ -334,6 +334,71 @@ Describe 'Test-ReviewedWorkPresent' {
         $r = Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry
         $r.ok | Should -BeFalse
         $r.reason | Should -Match 'not on this branch'
+    }
+
+    It 'passes when the base is merged between two work commits' {
+        $repo = Join-Path $TestDrive 'rw-merge-between'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        Set-Staged $repo 'b.txt' 'new'
+        $entry = New-StagedEntry $repo
+        & git -C $repo reset -q -- b.txt
+        & git -C $repo commit -q -m 'part one'
+        Merge-BaseBranch $repo
+        & git -C $repo add b.txt
+        & git -C $repo commit -q -m 'part two'
+        $r = Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry
+        $r.ok | Should -BeTrue
+        $r.reason | Should -Be 'commit-match-replayed'
+    }
+
+    It 'fails when the base is merged between work commits and the later commit is not what was reviewed' {
+        $repo = Join-Path $TestDrive 'rw-merge-between-edit'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $entry = New-StagedEntry $repo
+        & git -C $repo commit -q -m 'reviewed'
+        Merge-BaseBranch $repo
+        Save-Commit $repo 'c.txt' 'unreviewed'
+        $r = Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry
+        $r.ok | Should -BeFalse
+        $r.reason | Should -Match 'differs'
+    }
+
+    It 'skip and close agree: No change is not skipped once a commit lands' {
+        $repo = Join-Path $TestDrive 'rw-skip-nochange'
+        New-WorkRepo $repo
+        $entry = [pscustomobject]@{ verdict = 'No change'; mode = 'staged'; headSha = (Get-GitHeadSha -RepoPath $repo); fingerprint = $null; fpVersion = 2 }
+        $stamp = [pscustomobject]@{ mode = 'staged'; repos = [pscustomobject]@{ app = $entry } }
+        (Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $repo).skip | Should -BeTrue
+        Save-Commit $repo 'a.txt' 'surprise'
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $repo
+        $d.skip | Should -BeFalse
+        $d.reason | Should -Match 'commit\(s\) after the review'
+        (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeFalse
+    }
+
+    It 'skip and close agree: a staged Ready entry is skipped after its work is committed' {
+        $repo = Join-Path $TestDrive 'rw-skip-committed'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $stamp = [pscustomobject]@{ mode = 'staged'; repos = [pscustomobject]@{ app = (New-StagedEntry $repo) } }
+        & git -C $repo commit -q -m change
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $repo
+        $d.skip | Should -BeTrue
+        $d.reason | Should -Be 'commit-match'
+    }
+
+    It 'skips a pre-merge Ready stamp while the branch is unchanged' {
+        $repo = Join-Path $TestDrive 'rw-skip-premerge'
+        New-WorkRepo $repo
+        Save-Commit $repo 'a.txt' 'two'
+        $entry = [pscustomobject]@{ verdict = 'Ready'; mode = 'pre-merge'; headSha = (Get-GitHeadSha -RepoPath $repo); fingerprint = $null; fpVersion = 2 }
+        $stamp = [pscustomobject]@{ mode = 'pre-merge'; repos = [pscustomobject]@{ app = $entry } }
+        Merge-BaseBranch $repo
+        $d = Get-ReviewSkipDecision -Stamp $stamp -Repo 'app' -RepoPath $repo
+        $d.skip | Should -BeTrue
+        $d.reason | Should -Be 'pre-merge-head'
     }
 
     It 'passes a legacy stamp (no headSha) after a base-branch merge' {

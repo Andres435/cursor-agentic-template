@@ -285,6 +285,35 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $result = Invoke-Assert -Root $root -Phase 'close'
         $result.ExitCode | Should -Be 0
     }
+    It 'fails close when the verify receipt was taken before a later fix, and passes after re-verify' {
+        $root = Join-Path $TestDrive 'close-stale-receipt'
+        New-CloseRoot -Root $root -WorkType 'bug' -Ctx @{ start = 40; review = 50; close = 60 }
+        $repo = Join-Path $TestDrive 'close-stale-receipt-repo'
+        New-Item -ItemType Directory -Path $repo -Force | Out-Null
+        & git -C $repo init -q
+        & git -C $repo config user.email 't@example.com'
+        & git -C $repo config user.name 't'
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'one'
+        & git -C $repo add a.txt
+        & git -C $repo commit -q -m init
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'first try'
+        & git -C $repo add a.txt
+        Add-ManifestFields $root @{ affectedRepos = @([pscustomobject]@{ repo = 'app'; local = $true; path = $repo }) }
+        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar ok -RepoPath $repo -Root $root
+        # Review finds a Major; the fix is staged and re-reviewed, but verify is not re-run.
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'fixed'
+        & git -C $repo add a.txt
+        $paths = @{ app = $repo } | ConvertTo-Json -Compress
+        & (Join-Path $PSScriptRoot 'Set-ReviewReady.ps1') -Ticket WI00009 -Mode staged -Verdicts '{"app":"Ready"}' -RepoPaths $paths -Root $root
+        $stale = Invoke-Assert -Root $root -Phase 'close'
+        $stale.ExitCode | Should -Be 1
+        $stale.Output | Should -Match 'tests ran on older work'
+        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar ok -RepoPath $repo -Root $root
+        $fresh = Invoke-Assert -Root $root -Phase 'close'
+        $fresh.ExitCode | Should -Be 0
+        Get-ChildItem -LiteralPath $repo -Recurse -Force -File | ForEach-Object { $_.IsReadOnly = $false }
+    }
+
     It 'fails a bug close with no verify results on the manifest' {
         $root = Join-Path $TestDrive 'close-no-verify'
         New-CloseRoot -Root $root -WorkType 'bug' -Ctx @{ start = 40; review = 50; close = 60 }
