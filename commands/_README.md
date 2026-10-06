@@ -10,7 +10,7 @@ This folder no longer holds slash entries. A command file whose name matches a s
 | Start a ticket | `/start-ticket <id> bug\|feature\|spike` |
 | Build in a fresh chat | `/implement <id>` |
 | Start, swap, or stop the local stack | `/start-stack`, `/swap-stack`, `/stop-stack` |
-| Review staged changes | `/review-changes` |
+| Review ticket files; stage the clean ones | `/review-changes` |
 | Closeout package | `/complete-task` |
 | Commit, push, and open the PR after approval | `/prep-pr` |
 | Triage review feedback | `/address-pr-comments` |

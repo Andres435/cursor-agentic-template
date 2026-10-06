@@ -2,6 +2,7 @@
 name: ticket-router
 description: Classifies a ticket up front and emits a compact work manifest so the orchestrator loads only relevant policy docs, sets up the right repos, and parallelizes safe steps via subagent functions. Use as the first step of start-ticket after ticket fetch.
 keywords: router, classifier, manifest, workType, affectedRepos, docSet, priorFindings, parallelPlan, mode, profile
+disable-model-invocation: true
 icon: route
 color: purple
 ---

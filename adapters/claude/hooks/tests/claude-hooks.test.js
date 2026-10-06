@@ -212,7 +212,7 @@ check("nextAction is 'start-ticket' when manifest absent", () => {
   });
 });
 
-check("nextAction is 'review-changes (stage first)' when manifest has no reviewReady", () => {
+check("nextAction is 'review-changes' when manifest has no reviewReady", () => {
   withTempPlansClaude((dir) => {
     fs.writeFileSync(
       path.join(dir, "WI21053-manifest.json"),
@@ -225,7 +225,8 @@ check("nextAction is 'review-changes (stage first)' when manifest has no reviewR
     );
     assertNoCrash(r);
     const ctx = r.json.hookSpecificOutput.additionalContext;
-    assert(/review-changes/.test(ctx), "expected review-changes, got: " + ctx);
+    assert(/"nextAction":"review-changes"/.test(ctx), "expected review-changes, got: " + ctx);
+    assert(!/stage first/.test(ctx), "stage-first hint should be gone");
   });
 });
 

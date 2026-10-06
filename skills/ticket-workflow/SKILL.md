@@ -2,6 +2,7 @@
 name: ticket-workflow
 description: Phase-to-owner map of the ticket lifecycle. Reference only — start-ticket and complete-task own the mechanics. If this file and a command disagree, the command wins.
 keywords: ticket lifecycle, end-to-end, workflow map, phases, narrative
+disable-model-invocation: true
 icon: map
 color: cyan
 ---

@@ -109,7 +109,7 @@ result, so its own context window stays lean (the subagent burns its own window 
 - **Use:** staged-diff or pre-merge review per repo (parallel at closeout).
 - **Inputs:** `repo`, `repoPath`, `mode` (staged | premerge), optional `branch`.
 - **Does:** review per [review-protocol](review-protocol.md) and the report shape in
-  [severity-and-output](severity-and-output.md); staged diff is the findings source. For very large
+  [severity-and-output](severity-and-output.md). The parent names the diff: working-tree review is `git diff HEAD` on the candidate paths plus untracked candidates; pre-merge is the three-dot range. For very large
   diffs, chunk per file/module before reviewing to avoid context blowups. **Never runs a stamp
   script** (`Set-ReviewReady`, `Set-TicketCtxPct`): it returns findings and a verdict, and the
   calling chat stamps once for all repos.

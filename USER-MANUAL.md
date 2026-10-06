@@ -9,8 +9,8 @@ Branch mode is three chats. Pin engineering mode, then type only `/start-ticket`
 
 | Chat | Type | Done when |
 | --- | --- | --- |
-| 1 | `/start-ticket <ticket> bug\|feature\|spike` | The change is in the working tree. Stage what you want reviewed. |
-| 2 | `/review-changes` | The staged set has a verdict, stamped on the manifest. |
+| 1 | `/start-ticket <ticket> bug\|feature\|spike` | The change is in the working tree. |
+| 2 | `/review-changes` | Clean ticket files are staged and the set has a verdict. |
 | 3 | `/complete-task`, then `/prep-pr` after you approve | Only the actions you approved ran. |
 
 `/start-stack` runs the local apps. It is not a chat. If chat 1 runs out of context, open a fresh
@@ -40,10 +40,10 @@ Chat 1 — Plan and build
   It writes the plan, then builds in this same chat. Each Work Plan step's [low]|[med]|[high]
   tag sets its tier.
   /start-stack <ticket>   when you need the local apps
-  Done when: the change is in your working tree and you staged what you want reviewed.
+  Done when: the change is in your working tree
 
 Chat 2 — Review
-  /review-changes         new chat; reviews the staged set and stamps the verdict
+  /review-changes         new chat; reviews ticket files, stages the clean ones, stamps the verdict
 
 Chat 3 — Close
   /complete-task          new chat; skips review-diff when chat 2 was Ready on the same staged set
@@ -89,7 +89,7 @@ ticket window, review, close. Later commands read the mode from the manifest.
 | Build the approved plan (resume / worktree) | `/implement <ticket>` |
 | Run the local apps | `/start-stack <ticket>` |
 | Give the stack to another ticket / stop it | `/swap-stack <ticket>` / `/stop-stack` |
-| Review staged changes | `/review-changes` |
+| Review ticket files; stage the clean ones | `/review-changes` |
 | Closeout and approval package | `/complete-task` |
 | Commit / push / PR / tracker write-back, after you approve | `/prep-pr` |
 | Address PR comments | `/address-pr-comments <ticket>` |

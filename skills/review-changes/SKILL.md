@@ -1,6 +1,6 @@
 ---
 name: review-changes
-description: Chat 2. After you stage. Reviews the staged set for merge readiness — mode selection, repo scoping, subagent fan-out, second opinion on high-risk plans, report, and the review stamp.
+description: Chat 2. Reviews ticket files and stages the ones with no Blocker or Major. Mode selection, repo scoping, subagent fan-out, second opinion, report, and the review stamp.
 keywords: code review, working tree, pre-merge, staged diff, findings, verdict
 disable-model-invocation: true
 icon: search
@@ -14,19 +14,21 @@ Review code changes before creating PRs. Read and execute
 
 ## Modes
 
-- **Working-tree** (default) — review staged changes across workspace repos. The ticket key comes
-  from the folder name or the repos' current branches (`Get-TicketFromBranch.ps1`), so branch mode
-  needs no token.
-- **Pre-merge** — supply a branch token (e.g. `review-changes <ticket>`) to review the three-dot
-  diff vs `origin/<base>` (`profile.baseBranchDefault`). A token naming the current branch while
-  changes are staged stays working-tree.
+- **Working-tree** (default) — review ticket files in the affected repos, then stage each file
+  with no Blocker or Major. The ticket key comes from the folder name or the repos' current
+  branches (`Get-TicketFromBranch.ps1`), so branch mode needs no token.
+- **Pre-merge** — supply a branch token that is not the current branch (e.g. `review-changes <ticket>`)
+  to review the three-dot diff vs `origin/<base>` (`profile.baseBranchDefault`). A token naming the
+  current branch stays working-tree.
 
 ## Key steps (summary)
 
 1. Parse the invocation for an optional branch token → select mode.
 2. With a ticket key, run [ticket-context-load](../ticket-context-load/SKILL.md) (`review-changes`
    profile); scope repos from manifest `affectedRepos` and resolve paths via `Resolve-TicketRoot.ps1`.
-3. Collect diffs (`git diff --staged` for working-tree; three-dot diff for pre-merge).
+3. Working-tree: `Select-TicketStagePaths.ps1 -Json`, review those paths, then `git add` the
+   clean ones and `git restore --staged` any path a Blocker or Major cites. Pre-merge: three-dot
+   diff, and do not change the index. Stamp only after the index matches.
 4. `dispatch` `review-diff` per repo for multi-repo reviews; twice (standard + deep) when the plan
    has a `[high]` step.
 5. Produce the report per [../../_shared/severity-and-output.md](../../_shared/severity-and-output.md):
@@ -43,4 +45,4 @@ Review code changes before creating PRs. Read and execute
 - Severity + format: [../../_shared/severity-and-output.md](../../_shared/severity-and-output.md)
 - Subagent fan-out: `_shared/subagent-functions.md`
 
-This command does **not** commit or push. It does write `reviewReady` / `ctxPct.review` on the ticket manifest.
+This command does **not** commit or push. Working-tree mode stages clean ticket files, then writes `reviewReady` / `ctxPct.review` on the ticket manifest.

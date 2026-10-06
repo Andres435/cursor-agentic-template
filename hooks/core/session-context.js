@@ -131,7 +131,7 @@ function runResolve(ticket) {
 
 /**
  * manifest missing                       → "start-ticket"
- * manifest exists, no reviewReady stamp  → "review-changes (stage first)"
+ * manifest exists, no reviewReady stamp  → "review-changes"
  * reviewReady set, completedAtUtc null   → "complete-task"
  * completedAtUtc set                     → "closed"
  * TMO_PLANS_DIR overrides plans/ (tests).
@@ -147,7 +147,7 @@ function resolveNextAction(ticket) {
   }
   if (manifest.completedAtUtc) return "closed";
   if (manifest.reviewReady) return "complete-task";
-  return "review-changes (stage first)";
+  return "review-changes";
 }
 
 /** null when there is nothing to say; otherwise { label, compact, env, text }. */
