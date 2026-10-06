@@ -9,8 +9,8 @@ keywords: bug, defect, repro steps, root cause, regression, hypothesis, bug plan
 The bug plan's content, from symptom to root cause, regression test, and fix. `/start-ticket` loads
 it at step 6 and owns intake, plan mode, approval, and the final message; structure, digest, and
 step tags follow [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md).
-Visual bugs verify per [../../../_shared/runtime-verify.md](../../../_shared/runtime-verify.md) at
-build time — no CDP, no server rebuild for markup/CSS.
+Visual bugs verify per [../../../_shared/runtime-verify.md](../../../_shared/runtime-verify.md)
+(ask-first browser pass). No server rebuild for markup/CSS.
 
 ## Symptom + environment gate (before investigating)
 

@@ -47,7 +47,8 @@ Each step cites the behavior it satisfies (`B1`, `B2`) or `Foundational` when it
 
 TDD belongs on the Work Plan, not on the behavior list. **Default to RED -> GREEN -> REFACTOR** for any behavior-heavy, risky, or cross-layer step. Skip TDD only for trivial wiring (e.g. a pass-through DTO property) and note the reason on that step. Use existing fixtures before new test structure. Do not write every test up front. Use [../../tdd-red-green-refactor/SKILL.md](../../tdd-red-green-refactor/SKILL.md) for behavior-heavy steps.
 
-UI/CSS verification: [../../../_shared/runtime-verify.md](../../../_shared/runtime-verify.md) — no CDP, no server rebuild for markup/CSS.
+UI/CSS verification: [../../../_shared/runtime-verify.md](../../../_shared/runtime-verify.md)
+(ask-first browser pass). No server rebuild for markup/CSS.
 
 ### 1. Environment Context
 
