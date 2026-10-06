@@ -45,6 +45,7 @@ only that heading's section.
 | [../../../_shared/model-routing.md#difficulty-rubric](../../../_shared/model-routing.md#difficulty-rubric) | always | `[low]`/`[med]`/`[high]` step tags |
 | [../../../_shared/subagent-functions.md#calling-convention](../../../_shared/subagent-functions.md#calling-convention) | always | Step 5 dispatch packet shape |
 | [../../../_shared/subagent-functions.md#explore-reporepo-question---findings](../../../_shared/subagent-functions.md#explore-reporepo-question---findings) | always | Step 5 scope seed |
+| [../../../_shared/subagent-functions.md#why-reporepo-files---history](../../../_shared/subagent-functions.md#why-reporepo-files---history) | if-bug-regression | Step 5 why lane (used to work, broke recently) |
 | [../../../_shared/subagent-functions.md#branch-setuprepo-ticket---branch-status](../../../_shared/subagent-functions.md#branch-setuprepo-ticket---branch-status) | always | Step 5 branch prep (not investigate) |
 | [../../../_shared/severity-and-output.md#chat-output-budget](../../../_shared/severity-and-output.md#chat-output-budget) | always | Step 10 message budget |
 | [../references/worktree-handoff.md](../references/worktree-handoff.md) | worktree | Steps 4, 8, 10 in worktree mode |
@@ -111,6 +112,9 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - **Parent checks packets:** drop empty/off-topic; keep contradictions (comment vs statement, a
      shared or protected type as true owner) as Engineering Decisions candidates; never dump
      `keyFiles` raw.
+   - Bug + **used to work:** `why-repo` per repo with those `keyFiles` (cap 8). Skip
+     `why skipped: never worked` or `why skipped: no keyFiles`. Do not guess regression vs
+     never-worked — confirm or ask at the bug-fix symptom gate.
    - Not in investigate mode: **local ticket branch exists but origin does not** → default is a
      rejected or unmerged PR; confirm with the tracker, then recreate from latest
      `origin/<baseBranch>` (stash or cherry-pick what you need; never merge base into the old
@@ -122,7 +126,7 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
 6. **Draft in plan mode — do not persist yet**
    - `enter-plan` automatically (pre-approved). Plan tier is deep; below deep without engineering
      mode, remind the user once; with engineering mode, draft through the deep planner lane.
-   - Seed scope from the step 5 packets; do not re-dispatch `explore-repo` or run a broad Grep.
+   - Seed scope from the step 5 packets; do not re-dispatch `explore-repo` or `why-repo` or run a broad Grep.
    - Shape: the work-type template (bug, feature, refactor → `feature-plan.md` Refactor section,
      spike). Cross-repo or unclear scope: plan the dependency order first.
    - Structure per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md):

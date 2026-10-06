@@ -1,7 +1,7 @@
 ---
 name: subagent-functions
 description: Reusable subagent "function" contracts with fixed inputs and compact outputs, so the orchestrator can fan out token-heavy read work and keep its own context small. Use when start-ticket, complete-task, review-changes, address-pr-comments, or peer-review dispatch parallel work. implement.md dispatches the manifest's specialists[] directly per step instead — a different fan-out shape (per-step domain depth, not per-repo read work) — so it is not a consumer of these specific functions.
-keywords: subagent functions, explore-repo, branch-setup, verify-repo, review-diff, pr-feedback-fetch, peer-review-pr, fan-out, compact return
+keywords: subagent functions, explore-repo, why-repo, branch-setup, verify-repo, review-diff, pr-feedback-fetch, peer-review-pr, fan-out, compact return
 ---
 
 # Subagent Functions
@@ -48,13 +48,9 @@ result, so its own context window stays lean (the subagent burns its own window 
 - Every packet's first line is `model: <what the subagent runs on>`. The parent discards a packet
   that reports an automatic choice or a substitute ([model-routing.md](model-routing.md#dispatch-rules) rule 8).
 
----
-
 ## `explore-repo(repo, question) -> findings`
 
-- **Role:** read-only explorer
-- **Use:** scope analysis / "where does X live / how does Y work" in one repo or area.
-- **Inputs:** `repo`, `repoPath`, `question`, optional `thoroughness` (quick | medium | very thorough).
+- **Role:** read-only explorer. **Use:** where X lives / how Y works. **Inputs:** `repo`, `repoPath`, `question`, optional `thoroughness`.
 - **Returns (compact):**
   ```
   repo: <name>
@@ -63,6 +59,13 @@ result, so its own context window stays lean (the subagent burns its own window 
   entryPoints: [symbol/file, ...]    # <=5
   risks: [one-liners]                # optional
   ```
+
+## `why-repo(repo, files) -> history`
+
+- **Role:** shell (git). **Regressions only** (used to work). Skip when never worked. Not part of `explore-repo`.
+- **Inputs:** `repo`, `repoPath`, explore `keyFiles` (cap 8).
+- **Does:** `git log -n 5`, `--grep=revert -20`, `--diff-filter=D --summary` on those files; extract ticket ids (`profile.ticketPrefix`, common forms). No tracker MCP in the lane.
+- **Returns:** `model`, `repo`, `files` [path @ sha, date] <=8, `tickets` <=5, `why` <=3 sentences, optional `deleted`. Parent looks up `tickets[]` read-only when `profile.ticketSystem` is not `none`; never writes historical items.
 
 ## `branch-setup(repo, ticket) -> {branch, status}`
 

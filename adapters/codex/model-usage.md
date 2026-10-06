@@ -19,7 +19,7 @@ workspace had no Codex install on 2026-09-25, so the cells below name the slot, 
 
 | Tier | `spawn_agent` `model` | `reasoning_effort` | Used for |
 |---|---|---|---|
-| `fast` | smallest model on the installed Codex list | `low` when the call accepts it; otherwise omit | `[low]` steps; explore-repo, branch-setup, pr-feedback-fetch, verify-repo |
+| `fast` | smallest model on the installed Codex list | `low` when the call accepts it; otherwise omit | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
 | `standard` | mid model on that list, or the fast model when the list has one id | `medium` when the call accepts it; otherwise omit | `[med]` steps; review-diff, peer-review-pr |
 | `deep` | **The session's selected model, inline only** | the session's own effort | plans, `[high]` steps, second-opinion reviewer, architect deep candidate, blast-radius |
 | `frontier` | a model the user names | only when the user asks | only when the user asks for it in this session |

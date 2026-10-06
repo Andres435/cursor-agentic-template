@@ -40,6 +40,7 @@ Coworker PR review is `/peer-review` — not on this author path.
 | Intake + classify | `/start-ticket` | [start-ticket/SKILL.md](../start-ticket/SKILL.md) → [ticket-router/SKILL.md](../ticket-router/SKILL.md) |
 | Branch / worktree setup | Step 5 of start-ticket | `branch-setup` via [subagent-functions.md](../../_shared/subagent-functions.md). A spike (`investigate`) skips this row. |
 | Plan (Engineering Decisions + Work Plan) | Step 6 of start-ticket (plan mode) | [bug-fix.md](../start-ticket/references/bug-fix.md) · [feature-plan.md](../start-ticket/references/feature-plan.md) · [tech-spike.md](../start-ticket/references/tech-spike.md) |
+| Why archaeology | Bug + used to work, after explore | `why-repo` via [subagent-functions.md](../../_shared/subagent-functions.md). Skip when it never worked. |
 | Spike investigate | `/start-ticket <ticket> spike` (`mode: investigate`) | Read-only on the canonical clones; no branch. Closeout skips verify and review ([complete-task playbook](../complete-task/playbooks/complete-task.md)); [document-spike/SKILL.md](../document-spike/SKILL.md) only when the user asks. |
 | Spike investigate | `/start-ticket <ticket> spike` (`mode: investigate`) | Read-only on the canonical clones; no branch. Closeout skips verify and review ([complete-task playbook](../complete-task/playbooks/complete-task.md)); [document-spike/SKILL.md](../document-spike/SKILL.md) only when the user asks. |
 | Build (branch mode) | After plan approval | Same chat; [implement/playbooks/implement.md](../implement/playbooks/implement.md) steps 3–6 |

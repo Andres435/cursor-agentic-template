@@ -13,7 +13,7 @@ verbs in [../../_shared/harness-verbs.md](../../_shared/harness-verbs.md). This 
 
 | Tier | `Agent` `model` | Used for |
 |---|---|---|
-| `fast` | `haiku` | `[low]` steps; explore-repo, branch-setup, pr-feedback-fetch, verify-repo |
+| `fast` | `haiku` | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
 | `standard` | `sonnet` | `[med]` steps; review-diff, peer-review-pr |
 | `deep` | `opus` | plans, `[high]` steps, second-opinion reviewer, architect deep lane, blast-radius |
 | `frontier` | `fable` | only when the user asks for it in chat |
@@ -54,7 +54,7 @@ Verb → tool map: [harness-verbs](../../_shared/harness-verbs.md).
 | Function | `Agent` `subagent_type` | Tier | Notes |
 |---|---|---|---|
 | `explore-repo` | `Explore` | fast | Read-only search; matches "where does X live". |
-| `branch-setup` | `general-purpose` | fast | No dedicated shell agent; Bash access for `git fetch`/branch resolution. |
+| `why-repo`, `branch-setup` | `general-purpose` | fast | No dedicated shell agent; Bash for git log/fetch. |
 | `verify-repo` | `general-purpose`, or a stack specialist agent when the profile defines one | fast | Prefer the specialist only when the stack needs it. |
 | `review-diff` | `agentic:code-reviewer` if your overlay adds one, else `general-purpose` with the review-changes prompt | standard (+ deep second opinion when the plan has a `[high]` step) | Never skip the review. |
 | `pr-feedback-fetch` | `general-purpose` | fast | Direct match. |

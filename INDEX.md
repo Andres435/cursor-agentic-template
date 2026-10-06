@@ -25,7 +25,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [_shared/engineering-decisions.md](_shared/engineering-decisions.md) | the plan's decision gate | engineering decision, TBD, out of scope |
 | [_shared/engineering-principles.md](_shared/engineering-principles.md) | principles cited by plans and reviews | principles |
 | [_shared/severity-and-output.md](_shared/severity-and-output.md) | severity labels, chat output budget, token-class law | blocker, major, output budget, ctxPct |
-| [_shared/subagent-functions.md](_shared/subagent-functions.md) | fan-out contracts | explore-repo, branch-setup, verify-repo, review-diff, peer-review-pr |
+| [_shared/subagent-functions.md](_shared/subagent-functions.md) | fan-out contracts | explore-repo, why-repo, branch-setup, verify-repo, review-diff, peer-review-pr |
 | [_shared/review-protocol.md](_shared/review-protocol.md) | review focus areas and rule sources | code review, conventions, security, tests |
 | [_shared/model-routing.md](_shared/model-routing.md) | tier contract for plans and lanes | tier, fast, standard, deep, frontier |
 | [_shared/harness-verbs.md](_shared/harness-verbs.md) | IDE-neutral verbs and their per-IDE tools | ask-user, dispatch, enter-plan, report-context |
@@ -67,7 +67,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 |---|---|---|
 | [skills/start-ticket/references/feature-plan.md](skills/start-ticket/references/feature-plan.md) | feature plan shape | feature, behaviors, clarify |
 | [skills/start-ticket/references/worktree-handoff.md](skills/start-ticket/references/worktree-handoff.md) | worktree mode only: provision, runtime heal, handoff message | worktree, handoff, paste block |
-| [skills/start-ticket/references/bug-fix.md](skills/start-ticket/references/bug-fix.md) | bug plan shape | bug, root cause, fix layer |
+| [skills/start-ticket/references/bug-fix.md](skills/start-ticket/references/bug-fix.md) | bug plan shape | bug, root cause, regression, never-worked, why-repo, fix layer |
 | [skills/start-ticket/references/tech-spike.md](skills/start-ticket/references/tech-spike.md) | spike plan shape | spike, investigate, findings |
 | [skills/start-ticket/references/document-spike.md](skills/start-ticket/references/document-spike.md) · [skill](skills/document-spike/SKILL.md) | writing a spike page, only when asked | document spike |
 | [skills/start-ticket/references/ticket-intake-generic.md](skills/start-ticket/references/ticket-intake-generic.md) | pattern for a tracker intake reference | intake, tracker |

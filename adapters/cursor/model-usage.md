@@ -25,7 +25,7 @@ Use this table when the picker is a Cursor Grok or Composer model. A GPT picker 
 
 | Tier | Cursor model | Used for |
 |---|---|---|
-| `fast` | `composer-2.5-fast` | `[low]` steps; explore-repo, branch-setup, pr-feedback-fetch, verify-repo |
+| `fast` | `composer-2.5-fast` | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
 | `standard` | `composer-2.5-fast` | `[med]` steps; review-diff, peer-review-pr — Cursor's included bucket has one Composer, so fast and standard share it |
 | `deep` | `grok-4.7-high-fast` when that selector is on this session's `Task` list | plans, `[high]` steps, second-opinion reviewer, architect deep lane, blast-radius |
 | `frontier` | Another model the user names | only when the user says so in chat; they own any cost approval |
@@ -54,6 +54,7 @@ user to pick a model before deep work, and do not name one. Every lane's reply s
 | Function | `subagent_type` |
 |---|---|
 | `explore-repo` | `explore` |
+| `why-repo` | `shell` |
 | `branch-setup` | `shell` |
 | `verify-repo` | `generalPurpose`, or the stack specialist from `profile.specialists` (no `shell` type) |
 | `review-diff`, `peer-review-pr` | `code-reviewer`; if `Task` rejects it, `generalPurpose` with the code-reviewer prompt (the template ships no code-reviewer agent; add one in your overlay) |
