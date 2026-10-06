@@ -1,7 +1,7 @@
 ---
 name: bug-fix
 description: Plan and investigate bug fixes. Use when the user provides a defect, repro steps, actual behavior, expected behavior, crash, regression, or asks for a bug-fix plan.
-keywords: bug, defect, repro steps, root cause, regression, hypothesis, bug plan
+keywords: bug, defect, repro steps, root cause, regression, never-worked, why-repo, hypothesis, bug plan
 ---
 
 # Bug Fix Investigation
@@ -20,6 +20,7 @@ an item still open when the Work Plan would be drafted stops the plan. Missing t
 wrong-repo exploration and rework:
 
 - **Concrete symptom:** the exact observed behavior (the message, the wrong value, the sequence that fails on first try and works on the second), not just "it's broken".
+- **Regression vs never-worked:** did this used to work and break recently (a dropdown choice that used to work), or did it never work? Confirm or ask; do not guess. **Used to work** → after explore, dispatch `why-repo` ([../../../_shared/subagent-functions.md](../../../_shared/subagent-functions.md#why-reporepo-files---history)) then look up `tickets[]` read-only. **Never worked** → `why skipped: never worked`; no git blame/log. Record the call in Engineering Decisions.
 - **Environment/data constraints:** empty tables, one customer mapped to several databases, whether the feature flag is on/off for the failing case, and whether **flag-off is also broken** (legacy vs modern-path bug — skips wrong-repo hunting).
 - **Test matrix (data-shaped bugs):** for payment or report bugs, agree the matrix — customer, database, period, mixed row kinds, time-boundary cases — before changing a query shape or fingerprint.
 
@@ -49,7 +50,8 @@ List affected repos, services, controllers, handlers, UI surfaces, database obje
 - Explain the likely cause and why it escaped existing coverage.
 - Cite the **executable statement**, not a comment or doc-comment that describes it (a mismatch is a finding, not the behavior).
 - Search for the same pattern elsewhere when the bug suggests a reusable defect.
-- Historical ticket IDs from `git blame` / `git log`: look them up read-only. Never write to historical tickets.
+- **Used to work:** consume the `why-repo` packet (files, tickets, why, deleted). Look up `tickets[]` read-only when `profile.ticketSystem` is not `none`. Never write to historical tickets. Do not credit a cause from the newest similarly named merge alone.
+- **Never worked:** skip blame/history (`why skipped: never worked`) and go straight to the mechanism. `why skipped: no keyFiles` when explore returned none.
 - Root-cause certainty H/M/L goes on the Plan Digest Risk line; M or L → recommend more investigation before build.
 
 ## 5. Regression test first
@@ -64,6 +66,7 @@ the focused test, the nearest broader scope; refactor only while green. Strict R
 Record the gate's calls plus anything root cause forced. It sits after root cause because on a bug the
 fix-shape call depends on the cause. Candidates:
 
+- **Regression vs never-worked** — used to work (why-repo + ticket lookup) vs never worked (no blame).
 - **Fix layer** — legacy path, modern path, or both; which repo owns the correct behavior. Write
   it as `Fix layer: <layer>`.
 - **Blast radius** — a shared or protected type or shared library change (needs approval) vs a

@@ -35,7 +35,7 @@ Without engineering mode, the plan and every step run inline on the chat's model
 | Role | Tier |
 |---|---|
 | Plan drafting and revision | deep |
-| `explore-repo`, `branch-setup`, `pr-feedback-fetch`, `verify-repo` | fast |
+| `explore-repo`, `why-repo`, `branch-setup`, `pr-feedback-fetch`, `verify-repo` | fast |
 | `review-diff`, `peer-review-pr` | standard |
 | Second-opinion reviewer (plan has a `[high]` step) | deep |
 | Architect design lanes | one deep + one standard — two different models |

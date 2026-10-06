@@ -43,6 +43,7 @@ Dispatch reusable subagent "functions" instead of token-heavy reads in the orche
 [_shared/subagent-functions.md](_shared/subagent-functions.md).
 
 - `explore-repo` — scope analysis per repo/area (read-only).
+- `why-repo` — git blame/log on known files; regressions only (used to work).
 - `branch-setup` — per-repo git prep during start-ticket.
 - `verify-repo` — scoped tests (+ static analysis when configured) per repo at closeout. The parent
   records each packet with `scripts/Set-VerifyReceipt.ps1`.

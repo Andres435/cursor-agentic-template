@@ -14,7 +14,7 @@ to a Grok model.
 
 | Tier | `Task` `model` | Used for |
 |---|---|---|
-| `fast` | `gpt-5.6-sol-medium` | `[low]` steps; explore-repo, branch-setup, pr-feedback-fetch, verify-repo |
+| `fast` | `gpt-5.6-sol-medium` | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
 | `standard` | `gpt-5.6-sol-medium` | `[med]` steps; review-diff, peer-review-pr — this session's Task list has one GPT selector, so fast and standard share it |
 | `deep` | **The chat's selected GPT model, inline only** | plans, `[high]` steps, second-opinion reviewer, architect deep candidate, blast-radius |
 | `frontier` | a GPT model the user names | only when the user asks for it in this chat |
