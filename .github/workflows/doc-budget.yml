@@ -25,7 +25,7 @@ jobs:
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
           Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0 -MaximumVersion 5.99.99
-          Invoke-Pester ./scripts/ticket,./scripts/lib -Output Detailed -CI
+          Invoke-Pester ./scripts/ticket,./scripts/lib,./scripts/worktree -Output Detailed -CI
 
       - name: Assert-TicketArtifacts fixture checks
         shell: pwsh

@@ -69,9 +69,9 @@ folds every repo name into one score and pulls unrelated rows — plus one `inte
 dispatches it in its step 5 fan-out: write `priorFindings: []` at step 3, then update the manifest
 when the results land. Script failure: [references/closeout-search.md](references/closeout-search.md).
 
-A row describing a call that went wrong last time is an Engineering Decisions candidate
-([../../_shared/engineering-decisions.md](../../_shared/engineering-decisions.md)), not just
-background.
+A row describing a call that went wrong last time is named in Engineering Decisions
+([../../_shared/engineering-decisions.md](../../_shared/engineering-decisions.md)): what it changed,
+or `lesson unchanged: <id> — <why>`.
 
 ## Parallel Plan
 

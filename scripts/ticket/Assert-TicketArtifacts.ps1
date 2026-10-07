@@ -36,9 +36,9 @@
                    there: the staged diff, or the first-parent commits since the stamp's
                    headSha (a later merge of the base branch is ignored; any other new
                    commit fails). A spike skips both.
-                   Optional stackSmoke is Never tested when absent, Tested when passed,
-                   Untested latest when stale (or passed fingerprint no longer matches).
-                   Not a fail.
+                   stackSmoke stays optional unless an affected repo has profile layer
+                   frontend. Then close fails unless the effective status is passed
+                   (current work, user confirmed). A spike skips that check.
 
     Session timestamps live in the manifest. The retired WI<n>-session.json is still
     accepted as a fallback so tickets started before that change can close.
@@ -145,6 +145,52 @@ function Get-ManifestField {
     if (-not $manifest) { return $null }
     if (-not ($manifest.PSObject.Properties.Name -contains $Name)) { return $null }
     return $manifest.$Name
+}
+
+function Get-HeadingBody {
+    param([string]$Content, [string]$HeadingRegex)
+    $lines = $Content -split "\r?\n"
+    $idx = -1
+    $level = 0
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match $HeadingRegex) {
+            $idx = $i
+            $level = $Matches[1].Length
+            break
+        }
+    }
+    if ($idx -lt 0) { return '' }
+    $end = $lines.Count
+    for ($i = $idx + 1; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^\s*(#{1,6})\s') {
+            if ($Matches[1].Length -le $level) { $end = $i; break }
+        }
+    }
+    if ($end -le $idx + 1) { return '' }
+    return ($lines[($idx + 1)..($end - 1)] -join "`n")
+}
+
+function Test-PriorLessonCites {
+    param([string]$PlanName, [string]$Content)
+    $raw = Get-ManifestField 'priorFindings'
+    if (-not $raw) { return $true }
+    $ids = [System.Collections.Generic.List[string]]::new()
+    foreach ($f in @($raw)) {
+        if (-not $f) { continue }
+        $id = $null
+        if ($f -is [string]) { $id = $f.Trim() }
+        elseif (($f.PSObject.Properties.Name -contains 'ticket') -and $f.ticket) { $id = ([string]$f.ticket).Trim() }
+        if ($id) { [void]$ids.Add($id) }
+    }
+    if ($ids.Count -eq 0) { return $true }
+    $body = Get-HeadingBody -Content $Content -HeadingRegex '(?i)^\s*(#{1,4})\s*(\d+[a-z]?\.?\s*)?Engineering Decisions\s*$'
+    $absent = [System.Collections.Generic.List[string]]::new()
+    foreach ($id in $ids) {
+        if ($body -notmatch [regex]::Escape($id)) { [void]$absent.Add($id) }
+    }
+    if ($absent.Count -eq 0) { return $true }
+    $missing.Add("$PlanName -- Engineering Decisions does not cite priorFindings id(s): $($absent -join ', ') (name each id and what it changed, or 'lesson unchanged: <id> -- <why>')")
+    return $false
 }
 
 function Test-PlanFile {
@@ -255,6 +301,7 @@ function Test-PlanFile {
                 return
             }
         }
+        if (-not (Test-PriorLessonCites -PlanName $planFile.Name -Content $content)) { return }
     }
     $found.Add($planFile.Name)
 }
@@ -550,10 +597,53 @@ function Test-ReviewFingerprints {
     }
 }
 
+function Get-FrontendRepoNames {
+    $names = [System.Collections.Generic.List[string]]::new()
+    $profilePath = Join-Path $RepoRoot 'profile.json'
+    if (-not (Test-Path -LiteralPath $profilePath)) { return @() }
+    try {
+        $profile = Get-Content -LiteralPath $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch { return @() }
+    if (-not ($profile.PSObject.Properties.Name -contains 'repos') -or -not $profile.repos) { return @() }
+    foreach ($repo in @($profile.repos)) {
+        if (-not $repo) { continue }
+        $props = @($repo.PSObject.Properties.Name)
+        if (($props -notcontains 'name') -or ($props -notcontains 'layers') -or -not $repo.name) { continue }
+        $layers = @($repo.layers | ForEach-Object { [string]$_ })
+        if ($layers -contains 'frontend') { [void]$names.Add([string]$repo.name) }
+    }
+    return @($names)
+}
+
+function Test-UiEvidence {
+    $frontend = @(Get-FrontendRepoNames)
+    if ($frontend.Count -eq 0) { return }
+    $hit = @(Get-CloseRepoNames | Where-Object { $frontend -contains $_.repo } | ForEach-Object { $_.repo })
+    if ($hit.Count -eq 0) { return }
+    $stamp = $null
+    if ($manifest -and ($manifest.PSObject.Properties.Name -contains 'stackSmoke')) { $stamp = $manifest.stackSmoke }
+    $paths = @{}
+    foreach ($repo in @(Get-CloseRepoNames)) {
+        if ($repo.path) { $paths[$repo.repo] = $repo.path }
+    }
+    $resolved = Get-ResolvedRepoPaths
+    foreach ($name in $hit) {
+        if ((-not $paths.ContainsKey($name)) -and $resolved.ContainsKey($name)) { $paths[$name] = $resolved[$name] }
+    }
+    $decision = Get-StackSmokeDecision -Stamp $stamp -RepoPaths $paths
+    if ($decision.effective -eq 'passed') {
+        $found.Add("$Key-manifest.json (stackSmoke: Tested, $($hit -join ', '))")
+        return
+    }
+    $missing.Add("$Key-manifest.json -- frontend repo(s) $($hit -join ', ') need a current passed stackSmoke stamp (Drive the changed flow, then Set-StackSmoke.ps1 -Status passed after the user confirms). Effective: $($decision.effective).")
+}
+
 function Test-CloseWork {
     if ($workType -eq 'spike') { return }
     Test-VerifyReceipt
     Test-ReviewFingerprints
+    Test-UiEvidence
 }
 
 function Test-LedgerRow {

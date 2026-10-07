@@ -286,11 +286,43 @@ function Test-ReviewVerdict {
     return ($v -in @('Ready', 'Ready with fixes', 'No change'))
 }
 
+# A merge commit after the stamp whose tree is not a clean merge of its two parents
+# (conflict resolution, or any other edit made in the merge). $null when every such merge is clean.
+function Get-UnreviewedMergeReason {
+    param(
+        [Parameter(Mandatory)][string]$RepoPath,
+        [string]$Since
+    )
+    if (-not $Since) { return $null }
+    $merges = @(Get-FirstParentCommits -RepoPath $RepoPath -Since $Since | Where-Object { $_.isMerge })
+    foreach ($m in $merges) {
+        $sha = $m.sha.ToLowerInvariant()
+        $reason = "merge commit $sha contains edits beyond both parents; review the branch and stamp -Mode pre-merge"
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $p1 = (& git -C $RepoPath rev-parse --verify --quiet "$sha^1" 2>$null | Out-String).Trim()
+            $p2 = (& git -C $RepoPath rev-parse --verify --quiet "$sha^2" 2>$null | Out-String).Trim()
+            if (-not $p1 -or -not $p2) { return $reason }
+            $clean = & git -C $RepoPath merge-tree --write-tree $p1 $p2 2>$null
+            if ($LASTEXITCODE -ne 0) { return $reason }
+            $cleanTree = if ($clean -is [array]) { [string]$clean[0] } else { [string]$clean }
+            $cleanTree = $cleanTree.Trim().ToLowerInvariant()
+            $actual = (& git -C $RepoPath rev-parse --verify --quiet ('{0}^{{tree}}' -f $sha) 2>$null | Out-String).Trim().ToLowerInvariant()
+            if (-not $actual -or $cleanTree -ne $actual) { return $reason }
+        } finally {
+            $ErrorActionPreference = $prev
+        }
+    }
+    return $null
+}
+
 # Does the repo still hold exactly the work this review stamp saw? Returns { ok; reason }.
 # Staged stamp: the staged diff matches, or, once committed, headSha..newest first-parent
-#   non-merge commit matches. Splitting the reviewed set across commits is fine, and a merge of
-#   the base branch afterwards is ignored. Any edit after the review changes the hash.
-# No change / pre-merge: nothing staged, headSha still on the branch, and only merges after it.
+#   non-merge commit matches. Splitting the reviewed set across commits is fine, and a clean
+#   merge of the base branch afterwards is ignored. A merge commit that is not a clean merge of
+#   its parents fails the stamp. Any edit after the review changes the hash.
+# No change / pre-merge: nothing staged, headSha still on the branch, and only clean merges after it.
 # Legacy stamp (no headSha): version-1 hash of the staged diff or of the newest non-merge commit.
 function Test-ReviewedWorkPresent {
     param(
@@ -314,6 +346,8 @@ function Test-ReviewedWorkPresent {
         }
         $after = @(Get-FirstParentCommits -RepoPath $RepoPath -Since $headSha | Where-Object { -not $_.isMerge })
         if ($after.Count -gt 0) { return [pscustomobject]@{ ok = $false; reason = "$($after.Count) commit(s) after the review" } }
+        $mergeReason = Get-UnreviewedMergeReason -RepoPath $RepoPath -Since $headSha
+        if ($mergeReason) { return [pscustomobject]@{ ok = $false; reason = $mergeReason } }
         $why = if ($verdict -eq 'No change') { 'no-change' } else { 'pre-merge-head' }
         return [pscustomobject]@{ ok = $true; reason = $why }
     }
@@ -341,11 +375,19 @@ function Test-ReviewedWorkPresent {
             if ($null -eq $current) {
                 return [pscustomobject]@{ ok = $false; reason = 'base merged between work commits and the work does not replay cleanly; review the branch and stamp -Mode pre-merge' }
             }
-            if ($current -eq $fp) { return [pscustomobject]@{ ok = $true; reason = 'commit-match-replayed' } }
+            if ($current -eq $fp) {
+                $mergeReason = Get-UnreviewedMergeReason -RepoPath $RepoPath -Since $headSha
+                if ($mergeReason) { return [pscustomobject]@{ ok = $false; reason = $mergeReason } }
+                return [pscustomobject]@{ ok = $true; reason = 'commit-match-replayed' }
+            }
             return [pscustomobject]@{ ok = $false; reason = 'committed work differs from the reviewed diff' }
         }
         $current = Get-RangeDiffFingerprint -RepoPath $RepoPath -From $headSha -To $work.sha -Version $version
-        if ($current -and $current -eq $fp) { return [pscustomobject]@{ ok = $true; reason = 'commit-match' } }
+        if ($current -and $current -eq $fp) {
+            $mergeReason = Get-UnreviewedMergeReason -RepoPath $RepoPath -Since $headSha
+            if ($mergeReason) { return [pscustomobject]@{ ok = $false; reason = $mergeReason } }
+            return [pscustomobject]@{ ok = $true; reason = 'commit-match' }
+        }
         return [pscustomobject]@{ ok = $false; reason = 'committed work differs from the reviewed diff' }
     }
 

@@ -22,8 +22,8 @@ model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specific
   lanes. Small `Set-*` scripts write it; no step writes a side file.
 - **Mechanical gates:** `scripts/ticket/Assert-TicketArtifacts.ps1` checks each phase. The close
   gate needs a passing verify result per repo (`Set-VerifyReceipt.ps1`) and a review stamp
-  (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed. A base-branch
-  merge is fine; any later commit means review again.
+  (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed. A clean base-branch
+  merge is fine. A merge that contains its own edits, or any later commit, means review again.
 - **Routing and tiers:** `ticket-router` writes a manifest so later steps load only the docs the
   ticket needs. Work runs on fast / standard / deep / frontier tiers
   ([_shared/model-routing.md](_shared/model-routing.md)). Engineering mode routes each step to its
@@ -52,7 +52,8 @@ Chat 3  /complete-task → /prep-pr
 ```
 
 Branch mode is three chats. Worktree mode (`--worktree`, only when `profile.worktreeSupported`)
-adds `/implement` in the ticket window. Pin engineering mode before `/start-ticket`.
+adds `/implement` in the ticket window. Those ticket commands load the tier contract on their own.
+Pin engineering mode for ad-hoc work, or for a long chat.
 
 ## Folder map
 

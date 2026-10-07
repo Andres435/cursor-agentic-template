@@ -29,8 +29,7 @@ verbs in [../../_shared/harness-verbs.md](../../_shared/harness-verbs.md). This 
   `model: "opus"`; send revisions back to the same agent with `SendMessage`.
 - Engineering mode: `/agentic:engineering-mode`, or select the **agentic:Engineering mode** output style
   (`/output-style`, or the desktop Code tab's output-style preference); switch back to Default or
-  say "exit engineering mode" to turn it off. Without it, plans and steps run inline on this
-  chat's model.
+  say "exit engineering mode" to turn it off. Ticket commands load the tier contract on their own. Pin this for ad-hoc work or a long chat.
 - Too large for a tier → split it; escalation is one tier up and logged, never down.
 - `/agentic:doctor --lanes` extra check: `~/.claude/settings.json` `env.CLAUDE_CODE_SUBAGENT_MODEL` is
   `sonnet`. Fail with: `unrouted subagents inherit the chat model — see adapters/claude/README.md`.

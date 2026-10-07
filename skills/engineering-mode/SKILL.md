@@ -1,6 +1,6 @@
 ---
 name: engineering-mode
-description: Pin this. Do not type it in the same message as /start-ticket. Orchestrator for the rest of the chat.
+description: Orchestrator for ad-hoc work and for a long chat. Do not type it in the same message as a ticket command.
 keywords: engineering mode, router, orchestrator, model routing, tier, difficulty, lanes, custom mode, output style, exit engineering mode
 disable-model-invocation: true
 icon: crown
@@ -20,9 +20,10 @@ Adapted from pstack's poteto-mode (Lauren Tan, MIT —
 
 ## On and off
 
-- **On:** pin this skill the way the adapter says, then type only the ticket command. Do not type
-  `/engineering-mode` and `/start-ticket` in the same message — some IDEs attach only this skill,
-  and the ticket playbook never loads.
+- **On:** pin this skill for ad-hoc work, or for a long chat that should stay an orchestrator
+  after compaction. `/start-ticket`, `/review-changes`, and `/complete-task` each load their
+  playbook and the tier contract on their own. Do not type `/engineering-mode` and a ticket
+  command in the same message — some IDEs attach only this skill, and the ticket playbook never loads.
 - **Stays on** until the chat ends. After a context compaction, re-read this file and the contract
   before the next dispatch.
 - **Off:** the user says "exit engineering mode" or unpins it the adapter's way. From then on

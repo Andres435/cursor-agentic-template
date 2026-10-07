@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    Stamp optional stackSmoke (start-stack runtime pass) onto a ticket manifest.
+    Stamp stackSmoke (a user-confirmed Drive) onto a ticket manifest.
 
 .DESCRIPTION
-    Called after a /start-stack smoke pass (only when the user confirms it passed
-    or failed), during /complete-task when the user skips, or after PR-comment
-    logic changes that invalidate a prior pass. Close does not require this field.
+    Called after a Drive the user confirms, during /complete-task when the ticket
+    has no frontend repo, or after a later edit that invalidates a prior pass.
+    Close requires a current passed stamp when an affected repo has profile layer
+    frontend. Otherwise the field may be absent or skipped.
 
     Status:
       passed  — Tested (flow worked on the local stack)

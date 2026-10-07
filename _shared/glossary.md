@@ -27,7 +27,7 @@ One line per term; the owner doc has the rule. Not loaded by default: read it wh
 | Receipt / stamp | A manifest field a script writes to prove a step ran on the current work: `verify`, `reviewReady`, `stackSmoke`, `feedback`. | [ticket-artifacts](ticket-artifacts.md) |
 | `reviewReady` | Review verdict per repo plus the reviewed work (`headSha`, fingerprint). Close and skip both check it still matches. | [Set-ReviewReady](../scripts/ticket/Set-ReviewReady.ps1) |
 | `verify` | verify-repo result per repo, with the work it ran on. Close fails when the tests ran on older work. | [Set-VerifyReceipt](../scripts/ticket/Set-VerifyReceipt.ps1) |
-| `stackSmoke` | Optional record that the app was clicked through: Never tested / Tested / Untested latest changes. Not a gate. | [Set-StackSmoke](../scripts/ticket/Set-StackSmoke.ps1) |
+| `stackSmoke` | User-confirmed Drive of the changed flow. A close gate when an affected repo has profile layer `frontend`. | [Set-StackSmoke](../scripts/ticket/Set-StackSmoke.ps1) |
 | Fingerprint | SHA-256 of the canonical diff (`fpVersion` 2) that names "the work" for stamps. | [ManifestFields](../scripts/ticket/lib/ManifestFields.ps1) |
 | `ctxPct` | How full each chat's context window was: `start`, `review`, `close`. Hook-measured or blank, never estimated. | [Set-TicketCtxPct](../scripts/ticket/Set-TicketCtxPct.ps1) |
 | `CtxS%` / `CtxR%` / `Ctx%` | Ledger columns for `ctxPct.start` / `.review` / `.close`. | [task-retrospective](../skills/complete-task/references/task-retrospective.md) |

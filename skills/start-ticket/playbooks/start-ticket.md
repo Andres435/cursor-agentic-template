@@ -108,6 +108,9 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
      compact status. Not in investigate mode.
    - `explore-repo` per affected local repo: title + one AC/repro clause, `thoroughness: quick`.
      Skip when there is one local repo **and** the ticket names the file.
+   - Bug + **used to work:** `why-repo` per repo with those `keyFiles` (cap 8). Skip
+     `why skipped: never worked` or `why skipped: no keyFiles`. Do not guess regression vs
+     never-worked — confirm or ask at the bug-fix symptom gate.
    - Prior-ticket search exactly as the router's [Prior closeouts](../../ticket-router/SKILL.md#prior-closeouts) rule says.
    - **Parent checks packets:** drop empty/off-topic; keep contradictions (comment vs statement, a
      shared or protected type as true owner) as Engineering Decisions candidates; never dump
@@ -132,6 +135,7 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - Structure per [../../../_shared/ticket-plan-output.md](../../../_shared/ticket-plan-output.md):
      Plan Digest, then **Engineering Decisions** ([../../../_shared/engineering-decisions.md](../../../_shared/engineering-decisions.md))
      before a tagged Work Plan. A `[high]` step needs the architect result or `architect skipped: <reason>`.
+     Each `priorFindings` id is named there, with what it changed or `lesson unchanged: <id> — <why>`.
    - **Open decisions stop the plan.** An unresolved AC, ADR, shared-owner, or extra-repo call →
      `ask-user` and wait. Never draft or persist TBD, "resolve during implement", or an invented
      default. Editing a shared owner is never the default.

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Read optional stackSmoke and report Never tested / Tested / Untested latest.
+    Read stackSmoke and report Never tested / Tested / Untested latest.
 
 .DESCRIPTION
     Absence is Never tested. A passed/failed stamp whose work-diff fingerprint

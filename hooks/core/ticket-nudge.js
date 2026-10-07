@@ -60,7 +60,7 @@ function nudgesFor(prompt, verbs) {
     bits.push(
       "Engineering mode and a ticket command are in the same message. Read that command's playbook and execute it; do not improvise from the command name. Paths: skills/start-ticket/playbooks/start-ticket.md, skills/implement/playbooks/implement.md, skills/review-changes/playbooks/review-changes.md, skills/complete-task/playbooks/complete-task.md, skills/address-pr-comments/playbooks/address-pr-comments.md. Engineering mode only chooses the model. " +
         exitPlan +
-        " before writer steps. Record ctxPct and the lane mix before the final message. A discarded lane's step still runs inline; say so once. Prefer pinning engineering mode, then typing only the ticket command."
+        " before writer steps. Record ctxPct and the lane mix before the final message. A discarded lane's step still runs inline; say so once. Ticket commands load the tier contract on their own. Pin engineering mode for ad-hoc work or a long chat, not in the same message."
     );
   }
   if (v.renameChat && ["start-ticket", "review-changes", "complete-task", "implement"].indexOf(command) !== -1) {

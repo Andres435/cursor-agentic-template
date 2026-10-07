@@ -32,7 +32,8 @@ spike's story-point or timebox field.
 
 1. **Verification summary (parallel)**
    - **Spike:** if `mode` is `investigate` and no affected repo has staged product changes, skip.
-   - `dispatch` `verify-repo` once per affected repo in a single batch
+   - `dispatch` `verify-repo` once per affected repo, on its tier
+     ([../../../_shared/model-routing.md](../../../_shared/model-routing.md#roles)), in a single batch
      ([../../../_shared/subagent-functions.md](../../../_shared/subagent-functions.md)); each runs
      scoped tests (and static analysis when the project has it) in its resolved path and returns a
      compact pass/fail packet. Parent concatenates packets only; do not read
@@ -42,21 +43,13 @@ spike's story-point or timebox field.
      The packet's static-analysis field maps to `-Sonar` (`ok`, `error`, or `not-run` when the
      project has none or it was skipped). `not-run` tests need `-Reason` (for example docs-only).
    - Summarize changed behavior and affected repos; list tests, linters, static analysis, manual
-     verification, optional stack smoke, and any checks that could not be run.
-   - **Stack smoke (optional):** extra runtime confidence, not a close gate; `-Phase close` does not
-     require it. Run `.\.cursor\scripts\Get-StackSmoke.ps1 -Ticket <ticket> -Json` and use
-     **label** / **effective**, not raw `status`:
-     - `never` — Never tested. Ask once for UI / auth / email / host-bound flows.
-     - `passed` — Tested. Cite it; do not re-ask unless they want another pass.
-     - `stale` — Untested latest changes (was Tested/Failed, then logic changed — PR comments, new
-       commits). Ask once to re-smoke the **current** change. If the recorded status is still
-       `passed`, persist `Set-StackSmoke.ps1 -Status stale` so the flag matches.
-     - `failed` / `skipped` — show as Failed / Skipped.
-     Pure helper/test tickets and spikes usually skip (`-Status skipped` + one-line reason). If they
-     want a pass: reuse a running stack or `/start-stack`, exercise the changed flow (the user logs
-     in; do not invent a harness), **ask once** whether it passed, and stamp `passed` or `failed`
-     **only after they answer**. Never claim Tested without that stamp. A Failed/stale stamp is
-     awareness — it does not block close unless the user says stop.
+     verification, stack smoke, and any checks that could not be run.
+   - **Stack smoke:** run `.\.cursor\scripts\Get-StackSmoke.ps1 -Ticket <ticket> -Json` and use
+     **label** / **effective**. When an affected repo has profile layer `frontend`, this is a close
+     gate: exercise the changed flow, then stamp `passed` only after the user says it passed.
+     `-Phase close` fails on never, skipped, failed, or stale for those repos. When no affected
+     repo is `frontend`, leave the stamp absent or `skipped` with a one-line reason. A stamp is
+     never the agent's own judgment.
 
 2. **Review readiness (parallel)**
    - **Spike:** same skip as step 1.
@@ -101,8 +94,8 @@ spike's story-point or timebox field.
      local session hours, and the tracker State question — no staged files, commit, or PR. Otherwise:
      staged files; unstaged/untracked awareness; commit message(s); PR title(s) and description(s);
      tracker updates and required-field gaps; hours and converted points; target State; **stack
-     smoke (optional)** next to Review — never a close blocker, local only (keep it out of tracker QA
-     notes). Add ADRs followed (by number) when [adr-policy](../../../_shared/adr-policy.md) applies.
+     smoke** next to Review. A `frontend` repo blocks close until effective status is Tested. Keep
+     it out of tracker QA notes. Add ADRs followed (by number) when [adr-policy](../../../_shared/adr-policy.md) applies.
    - Do not commit, push, create a PR, or write the tracker. Stop and wait for the user.
    - Spike approved with no product commit: write the findings and the approved State change. Do
      not hand off to prep-pr.

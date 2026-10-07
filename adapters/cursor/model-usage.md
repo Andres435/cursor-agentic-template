@@ -69,7 +69,7 @@ Always-on stub: [../../rules/model-usage.mdc](../../rules/model-usage.mdc). Cont
   inherits the chat.
 - Engineering mode: append `/engineering-mode`, or pin the `engineering-mode` skill as a Custom
   Mode (`/` → engineering-mode → Alt+Enter / **Use as Mode**). × on the chip or "exit engineering
-  mode" turns it off. Without it, the chat plans and builds inline on its own model.
+  mode" turns it off. Ticket commands load the tier contract on their own. Pin this for ad-hoc work, or for a long chat that should stay an orchestrator after compaction.
 - A slash command attaches its playbook to one message. For a long ticket, enable the command in
   Custom Mode (Option+Enter on Mac) so it stays active across the chat.
 - Other Models (frontier) → only after the user chooses.

@@ -22,6 +22,9 @@ Three things reach the user as a question rather than an assumption:
 3. **Settled-elsewhere conflict** — an Accepted ADR (`profile.adrIndex`) already decided this
    differently, or a `priorFindings` lesson says this exact call went wrong before.
 
+When `priorFindings` has rows, name each id in this section and what it changed, or write
+`lesson unchanged: <id> — <why>`. `-Phase start` fails if an id is missing.
+
 "Skipped — none of these apply" is a valid answer and takes one line. Trivial tickets stay trivial.
 
 ## Shape

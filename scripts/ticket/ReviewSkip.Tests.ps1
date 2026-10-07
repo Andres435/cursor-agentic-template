@@ -275,6 +275,26 @@ Describe 'Test-ReviewedWorkPresent' {
         (Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry).ok | Should -BeTrue
     }
 
+    It 'fails when a base merge commit contains edits beyond both parents' {
+        $repo = Join-Path $TestDrive 'rw-merge-conflict'
+        New-WorkRepo $repo
+        Set-Staged $repo 'a.txt' 'two'
+        $entry = New-StagedEntry $repo
+        & git -C $repo commit -q -m change
+        & git -C $repo checkout -q dev
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'dev side'
+        & git -C $repo add a.txt
+        & git -C $repo commit -q -m 'dev side'
+        & git -C $repo checkout -q main
+        & git -C $repo merge --no-ff dev -m 'merge dev' 2>$null | Out-Null
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'resolved third'
+        & git -C $repo add a.txt
+        & git -C $repo commit -q -m 'merge with edit'
+        $r = Test-ReviewedWorkPresent -RepoPath $repo -Entry $entry
+        $r.ok | Should -BeFalse
+        $r.reason | Should -Match 'stamp -Mode pre-merge'
+    }
+
     It 'fails when a commit lands after the review' {
         $repo = Join-Path $TestDrive 'rw-edit'
         New-WorkRepo $repo

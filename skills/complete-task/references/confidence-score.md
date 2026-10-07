@@ -18,7 +18,7 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
 | Scope clarity | High / Med / Low | one-line note |
 | <axis> | High / Med / Low | one-line note |
 | Fix / Implementation correctness | High / Med / Low | one-line note |
-| Stack smoke (optional) | Never tested / Tested / Untested latest changes / Failed / Skipped | one-line; omit the row when never tested and not asked |
+| Stack smoke | Never tested / Tested / Untested latest changes / Failed / Skipped | one-line; a frontend repo needs Tested before close |
 | Regression risk (Low = best) | Low / Med / High | one-line note |
 | **Overall confidence** | **High / Med / Low** | one-line rationale |
 
@@ -36,7 +36,7 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
 | `skills/start-ticket/references/tech-spike.md` | Findings certainty |
 | `skills/review-changes/SKILL.md` | Change-set understanding. Optional **Stack smoke** row from `Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes). |
 | `skills/ticket-workflow` | Whichever axis matches the underlying ticket type (bug -> Root-cause certainty, feature -> Design certainty, spike -> Findings certainty, change-set review -> Change-set understanding) |
-| `skills/complete-task` | Same axis as the ticket type. Optional **Stack smoke** row when the stack was used or offered (`manifest.stackSmoke`). |
+| `skills/complete-task` | Same axis as the ticket type. **Stack smoke** row from `Get-StackSmoke.ps1`. A frontend repo needs Tested before close. |
 
 ## How to rate each dimension
 
@@ -46,7 +46,7 @@ Every bug, feature, change, spike, and review ends with this block. Each consume
   - Low: significant ambiguity that could change the approach
 - **Domain certainty axis** (Root-cause / Design / Findings / Change-set understanding) -- Confidence the analysis is correct.
 - **Fix / Implementation correctness** -- Confidence the proposed change correctly addresses scope without unintended side effects.
-- **Stack smoke (optional)** -- Stack start plus a real-path pass of the changed flow. **Tested** (`passed`) raises implementation confidence. **Untested latest changes** (`stale`) means a prior pass no longer covers current logic (PR comments, new commits) — not the same as Never tested. Failed is a residual risk (does not fail close). Skipped / Never tested is honest, not a defect.
+- **Stack smoke** -- a real-path pass of the changed flow. **Tested** (`passed`) raises implementation confidence. **Untested latest changes** (`stale`) means a prior pass no longer covers current logic. When an affected repo has profile layer `frontend`, close fails unless effective status is passed. Otherwise Failed, Skipped, and Never tested stay on the score.
 - **Regression risk** (inverted -- Low is best) -- Likelihood the change breaks something else.
   - Low: isolated change, well-tested area, narrow blast radius
   - Med: touches shared code or untested paths

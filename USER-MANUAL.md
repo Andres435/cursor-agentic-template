@@ -5,7 +5,7 @@ Day-to-day ticket workflow for humans. Agents: [AGENTS.md](AGENTS.md). First clo
 `/onboard` for the machine script ([MACHINE-SETUP.md](MACHINE-SETUP.md)). After that, commands run
 from the profile and do not re-ask for repos or start commands.
 
-Branch mode is three chats. Pin engineering mode, then type only `/start-ticket`.
+Branch mode is three chats. `/start-ticket`, `/review-changes`, and `/complete-task` each load their playbook and the tier contract.
 
 | Chat | Type | Done when |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ commit and update the plugin: Claude reads a snapshot, not the working tree
 4. Type slash commands. Free-form "please start this ticket" skips intake, branch setup, and the plan.
 
 `/start-ticket` also searches prior closeouts (`plans/closeout-index.md`) and puts matching lessons on
-the manifest as `priorFindings`, at most eight. You see those in the plan, not every old ticket.
+the manifest as `priorFindings`, at most eight. The plan names each id and what it changed.
 
 ## Ticket lifecycle
 
@@ -61,10 +61,11 @@ other commit after the review means `/review-changes` again. A spike skips both.
 
 ### Engineering mode
 
-Pin it, then type only the ticket command. The plan and every Work Plan step run on the model its
-tier calls for. How to pin it is in your IDE's adapter ([Cursor](adapters/cursor/model-usage.md),
+`/start-ticket`, `/review-changes`, and `/complete-task` each load their playbook and the tier
+contract. Pin this for ad-hoc work, or for a long chat that should stay an orchestrator after
+compaction. How to pin it is in your IDE's adapter ([Cursor](adapters/cursor/model-usage.md),
 [Claude Code](adapters/claude/model-usage.md)). Say "exit engineering mode" to turn it off. Typing
-`/engineering-mode` and `/start-ticket` in one message attaches only the first skill.
+`/engineering-mode` and a ticket command in one message attaches only the first skill.
 
 ```text
 Engineering mode on — orchestrator: <model> (<tier>)

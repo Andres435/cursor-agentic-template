@@ -155,6 +155,37 @@ Describe 'Assert-TicketArtifacts -Phase start: Work Plan content checks' {
         $result = Invoke-Assert -Root $fixture.Root -Phase 'start'
         $result.ExitCode | Should -Be 0
     }
+
+    It 'fails when Engineering Decisions omits a priorFindings id' {
+        $fixture = New-FixtureRoot -Root (Join-Path $TestDrive 'start-lesson-miss') `
+            -EngineeringDecisions 'None -- fixture, no scope or contract calls to make.' `
+            -WorkPlanSection @'
+## Work Plan
+
+1. [low] Fixture step one
+'@
+        $manifest = Get-Content -LiteralPath $fixture.ManifestPath -Raw | ConvertFrom-Json
+        $manifest | Add-Member -NotePropertyName priorFindings -NotePropertyValue @([pscustomobject]@{ ticket = 'WI11111'; lesson = 'do not default the flag' })
+        [System.IO.File]::WriteAllText($fixture.ManifestPath, ($manifest | ConvertTo-Json -Depth 6), $script:Utf8NoBom)
+        $result = Invoke-Assert -Root $fixture.Root -Phase 'start'
+        $result.ExitCode | Should -Be 1
+        $result.Output | Should -Match 'WI11111'
+    }
+
+    It 'passes when Engineering Decisions cites each priorFindings id' {
+        $fixture = New-FixtureRoot -Root (Join-Path $TestDrive 'start-lesson-hit') `
+            -EngineeringDecisions 'lesson unchanged: WI11111 -- this ticket does not touch that flag.' `
+            -WorkPlanSection @'
+## Work Plan
+
+1. [low] Fixture step one
+'@
+        $manifest = Get-Content -LiteralPath $fixture.ManifestPath -Raw | ConvertFrom-Json
+        $manifest | Add-Member -NotePropertyName priorFindings -NotePropertyValue @([pscustomobject]@{ ticket = 'WI11111'; lesson = 'do not default the flag' })
+        [System.IO.File]::WriteAllText($fixture.ManifestPath, ($manifest | ConvertTo-Json -Depth 6), $script:Utf8NoBom)
+        $result = Invoke-Assert -Root $fixture.Root -Phase 'start'
+        $result.ExitCode | Should -Be 0
+    }
 }
 
 Describe 'Assert-TicketArtifacts -Phase implement: not retroactive' {
@@ -285,6 +316,21 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $result = Invoke-Assert -Root $root -Phase 'close'
         $result.ExitCode | Should -Be 0
     }
+
+    It 'fails a frontend close without a current passed stackSmoke and passes once stamped' {
+        $root = Join-Path $TestDrive 'close-frontend'
+        New-StampedCloseRoot $root
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        $profile = @{ repos = @(@{ name = 'app'; path = '.'; layers = @('frontend') }) } | ConvertTo-Json -Depth 5
+        [System.IO.File]::WriteAllText((Join-Path $root 'profile.json'), $profile + "`n", $utf8)
+        $fail = Invoke-Assert -Root $root -Phase 'close'
+        $fail.ExitCode | Should -Be 1
+        $fail.Output | Should -Match 'stackSmoke'
+        Add-ManifestFields $root @{ stackSmoke = [pscustomobject]@{ status = 'passed'; notes = 'user confirmed' } }
+        $ok = Invoke-Assert -Root $root -Phase 'close'
+        $ok.ExitCode | Should -Be 0
+    }
+
     It 'fails close when the verify receipt was taken before a later fix, and passes after re-verify' {
         $root = Join-Path $TestDrive 'close-stale-receipt'
         New-CloseRoot -Root $root -WorkType 'bug' -Ctx @{ start = 40; review = 50; close = 60 }

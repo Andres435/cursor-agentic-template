@@ -35,8 +35,9 @@ The work-type template supplies the content (`skills/start-ticket/references/bug
    - `[med]` = standard — multi-file slice, focused bug, one repo
    - `[high]` = deep — tricky shared types, hard root cause, cross-cutting design
 
-Split a step larger than one lane can hold. `-Phase start` fails an untagged step, or a `[high]`
-step with no `architect` line in Engineering Decisions.
+Split a step larger than one lane can hold. `-Phase start` fails an untagged step, a `[high]`
+step with no `architect` line in Engineering Decisions, or a `priorFindings` id missing from that
+section.
 
 ### Plan digest
 

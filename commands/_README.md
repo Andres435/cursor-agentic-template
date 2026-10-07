@@ -6,7 +6,7 @@ This folder no longer holds slash entries. A command file whose name matches a s
 | Goal | Command |
 |---|---|
 | Fill profile, env card, and specialist on a new product | `/start-new-project` |
-| Pin this, then type only the ticket command | `/engineering-mode` |
+| Pin for ad-hoc work or a long chat. Do not type it in the same message as a ticket command | `/engineering-mode` |
 | Start a ticket | `/start-ticket <id> bug\|feature\|spike` |
 | Build in a fresh chat | `/implement <id>` |
 | Start, swap, or stop the local stack | `/start-stack`, `/swap-stack`, `/stop-stack` |

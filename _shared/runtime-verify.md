@@ -1,7 +1,7 @@
 ---
 name: runtime-verify
 description: Token rails for local stack recycle and UI verify. Load from start-stack failure handling, the UI steps in skills/start-ticket/references/bug-fix.md and feature-plan.md, and frontend specialists. Do not use as always-on.
-keywords: token rails, stack recycle, UI verify, retry policy, no polling, browser CDP, ask-first, stack smoke, local login
+keywords: token rails, stack recycle, UI verify, retry policy, no polling, browser CDP, frontend close gate, stack smoke, local login
 ---
 
 # Runtime verify (token rails)
@@ -33,14 +33,13 @@ Humans: [../USER-MANUAL.md](../USER-MANUAL.md). Agents: obey this slice; do not 
 
 ## UI / CSS
 
-- **Default:** human hard-refresh (full reload; frameworks with HMR update on save). Do not open the
-  browser unsolicited.
-- **After `/start-stack` prints URLs**, one suggestion line if the ticket is UI-scoped: the user
-  can ask for a smoke pass. Do not start browser automation (CDP) in that same turn.
-- **If the user asks for a browser pass (ask-first):** one happy-path pass — open the URL, exercise
-  the changed flow, stop. Cap: four failed actions then stop and report. No screenshot loops, no
-  port or server diagnosis via CDP, no CSS rebuild loops. CDP burns thought tokens; keep passes
-  minimal.
+- **Frontend layer:** an affected repo with profile layer `frontend` must be exercised before close.
+  One happy-path pass, four failed actions then stop. Stamp `Set-StackSmoke.ps1 -Status passed|failed`
+  only after the user says which. Close fails without a current `passed` stamp. Do not stamp from
+  the agent's own judgment.
+- **Otherwise:** human hard-refresh. Do not open the browser unsolicited. After `/start-stack`
+  prints URLs, one suggestion line. Do not start browser automation in that turn. A pass the user
+  asks for uses the same cap and the same user-confirmed stamp.
 - **Local login:** read `local-test-login.local.json` at the workflow root (copy from
   [../local-test-login.example.json](../local-test-login.example.json); gitignored). Use
   `login.username` / `login.password` on the login form. Never commit the file or echo the password
