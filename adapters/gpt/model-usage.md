@@ -15,13 +15,13 @@ to a Grok model.
 | Tier | `Task` `model` | Used for |
 |---|---|---|
 | `fast` | `gpt-5.6-sol-medium` | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
-| `standard` | `gpt-5.6-sol-medium` | `[med]` steps; review-diff, peer-review-pr — this session's Task list has one GPT selector, so fast and standard share it |
+| `standard` | `gpt-5.6-sol-medium` | `[med]` steps; review-diff, peer-review-pr — the Task list had one GPT selector when checked, so fast and standard share it |
 | `deep` | **The chat's selected GPT model, inline only** | plans, `[high]` steps, second-opinion reviewer, architect deep candidate, blast-radius |
 | `frontier` | a GPT model the user names | only when the user asks for it in this chat |
 
 **`deepLane: inline`** — deep and `[high]` run on the picker's GPT model. Never dispatched.
 
-`gpt-5.6-sol-medium` is the GPT selector on this session's `Task` model list (2026-09-25).
+`gpt-5.6-sol-medium` is the GPT selector on the Cursor `Task` model list (checked 2026-09-25).
 `/doctor --lanes` prints the list again; copy the selector from that list when it changes. If the
 list has more than one GPT selector, fast takes the smaller one and standard takes the other, and
 this table is updated with the date. Deep is never dispatched.

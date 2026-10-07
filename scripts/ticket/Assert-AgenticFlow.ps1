@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Fail-closed gate for all agentic-flow requirements.
@@ -344,9 +345,10 @@ if (-not (Test-Path -LiteralPath $pluginManifest)) {
 # Cursor's hooks.json (repo root) and Claude's adapters/claude/hooks/hooks.json must be
 # valid JSON, wire the required hooks, and point only at scripts that exist. Each IDE's
 # plugin manifest must be valid JSON and its ./relative paths must exist.
+# Claude runs the commit guard and the push gate through one process (git-guard.js).
 $hookManifests = @(
-    @{ Rel = 'hooks.json'; Events = @('sessionStart', 'beforeReadFile', 'beforeShellExecution') },
-    @{ Rel = 'adapters/claude/hooks/hooks.json'; Events = @('SessionStart', 'PreToolUse', 'UserPromptSubmit') }
+    @{ Rel = 'hooks.json'; Events = @('sessionStart', 'beforeReadFile', 'beforeShellExecution'); Needs = @('closeout', 'git-push-agentic-flow', 'git-commit-ticket') },
+    @{ Rel = 'adapters/claude/hooks/hooks.json'; Events = @('SessionStart', 'PreToolUse', 'UserPromptSubmit'); Needs = @('closeout', 'git-guard') }
 )
 foreach ($hm in $hookManifests) {
     $hmPath = Join-Path $Root $hm.Rel
@@ -356,7 +358,7 @@ foreach ($hm in $hookManifests) {
     foreach ($ev in $hm.Events) {
         if ($hmText -notmatch [regex]::Escape('"' + $ev + '"')) { Fail "hooks: $($hm.Rel) does not define $ev" }
     }
-    foreach ($need in @('closeout', 'git-push-agentic-flow', 'git-commit-ticket')) {
+    foreach ($need in $hm.Needs) {
         if ($hmText -notmatch $need) { Fail "hooks: $($hm.Rel) does not wire $need" }
     }
     foreach ($m in [regex]::Matches($hmText, '(?:\./|\$\{CLAUDE_PLUGIN_ROOT\}/)([\w./-]+\.js)')) {
@@ -429,10 +431,12 @@ foreach ($adapterPath in $routingAdapters) {
     }
 }
 
-# Case-SENSITIVE bans over the core. INDEX.md is exempt (its keywords exist to be
-# searched), and harness-verbs.md is exempt from the tool ban (it is the vocabulary).
-$modelNamePattern = '\b(Grok|Composer|Sonnet|Opus|Haiku|Fable)\b|grok-|composer-\d|gpt-\d'
-$toolNamePattern  = '\b(AskQuestion|SwitchMode|target_mode_id|AskUserQuestion|ExitPlanMode|EnterPlanMode|generalPurpose|CURSOR_PROJECT_DIR|CLAUDE_PROJECT_DIR)\b|Custom Mode|context-window indicator|native Build'
+# Bans over the core. INDEX.md is exempt (its keywords exist to be searched), and
+# harness-verbs.md is exempt from the tool ban (it is the vocabulary). Model names match in
+# any case ("opus" is as much a leak as "Opus"); only Composer stays case-sensitive, because
+# "composer" is ordinary English a project rule may use.
+$modelNamePattern = '(?i:\b(Grok|Sonnet|Opus|Haiku|Fable)\b|grok-|gpt-\d)|\bComposer\b|composer-\d'
+$toolNamePattern  = '\b(AskQuestion|SwitchMode|target_mode_id|AskUserQuestion|ExitPlanMode|EnterPlanMode|generalPurpose|CURSOR_PROJECT_DIR|CLAUDE_PROJECT_DIR|spawn_agent)\b|\bTask tool\b|Custom Mode|context-window indicator|native Build'
 $coreFiles = [System.Collections.Generic.List[string]]::new()
 foreach ($dir in @('skills', 'agents', 'commands', '_shared', 'rules', 'environments', 'hooks/core')) {
     $dirPath = Join-Path $Root $dir
@@ -570,28 +574,84 @@ if (-not (Test-Path -LiteralPath $codexManifest)) {
     }
 }
 
-# ---- 12b. Human docs agree on three chats; slash menu is the path only --------
-$humanDocs = @(
-    @{ Rel = 'README.md'; Label = 'README.md' }
-    @{ Rel = 'USER-MANUAL.md'; Label = 'USER-MANUAL.md' }
-    @{ Rel = 'commands/_README.md'; Label = 'commands/_README.md' }
-)
-foreach ($doc in $humanDocs) {
-    $docPath = Join-Path $Root ($doc.Rel -replace '/', [IO.Path]::DirectorySeparatorChar)
-    if (-not (Test-Path -LiteralPath $docPath)) {
-        Fail "chat-count: $($doc.Label) is missing"
-        continue
+# ---- 12b. Doc claims hold; slash menu is the path only ------------------------
+# Each claim in scripts/ticket/doc-claims.psd1 is a workflow fact the docs state. A doc that
+# contradicts it (Forbid), a doc that stops stating it (Require), or code that no longer
+# makes it true (Anchor) fails here. Link and budget checks cannot see any of these: a new
+# close gate can ship while docs still say it is optional.
+$claimsPath = Join-Path $Root 'scripts/ticket/doc-claims.psd1'
+if (-not (Test-Path -LiteralPath $claimsPath)) {
+    Fail "doc-claims: scripts/ticket/doc-claims.psd1 not found"
+} else {
+    try {
+        $claimRegistry = Import-PowerShellDataFile -LiteralPath $claimsPath
+    } catch {
+        $claimRegistry = $null
+        Fail "doc-claims: doc-claims.psd1 does not parse -- $($_.Exception.Message)"
     }
-    $docText = Get-Content -LiteralPath $docPath -Raw -Encoding UTF8
-    if ($docText -match '(?i)two chats') {
-        Fail "chat-count: $($doc.Label) says 'two chats'. Branch mode is three chats; see USER-MANUAL.md"
-    }
-}
-$manualPath = Join-Path $Root 'USER-MANUAL.md'
-if (Test-Path -LiteralPath $manualPath) {
-    $manualText = Get-Content -LiteralPath $manualPath -Raw -Encoding UTF8
-    if ($manualText -notmatch '(?i)branch mode is three chats') {
-        Fail "chat-count: USER-MANUAL.md must say branch mode is three chats"
+    if ($claimRegistry) {
+        # The file universe: tracked plus new untracked files, as git sees them, so a
+        # violation is caught before its first commit. Ticket files and scratch are out.
+        . (Join-Path $PSScriptRoot 'lib/TicketPrefix.ps1')
+        $claimTicketGlob = 'plans/' + (Get-TicketPrefix -Root $Root) + '*'
+        $claimFiles = @()
+        Push-Location -LiteralPath $Root
+        try {
+            $claimFiles = @(& git ls-files --cached --others --exclude-standard 2>$null | ForEach-Object { $_ -replace '\\', '/' })
+        } finally { Pop-Location }
+        if (-not $claimFiles.Count) {
+            $claimFiles = @(Get-ChildItem -LiteralPath $Root -Recurse -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' } |
+                ForEach-Object { $_.FullName.Substring($Root.Length).TrimStart('\', '/') -replace '\\', '/' })
+        }
+        $claimFiles = @($claimFiles | Where-Object {
+            $_ -notlike $claimTicketGlob -and $_ -notlike 'tmp/*' -and $_ -notlike '*/fixtures/*' -and
+            (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf)
+        })
+        $docGlobs = @('*.md', '*.mdc', '*.markdown')
+        function Test-AnyGlob([string]$Path, $Globs) {
+            foreach ($g in @($Globs)) { if ($Path -like $g) { return $true } }
+            return $false
+        }
+        function Read-ClaimFile([string]$Rel) {
+            $p = Join-Path $Root ($Rel -replace '/', [IO.Path]::DirectorySeparatorChar)
+            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) { return $null }
+            return (Get-Content -LiteralPath $p -Raw -Encoding UTF8)
+        }
+
+        foreach ($claim in @($claimRegistry.Claims)) {
+            $id = $claim.Id
+            if ($claim.ContainsKey('Anchor')) {
+                $anchorText = Read-ClaimFile $claim.Anchor.File
+                if ($null -eq $anchorText -or $anchorText -notmatch $claim.Anchor.Pattern) {
+                    Fail "doc-claims: $id -- anchor gone: $($claim.Anchor.File) no longer matches /$($claim.Anchor.Pattern)/. The code changed: update or retire this claim in doc-claims.psd1, with the docs it covers."
+                }
+            }
+            $requires = if ($claim.ContainsKey('Require')) { @($claim.Require) } else { @() }
+            foreach ($req in $requires) {
+                $reqText = Read-ClaimFile $req.File
+                if ($null -eq $reqText) {
+                    Fail "doc-claims: $id -- $($req.File) is missing"
+                } elseif ($reqText -notmatch $req.Pattern) {
+                    Fail "doc-claims: $id -- $($req.File) must match /$($req.Pattern)/ ($($claim.Why))"
+                }
+            }
+            $forbids = if ($claim.ContainsKey('Forbid')) { @($claim.Forbid) } else { @() }
+            foreach ($forbid in $forbids) {
+                $in = if ($forbid.ContainsKey('In')) { $forbid.In } else { $docGlobs }
+                $except = if ($forbid.ContainsKey('Except')) { $forbid.Except } else { @() }
+                foreach ($rel in $claimFiles) {
+                    if (-not (Test-AnyGlob $rel $in) -or (Test-AnyGlob $rel $except)) { continue }
+                    if ($rel -eq 'scripts/ticket/doc-claims.psd1') { continue }
+                    $lines = @(Get-Content -LiteralPath (Join-Path $Root $rel) -Encoding UTF8)
+                    for ($li = 0; $li -lt $lines.Count; $li++) {
+                        if ($lines[$li] -match $forbid.Pattern) {
+                            Fail "doc-claims: $id -- ${rel}:$($li + 1) contradicts the claim ('$($Matches[0])'). $($claim.Why)"
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -680,6 +740,42 @@ if (Test-Path -LiteralPath $agentsDir) {
             Fail "agents-surface: agents/$($_.Name) has no 'name:'/'description:' frontmatter -- every agents/*.md registers as an agent; move docs to agents/README.markdown"
         }
     }
+    # The reviewer runs as review-diff / peer-review-pr, whose contract is read-only
+    # (_shared/subagent-functions.md). Prose alone let it inherit every tool.
+    $reviewerPath = Join-Path $agentsDir 'code-reviewer.md'
+    if (Test-Path -LiteralPath $reviewerPath) {
+        $reviewerFront = [regex]::Match((Get-Content -LiteralPath $reviewerPath -Raw -Encoding UTF8), '\A---\r?\n(.*?)\r?\n---', 'Singleline').Groups[1].Value
+        $denied = [regex]::Match($reviewerFront, '(?m)^disallowedTools:\s*(.+)$').Groups[1].Value
+        foreach ($tool in @('Edit', 'Write', 'NotebookEdit')) {
+            if ($denied -notmatch "(^|[,\s\[])$tool([,\s\]]|$)") {
+                Fail "agents-surface: agents/code-reviewer.md must list '$tool' in disallowedTools -- review-diff and peer-review-pr are read-only"
+            }
+        }
+    }
+}
+
+# ---- 14. Docs move with the code they describe ------------------------------
+# A gate, hook, or lifecycle skill change needs a doc change in the same branch, or a
+# Docs-Unaffected trailer saying why not (doc-claims.psd1 CoChange). [INFO] lines are
+# printed; a skip outside CI (no git, no base) is never a failure.
+$docSyncScript = Join-Path $PSScriptRoot 'Assert-DocSync.ps1'
+if (Test-Path -LiteralPath $docSyncScript) {
+    $out = & (Get-PowerShell7Path) -NonInteractive -NoProfile -File $docSyncScript -Root $Root 2>&1
+    foreach ($line in $out) {
+        $t = $line.ToString().Trim()
+        if ($t -match '^\[INFO\]') { Write-Host $t -ForegroundColor DarkGray }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        foreach ($line in $out) {
+            $t = $line.ToString().Trim()
+            if ($t -match '^\[FAIL\] (.*)$') { Fail $Matches[1] }
+        }
+        if (-not ($violations | Where-Object { $_ -like 'doc-sync:*' })) {
+            Fail "doc-sync: Assert-DocSync.ps1 exited $LASTEXITCODE -- $($out -join '; ')"
+        }
+    }
+} else {
+    Fail "doc-sync: Assert-DocSync.ps1 not found at $docSyncScript"
 }
 
 # ---- Report ----------------------------------------------------------------

@@ -123,8 +123,9 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
      `origin/<baseBranch>` (stash or cherry-pick what you need; never merge base into the old
      lineage). **Both exist** → check out, fast-forward from `origin/<ticket>`, merge
      `origin/<baseBranch>`.
-   - After `branch-setup` returns, start `scripts/runtime/Initialize-TicketRuntime.ps1` **in the
-     background** when the profile has it; otherwise skip (`/start-stack` starts the app).
+   - After `branch-setup` returns, start the overlay's `Initialize-TicketRuntime.ps1` (under
+     `scripts/runtime/`) **in the background** when it exists; otherwise skip (`/start-stack`
+     starts the app).
 
 6. **Draft in plan mode — do not persist yet**
    - `enter-plan` automatically (pre-approved). Plan tier is deep; below deep without engineering

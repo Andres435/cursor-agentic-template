@@ -296,6 +296,17 @@ check("stays silent when the commit names a work item", () => {
   assert(r.stdout === "", "expected no output, got: " + r.stdout);
 });
 
+check("asks before a PowerShell-tool commit with no work-item id", () => {
+  const r = run("git-commit-ticket.js", {
+    tool_name: "PowerShell",
+    tool_input: { command: 'Set-Location C:\\repos; git commit -m "fix the thing"' },
+    cwd: "C:\\repos",
+  });
+  assertNoCrash(r);
+  assert(r.json, "expected JSON output, got: " + r.stdout);
+  assert(r.json.hookSpecificOutput.permissionDecision === "ask", "expected ask");
+});
+
 check("ignores non-commit Bash commands", () => {
   const r = run("git-commit-ticket.js", {
     tool_name: "Bash",
@@ -379,7 +390,9 @@ check("every declared hook script exists", () => {
       }
     }
   }
-  assert(seen.length === 7, "expected 7 wired hooks, found " + seen.length);
+  // git-guard.js runs the commit and push bridges in one process, so 6 entries wire 7 bridges.
+  assert(seen.length === 6, "expected 6 wired hooks, found " + seen.length);
+  assert(seen.includes("git-guard.js"), "git-guard.js is not wired");
 });
 
 check("every Cursor hook has a Claude counterpart", () => {

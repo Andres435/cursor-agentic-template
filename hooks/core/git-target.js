@@ -84,4 +84,4 @@ function stagedUserPlans(root) {
     .filter((s) => s && !PLANS_ALLOW.test(s));
 }
 
-module.exports = { gitCalls, workflowRoot, stagedUserPlans, PLANS_ALLOW, ASSERT_REL };
+module.exports = { gitCalls, workflowRoot, stagedUserPlans, unquote, PLANS_ALLOW, ASSERT_REL };

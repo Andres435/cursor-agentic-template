@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Thin start-stack wrapper for the template. Reads profile.json stacks.startCommand and executes it.

@@ -1,15 +1,20 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Link gate for workflow documentation. Fails on relative links that do not
-    resolve, and on link labels that name a path that does not exist.
+    resolve, on link labels that name a path that does not exist, and on
+    backticked paths into this repo that do not exist.
 
 .DESCRIPTION
-    Three checks, in descending order of how much damage they prevent:
+    Four checks, in descending order of how much damage they prevent:
 
     Links that resolve OUTSIDE this repo are out of scope for every check --
-    ../../TmoPro/..., ../../TmoDocs/..., a sibling's .cursor. Whether they
-    resolve depends on the developer's workspace layout, and CI checks out this
-    repo alone, so validating them would fail there and nowhere else.
+    ../../<product-repo>/..., a sibling's .cursor. Whether they resolve depends
+    on the developer's workspace layout, and CI checks out this repo alone, so
+    validating them would fail there and nowhere else. The one exception: a link
+    or path into <Sibling>/<this folder>/ always fails when profile.json places
+    this folder beside that repo (its repos[].path is not '.'), because then it
+    is never inside one.
 
       1. BROKEN TARGET  (hard fail)
          A relative link whose target file does not exist. The corpus exists to
@@ -33,6 +38,12 @@
          only the mutual pair is a cycle, because the phase doc already points
          up at the contract. Redirect stubs (a 'Canonical:' line) and README
          indexes are exempt — both are navigational by design.
+      4. STALE PATH    (hard fail; sibling paths warn)
+         A path in an inline code span, outside fenced blocks, that does not
+         exist. A find-and-replace of a folder name can leave spans like
+         `<Repo>/<this folder>/skills/...` that no link check could see. Only
+         spans that name this repo unambiguously are hard-checked (see the setup
+         comment); a missing path git ignores is a runtime file and passes.
 
     This is a CORRECTNESS gate, not a growth gate. Assert-DocBudget.ps1 owns
     size. Exit 0 = pass, 1 = at least one hard failure.
@@ -63,9 +74,11 @@ param(
 
 Set-StrictMode -Version Latest
 
-# Ticket artifacts and test fixtures are out of scope: WI*-plan files reference
+# Ticket artifacts and test fixtures are out of scope: <ticket>-plan files reference
 # source paths in sibling repos, and fixtures must stay byte-stable for tests.
-$excluded = @('tmp/*', 'scripts/ticket/fixtures/*', 'plans/WI*', 'node_modules/*')
+. (Join-Path $PSScriptRoot 'ticket/lib/TicketPrefix.ps1')
+$ticketPrefix = Get-TicketPrefix -Root ([IO.Path]::GetFullPath($Root))
+$excluded = @('tmp/*', 'scripts/ticket/fixtures/*', "plans/$ticketPrefix*", 'node_modules/*')
 
 $linkPattern = '\[([^\]]*)\]\(([^)\s]+)\)'
 
@@ -73,10 +86,14 @@ $brokenTargets  = [System.Collections.Generic.List[object]]::new()
 $staleLabels    = [System.Collections.Generic.List[object]]::new()
 $tierCandidates = [System.Collections.Generic.List[object]]::new()
 $tierWarnings   = [System.Collections.Generic.List[object]]::new()
+$pathMisses     = [System.Collections.Generic.List[object]]::new()
+$stalePaths     = [System.Collections.Generic.List[object]]::new()
+$siblingWarns   = [System.Collections.Generic.List[object]]::new()
 $checked        = 0
 $external       = 0
+$spanPaths      = 0
 
-# Links that resolve outside this repo (../../TmoPro/..., ../../TmoDocs/..., a
+# Links that resolve outside this repo (../../<product-repo>/..., a
 # sibling's .cursor) point at repos cloned beside this one. Whether they resolve
 # depends on the developer's workspace layout, and on CI nothing but this repo is
 # checked out -- so they are out of scope rather than broken.
@@ -89,6 +106,58 @@ function Test-InsideRepo {
 
 $docs = @(Get-ChildItem -LiteralPath $RootFull -Recurse -File -Include '*.md', '*.mdc', '*.markdown' -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' })
+
+# --- 4. inline code paths: setup --------------------------------------------
+# A backticked path is a pointer the model follows just like a link. A span is checked
+# when it starts with this folder's own name (`<this folder>/`), with a folder only this
+# repo has, or with hooks/ or scripts/ plus one of this repo's own subfolders (other repos
+# have hooks/ and scripts/ too, so a bare `scripts/setup.ps1` may be a product repo's).
+# Spans that start with a repo from profile.json are checked against the workspace and only
+# warn. Everything else in backticks is code or prose. Matching is case-sensitive:
+# `Scripts/x` in a product repo is not this repo's scripts/.
+$selfName = Split-Path $RootFull -Leaf
+$ownDirs = @('_shared', 'skills', 'agents', 'rules', 'environments', 'adapters', 'commands', 'output-styles')
+$sharedNameDirs = @{}
+foreach ($name in @('hooks', 'scripts')) {
+    $p = Join-Path $RootFull $name
+    $sharedNameDirs[$name] = @(Get-ChildItem -LiteralPath $p -Directory -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+}
+$siblingRepos = @()
+# Repos this folder sits beside (repos[].path is not '.'): a path <Repo>/<this folder>/ is wrong.
+$besideRepos = @()
+$profilePath = Join-Path $RootFull 'profile.json'
+if (Test-Path -LiteralPath $profilePath) {
+    try {
+        $profileJson = Get-Content -LiteralPath $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($profileJson.PSObject.Properties.Name -contains 'repos') {
+            $siblingRepos = @($profileJson.repos | ForEach-Object { $_.name } | Where-Object { $_ })
+            $besideRepos = @($profileJson.repos | Where-Object {
+                $_.name -and -not (($_.PSObject.Properties.Name -contains 'path') -and ([string]$_.path).Trim() -in @('.', './', ''))
+            } | ForEach-Object { $_.name })
+        }
+    } catch { $siblingRepos = @(); $besideRepos = @() }
+}
+$ticketSpanPattern = [regex]::Escape($ticketPrefix) + '(\d|\*)'
+$workspaceFull = Split-Path $RootFull -Parent
+$fencePattern = '(?ms)^[ \t]*(```|~~~).*?^[ \t]*\1[ \t]*\r?$'
+$spanPattern  = '`([^`\r\n]+)`'
+
+# The path inside one inline code span, or $null when the span is not a checkable path.
+function Get-SpanPath {
+    param([string]$Span)
+    $s = $Span.Trim()
+    if ($s -match '\s') {
+        # A command line: check only its first token, and only when it names a file.
+        $s = ($s -split '\s+')[0]
+        if ($s -notmatch '\.(ps1|md|mdc|markdown|json|js|psd1)$') { return $null }
+    }
+    $s = $s -replace '\\', '/' -replace '^\./', '' -replace '[,;:.)]+$', ''
+    $s = ($s -split '#')[0] -replace ':\d+(-\d+)?$', ''
+    if ($s -notmatch '/') { return $null }
+    if ($s -match '[<>{}$%|"''()\[\]]|\.\.\.|…|#|^https?:|^[A-Za-z]:/|^/|^\.\./') { return $null }
+    if ($s -match $ticketSpanPattern) { return $null }  # per-ticket files are user-local
+    return $s.TrimEnd('/')
+}
 
 foreach ($doc in $docs) {
     $relative = ($doc.FullName.Substring($RootFull.Length).TrimStart('\', '/') -replace '\\', '/')
@@ -105,6 +174,48 @@ foreach ($doc in $docs) {
     $isStub  = $text -match '(?m)^Canonical:'
     $isIndex = [IO.Path]::GetFileName($relative) -in @('README.md', 'README.markdown', 'INDEX.md')
 
+    # --- 4. inline code paths ---------------------------------------------------
+    $prose = [regex]::Replace($text, $fencePattern, '')
+    foreach ($sm in [regex]::Matches($prose, $spanPattern)) {
+        $path = Get-SpanPath $sm.Groups[1].Value
+        if (-not $path) { continue }
+        $segments = @($path -split '/')
+        $first = $segments[0]
+        $prefixed = $first -ceq $selfName
+        if ($prefixed) {
+            $segments = @($segments | Select-Object -Skip 1)
+            if (-not $segments.Count) { continue }
+            $first = $segments[0]
+            $path = $segments -join '/'
+        }
+        if (-not $prefixed -and $first -cin $siblingRepos) {
+            if ($segments.Count -gt 1 -and $segments[1] -ceq $selfName -and $first -cin $besideRepos) {
+                $stalePaths.Add([pscustomobject]@{ File = $relative; Path = $sm.Groups[1].Value; Why = "$selfName is a sibling of $first, not inside it" })
+                continue
+            }
+            if (-not (Test-Path -LiteralPath (Join-Path $workspaceFull $first))) { continue }  # not cloned here (CI)
+            if ($path.Contains('**')) { continue }  # recursive globs are scan patterns, not pointers
+            $spanPaths++
+            # Repo-relative spans are written two ways: <Repo>/<path>, or a repo whose code
+            # sits in a same-named inner folder (<Repo>/<Repo>/<path>).
+            $rest = ($segments | Select-Object -Skip 1) -join '/'
+            $candidates = @($path, "$first/$first/$rest")
+            $hit = $candidates | Where-Object { Test-Path -Path (Join-Path $workspaceFull ($_ -replace '/', [IO.Path]::DirectorySeparatorChar)) }
+            if (-not $hit) { $siblingWarns.Add([pscustomobject]@{ File = $relative; Path = $path }) }
+            continue
+        }
+        if ($first -ceq 'plans') { continue }  # user-local ticket files
+        $own = $prefixed -or ($first -cin $ownDirs) -or
+            ($sharedNameDirs.ContainsKey($first) -and $segments.Count -gt 2 -and ($segments[1] -cin $sharedNameDirs[$first]))
+        if (-not $own) { continue }
+        $spanPaths++
+        $full = Join-Path $RootFull ($path -replace '/', [IO.Path]::DirectorySeparatorChar)
+        $nearDoc = Join-Path $dir ($path -replace '/', [IO.Path]::DirectorySeparatorChar)
+        if (-not (Test-Path -Path $full) -and ($prefixed -or -not (Test-Path -Path $nearDoc))) {
+            $pathMisses.Add([pscustomobject]@{ File = $relative; Path = $path; Span = $sm.Groups[1].Value })
+        }
+    }
+
     foreach ($m in [regex]::Matches($text, $linkPattern)) {
         $label  = $m.Groups[1].Value
         $target = $m.Groups[2].Value
@@ -116,6 +227,14 @@ foreach ($doc in $docs) {
         if ($targetPath) {
             $resolved = [IO.Path]::GetFullPath([IO.Path]::Combine($dir, ($targetPath -replace '/', [IO.Path]::DirectorySeparatorChar)))
             if (-not (Test-InsideRepo $resolved)) {
+                # A link into <Sibling>/<this folder>/... is a bad find-and-replace, never a
+                # layout difference: this folder sits beside that repo, not inside it.
+                $wsRel = if ($resolved.StartsWith($workspaceFull)) { $resolved.Substring($workspaceFull.Length).TrimStart('\', '/') -replace '\\', '/' } else { '' }
+                $wsSeg = @($wsRel -split '/')
+                if ($wsSeg.Count -gt 1 -and $wsSeg[0] -cin $besideRepos -and $wsSeg[1] -ceq $selfName) {
+                    $stalePaths.Add([pscustomobject]@{ File = $relative; Path = $target; Why = "$selfName is a sibling of $($wsSeg[0]), not inside it" })
+                    continue
+                }
                 $external++
                 continue
             }
@@ -140,7 +259,7 @@ foreach ($doc in $docs) {
         # cycle. Only a MUTUAL pair does, so collect candidates here and decide
         # after every doc has been read.
         # Only this workspace's own skills/ tree — a link into a tracked repo's
-        # .cursor (e.g. TmoPro/.cursor/skills/...) is a cross-repo reference.
+        # .cursor (e.g. <product-repo>/.cursor/skills/...) is a cross-repo reference.
         if ($relative -like '_shared/*' -and -not $isStub -and -not $isIndex -and $targetPath) {
             $tierResolved = [IO.Path]::GetFullPath([IO.Path]::Combine($dir, ($targetPath -replace '/', [IO.Path]::DirectorySeparatorChar)))
             $skillsRoot = [IO.Path]::GetFullPath([IO.Path]::Combine($Root, 'skills'))
@@ -179,7 +298,24 @@ foreach ($c in $tierCandidates) {
     }
 }
 
-$hardFailures = $brokenTargets.Count + $staleLabels.Count + $tierWarnings.Count
+# A missing in-repo path that git ignores is a runtime file (scripts/.hook-errors.log,
+# a launcher state file): documented on purpose, absent on a clean checkout.
+if ($pathMisses.Count) {
+    $ignored = @()
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        # Paths as arguments, not --stdin: a PowerShell pipe to a native command ends each
+        # line with CRLF, and git then looks for a name ending in '\r'.
+        $missPaths = @($pathMisses | ForEach-Object { $_.Path } | Sort-Object -Unique)
+        $ignored = @(& git -C $RootFull check-ignore --no-index -- @missPaths 2>$null | ForEach-Object { $_ -replace '\\', '/' })
+    }
+    foreach ($miss in $pathMisses) {
+        if ($ignored -notcontains $miss.Path) {
+            $stalePaths.Add([pscustomobject]@{ File = $miss.File; Path = $miss.Span; Why = 'no such file or folder in this repo' })
+        }
+    }
+}
+
+$hardFailures = $brokenTargets.Count + $staleLabels.Count + $tierWarnings.Count + $stalePaths.Count
 
 if ($brokenTargets.Count) {
     Write-Host "[FAIL] $($brokenTargets.Count) broken link target(s):" -ForegroundColor Red
@@ -199,8 +335,18 @@ if ($tierWarnings.Count) {
     Write-Host "  Contracts are hubs: let the phase doc point up at the contract, not both ways."
 }
 
+if ($stalePaths.Count) {
+    Write-Host "[FAIL] $($stalePaths.Count) stale code path(s) — a backticked path that does not exist:" -ForegroundColor Red
+    foreach ($v in $stalePaths) { Write-Host ("  {0,-58} ``{1}`` ({2})" -f $v.File, $v.Path, $v.Why) }
+}
+
+if ($siblingWarns.Count) {
+    Write-Host "[WARN] $($siblingWarns.Count) sibling-repo path(s) not found in this workspace (advisory; CI cannot check them):" -ForegroundColor Yellow
+    foreach ($v in $siblingWarns) { Write-Host ("  {0,-58} ``{1}``" -f $v.File, $v.Path) }
+}
+
 if ($hardFailures -eq 0) {
-    Write-Host "[PASS] Doc links: $checked file(s) checked, all targets and labels resolve, no tier cycles." -ForegroundColor Green
+    Write-Host "[PASS] Doc links: $checked file(s) checked, all targets, labels, and $spanPaths code path(s) resolve, no tier cycles." -ForegroundColor Green
     if ($external) {
         Write-Host "       ($external link(s) into sibling repos not checked — they depend on workspace layout.)"
     }

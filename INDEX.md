@@ -12,7 +12,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [MACHINE-SETUP.md](MACHINE-SETUP.md) | new laptop; bootstrap; IDE plugin install | setup, pwsh, hooks, Claude Code, Codex |
 | [TEMPLATE.md](TEMPLATE.md) | maintaining the template: core vs overlay | core, overlay, versioning, porting |
 | [AGENTS.md](AGENTS.md) | agent routing, subagent functions, domain router | agents, routing, engineering mode |
-| [profile.json](profile.json) | repos, tracker, prefix, stack command, slash list | repos, ticketSystem, ticketPrefix, slashCommands |
+| [profile.json](profile.json) | repos, tracker, prefix, stack command, slash list | repos, ticketSystem, ticketPrefix, slashCommands, uiGlobs |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | attribution for adapted ideas | notices, license |
 
 ## Contracts (`_shared/`)

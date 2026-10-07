@@ -1,10 +1,13 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     List working-tree paths /review-changes may stage for one repo.
 
 .DESCRIPTION
     Candidates are staged, unstaged, and untracked files. Denied paths are
-    secret-shaped names. This script does not git add or restore. A product
+    secret-shaped names, and secret-shaped content (a ClearTextPassword, a
+    password= value, an Azure DevOps PAT, a private key) in the lines this
+    change adds. This script does not git add or restore. A product
     customize may add its own deny paths in its copy of this script.
     The playbook stages after review.
 
@@ -47,6 +50,48 @@ function Get-DenyReason {
     return $null
 }
 
+# Matched against ADDED lines only (or a whole untracked file), so a placeholder
+# already committed upstream never blocks an unrelated edit to the same file.
+# A launcher that writes a feed token into a tracked NuGet.Config is caught this way.
+$SecretContentPatterns = @(
+    'ClearTextPassword'
+    '(?i)\bpassword\s*=\s*[^;"''\s<>$%{}]{4,}'
+    '\b[a-z2-7]{52}\b'                            # Azure DevOps PAT (legacy 52-char)
+    '\b[A-Za-z0-9]{76}AZDO[A-Za-z0-9]{4}\b'       # Azure DevOps PAT (84-char)
+    '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+)
+
+function Test-SecretText {
+    param([string[]]$Lines)
+    foreach ($line in $Lines) {
+        foreach ($pattern in $SecretContentPatterns) {
+            if ($line -match $pattern) { return $true }
+        }
+    }
+    return $false
+}
+
+function Get-SecretContentReason {
+    param([string]$Path, [string]$Status)
+    if ($Status.Contains('D')) { return $null }
+    $full = Join-Path $RepoPath $Path
+    if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { return $null }
+    if ((Get-Item -LiteralPath $full).Length -gt 1MB) { return $null }
+
+    if ($Status -eq '??') {
+        $text = [IO.File]::ReadAllText($full)
+        if ($text.IndexOf([char]0) -ge 0) { return $null }  # binary
+        $lines = $text -split "`r?`n"
+    } else {
+        # Staged plus unstaged edits against HEAD, added lines only.
+        $diff = @(& git -C $RepoPath diff HEAD --no-color --no-ext-diff -U0 -- $Path 2>$null)
+        $lines = @($diff | Where-Object { $_.StartsWith('+') -and -not $_.StartsWith('+++') } |
+            ForEach-Object { $_.Substring(1) })
+    }
+    if (Test-SecretText $lines) { return 'secret-shaped content' }
+    return $null
+}
+
 if (-not (Test-Path -LiteralPath $RepoPath)) {
     throw "Repo path not found: $RepoPath"
 }
@@ -75,6 +120,7 @@ foreach ($line in $lines) {
     if (-not $path -or $seen.ContainsKey($path)) { continue }
     $seen[$path] = $true
     $reason = Get-DenyReason $path
+    if (-not $reason) { $reason = Get-SecretContentReason -Path $path -Status $line.Substring(0, 2) }
     if ($reason) {
         $denied.Add([pscustomobject]@{ path = $path; reason = $reason })
     } else {

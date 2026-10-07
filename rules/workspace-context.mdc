@@ -10,5 +10,5 @@ alwaysApply: true
 - Search from the **affected repo path**. Wide Grep/Glob from the workspace root can time out on
   large monorepos.
 
-Full map: load `_shared/workspace-context.md` (included in ticket-router `docSet` for multi-repo
-tickets). Do not load it for single-repo tickets.
+Full map: `profile.json` `repos[]` plus the matching cards under `environments/` (the
+ticket-router `docSet` names them for multi-repo tickets). Do not load them for single-repo tickets.

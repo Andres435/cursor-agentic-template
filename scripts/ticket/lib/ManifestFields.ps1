@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Shared helpers for reviewReady stamps, staged fingerprints, ctxPct, and
@@ -7,6 +8,8 @@
 #>
 
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot 'TicketPrefix.ps1')
 $ErrorActionPreference = 'Stop'
 
 function Get-TicketKeyFromRaw {
@@ -14,15 +17,7 @@ function Get-TicketKeyFromRaw {
     $digits = $Ticket -replace '[^\d]', ''
     if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
     if ($Ticket -match '^(?<pre>[A-Za-z]+-?)\d') { return $Matches['pre'] + $digits }
-    $prefix = 'TICKET-'
-    $profile = Join-Path (Get-CursorRepoRoot -FromScriptRoot $PSScriptRoot) 'profile.json'
-    if (Test-Path -LiteralPath $profile) {
-        try {
-            $p = Get-Content -LiteralPath $profile -Raw | ConvertFrom-Json
-            if ($p.ticketPrefix) { $prefix = [string]$p.ticketPrefix }
-        } catch { }
-    }
-    return $prefix + $digits
+    return (Get-TicketPrefix) + $digits
 }
 
 # Open = never closed, or reopened and not yet re-closed (a reopen keeps completedAtUtc).
@@ -284,6 +279,35 @@ function Test-ReviewVerdict {
     param([AllowNull()][AllowEmptyString()][string]$Verdict)
     $v = ([string]$Verdict).Replace('*', '').Trim()
     return ($v -in @('Ready', 'Ready with fixes', 'No change'))
+}
+
+# Count stored finding lines by severity. A line starts with its label, optionally
+# bolded or bracketed: "Major: ...", "**Blocker** ...", "[Major] ...".
+function Get-FindingCounts {
+    param($Findings)
+    $counts = @{ Blocker = 0; Major = 0 }
+    foreach ($line in @($Findings)) {
+        if ([string]$line -match '^\W*(Blocker|Major)\b') { $counts[$Matches[1]]++ }
+    }
+    return $counts
+}
+
+# The verdict a repo's findings allow (severity-and-output.md "Verdict rules"), or $null
+# when the pair is consistent. Any Blocker is Not ready; any Major is not Ready.
+function Get-VerdictFindingConflict {
+    param([AllowNull()][AllowEmptyString()][string]$Verdict, $Findings)
+    $v = ([string]$Verdict).Replace('*', '').Trim()
+    $c = Get-FindingCounts $Findings
+    if ($c.Blocker -and $v -ne 'Not ready') {
+        return "$($c.Blocker) Blocker finding(s) mean the verdict is Not ready, not '$v'"
+    }
+    if ($c.Major -and $v -eq 'Ready') {
+        return "$($c.Major) Major finding(s) mean the verdict is Ready with fixes or Not ready, not Ready"
+    }
+    if (($c.Blocker + $c.Major) -and $v -eq 'No change') {
+        return "'No change' cannot carry Blocker/Major findings"
+    }
+    return $null
 }
 
 # A merge commit after the stamp whose tree is not a clean merge of its two parents

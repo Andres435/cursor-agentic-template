@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Record the engineering-mode lane mix on the ticket manifest.

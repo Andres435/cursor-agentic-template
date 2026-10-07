@@ -5,13 +5,18 @@ Day-to-day ticket workflow for humans. Agents: [AGENTS.md](AGENTS.md). First clo
 `/onboard` for the machine script ([MACHINE-SETUP.md](MACHINE-SETUP.md)). After that, commands run
 from the profile and do not re-ask for repos or start commands.
 
+Terms (manifest, tier, lane, receipt, Drive): [glossary](_shared/glossary.md).
+
 Branch mode is three chats. `/start-ticket`, `/review-changes`, and `/complete-task` each load their playbook and the tier contract.
 
 | Chat | Type | Done when |
 | --- | --- | --- |
-| 1 | `/start-ticket <ticket> bug\|feature\|spike` | The change is in the working tree. |
+| 1 | `/start-ticket <ticket> bug\|feature\|spike\|refactor` | The change is in the working tree. |
 | 2 | `/review-changes` | Clean ticket files are staged and the set has a verdict. |
 | 3 | `/complete-task`, then `/prep-pr` after you approve | Only the actions you approved ran. |
+
+If `/review-changes` reports a Blocker or Major, fix it (in any chat) and run `/review-changes`
+again before `/complete-task`; close fails while a review stamp still records one.
 
 `/start-stack` runs the local apps. It is not a chat. If chat 1 runs out of context, open a fresh
 chat and type `/implement <ticket>`: the approved plan is already on disk.
@@ -34,7 +39,7 @@ the manifest as `priorFindings`, at most eight. The plan names each id and what 
 
 ```text
 Chat 1 — Plan and build
-  /start-ticket <ticket> bug|feature|spike
+  /start-ticket <ticket> bug|feature|spike|refactor
   Deep tier drafts the plan. Question it; it revises only the section you asked about.
   Say "approved" in chat. Approval is that statement, never an IDE button.
   It writes the plan, then builds in this same chat. Each Work Plan step's [low]|[med]|[high]
@@ -56,8 +61,12 @@ Chat 3 — Close
 Later PR feedback: new chat, `/address-pr-comments <ticket>`. A coworker's PR: `/peer-review <id>`.
 
 **Close gate.** Close fails until each affected repo has a passing verify receipt and a review stamp
-whose reviewed work is still what got committed. A base-branch merge before push is fine. Any
-other commit after the review means `/review-changes` again. A spike skips both.
+whose reviewed work is still what got committed, with no open Blocker or Major. A base-branch merge
+before push is fine. Any other commit after the review means `/review-changes` again. When an
+affected repo has profile layer `frontend` and the change touches a `uiGlobs` file type, close also
+needs a Drive you confirmed passed (stack smoke Tested). A spike skips all three. `/prep-pr` runs
+the same work checks (`-Phase prepush`) before it commits, and the push hook runs them again on a
+branch that names the ticket.
 
 ### Engineering mode
 
@@ -86,7 +95,7 @@ ticket window, review, close. Later commands read the mode from the manifest.
 | Machine setup after the profile exists | `/onboard` |
 | Pin model routing for the chat | `/engineering-mode` |
 | Health check (profile, hooks, gates, lanes) | `/doctor` |
-| Start a ticket | `/start-ticket <ticket> bug\|feature\|spike` |
+| Start a ticket | `/start-ticket <ticket> bug\|feature\|spike\|refactor` |
 | Build the approved plan (resume / worktree) | `/implement <ticket>` |
 | Run the local apps | `/start-stack <ticket>` |
 | Give the stack to another ticket / stop it | `/swap-stack <ticket>` / `/stop-stack` |
@@ -107,7 +116,7 @@ ticket window, review, close. Later commands read the mode from the manifest.
 | `/review-changes` | Verdict on screen and `reviewReady` stamped | New chat `/complete-task` |
 | `/start-stack` | Script printed URLs, or `[FAIL]` after one recycle | You use the apps |
 | `/complete-task` | Approval package is on screen; verify receipt written | You approve, then `/prep-pr` |
-| `/prep-pr` | Only the actions you approved ran | Retrospective, then stop |
+| `/prep-pr` | Only the actions you approved ran; the work checks (`-Phase prepush`) passed before the first commit | Retrospective, then stop. Run in a fresh chat, it also does the close (retrospective, ledger row) |
 | `/peer-review` | Draft on screen; after approval, comments posted | Stop |
 
 ## Models (tiers)
@@ -132,7 +141,8 @@ inspect ports.
 
 The agent does not open the browser on its own. Ask for a smoke pass ("smoke test the UI"). It asks
 you whether it passed and stamps Tested only if you approve. Review and closeout show Never tested /
-Tested / Untested latest changes. Close never needs it.
+Tested / Untested latest changes. When an affected repo has profile layer `frontend` and the change
+touches a `uiGlobs` file type, close fails until that pass is Tested; otherwise you can skip it.
 
 ## Staging and review
 

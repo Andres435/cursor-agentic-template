@@ -79,12 +79,18 @@ stdin/stdout adapters for Claude's contract, wired by `hooks/hooks.json` (declar
 | Intent | Claude event | Script |
 |---|---|---|
 | Hydrate profile + ticket state at session start | `SessionStart` | `session-context.js` |
-| Deny user `plans/` files; ask for a ticket id on product commits | `PreToolUse` (`Bash`) | `git-commit-ticket.js` |
-| Run `Assert-AgenticFlow` before pushing this folder | `PreToolUse` (`Bash`) | `git-push-agentic-flow.js` |
+| Deny user `plans/` files; ask for a ticket id on product commits | `PreToolUse` (`Bash|PowerShell`) | `git-guard.js` → `git-commit-ticket.js` |
+| Run `Assert-AgenticFlow` before pushing this folder, and `Assert-TicketArtifacts -Phase prepush` before pushing a product branch that names a ticket | `PreToolUse` (`Bash|PowerShell`) | `git-guard.js` → `git-push-agentic-flow.js` |
 | Block direct closeout-file reads | `PreToolUse` (`Read`) | `closeout-read-guard.js` |
 | Nudge when the prompt starts with a ticket command | `UserPromptSubmit` | `ticket-command-nudge.js` |
 | Record measured context; re-hydrate after compact | `PreCompact` | `precompact-nudge.js` |
 | Record measured context from the transcript | `Stop` | `context-usage.js` |
+
+`git-guard.js` runs both git bridges in one node process (one start per shell call instead of
+two), exits at once when the command has no `git`, and keeps the stricter answer: a push deny
+beats a commit question in the same command. The PowerShell tool is matched too, so a commit or
+push run there is gated like one run through Bash. When a push bridge itself crashes on a push of
+this folder, it denies (fails closed) and logs to `scripts/.hook-errors.log`.
 
 Tests: `node adapters/claude/hooks/tests/claude-hooks.test.js`. It also fails if a Cursor hook has
 no Claude counterpart. Do not put Claude-only instructions in `AGENTS.md`.

@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Search prior ticket memory for compact lessons matching this ticket.
@@ -20,6 +21,9 @@
 .PARAMETER MaxResults
     Cap (default 8).
 
+.PARAMETER IndexPath
+    Override plans/closeout-index.md (tests).
+
 .EXAMPLE
     .\Search-CloseoutMemory.ps1 -Query "document download" -Repos app -Integration payments
 #>
@@ -29,7 +33,8 @@ param(
     [string]$Query = '',
     [string[]]$Repos = @(),
     [string]$Integration = '',
-    [int]$MaxResults = 8
+    [int]$MaxResults = 8,
+    [string]$IndexPath
 )
 
 Set-StrictMode -Version Latest
@@ -37,7 +42,7 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $PlansDir = Join-Path $RepoRoot 'plans'
-$IndexPath = Join-Path $PlansDir 'closeout-index.md'
+if (-not $IndexPath) { $IndexPath = Join-Path $PlansDir 'closeout-index.md' }
 
 if ($Repos.Count -eq 1 -and $Repos[0] -match ',') {
     $Repos = @($Repos[0] -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -70,20 +75,18 @@ $hits = @()
 
 if (Test-Path $IndexPath) {
     # Read ticket prefix so the row-pattern matches the configured format.
-    $prefixPat = 'WI'
-    $profilePath = Join-Path $RepoRoot 'profile.json'
-    if (Test-Path -LiteralPath $profilePath) {
-        try { $pc = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
-              if ($pc.ticketPrefix) { $prefixPat = [string]$pc.ticketPrefix } } catch { }
-    }
+    . (Join-Path (Join-Path $PSScriptRoot 'lib') 'TicketPrefix.ps1')
+    $prefixPat = Get-TicketPrefix -Root $RepoRoot
     $rowPattern = "^\|\s*$([regex]::Escape($prefixPat))\d+"
 
     Get-Content -Path $IndexPath | ForEach-Object {
         if ($_ -notmatch $rowPattern) { return }
         $score = Get-TermScore $_
         if ($score -le 0) { return }
-        $cols = $_.Trim().Trim('|') -split '\|' | ForEach-Object { $_.Trim() }
+        $cols = @($_.Trim().Trim('|') -split '\|' | ForEach-Object { $_.Trim() })
         if ($cols.Count -lt 3) { return }
+        # Ticket | Domain | Lesson | Status | Added. A superseded lesson is history, not advice.
+        if ($cols.Count -ge 4 -and $cols[3] -match '^(?i)superseded') { return }
         $hits += [pscustomobject]@{
             Ticket = $cols[0]
             Lesson = $cols[2]

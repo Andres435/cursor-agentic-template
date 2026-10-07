@@ -1,7 +1,8 @@
 # Machine setup
 
 One-time setup for a laptop that will run this workflow. Visual Studio, IIS, cloud CLIs, and
-product SDKs are not needed unless your project overlay adds them.
+product SDKs are not needed unless your project overlay adds them. Day-to-day ticket usage:
+[USER-MANUAL.md](USER-MANUAL.md). Terms: [glossary](_shared/glossary.md).
 
 ## 1. Folder layout
 
@@ -27,7 +28,7 @@ Repos and paths come from `profile.json`. Do not hardcode product names in core 
 | Tool | Why |
 |---|---|
 | Git | Repos, review fingerprints, the push gate |
-| PowerShell 7 (`pwsh`) | Ticket gates and Pester tests. Windows PowerShell 5.1 is not enough |
+| PowerShell 7 (`pwsh`) | Ticket gates, hooks, and Pester tests. Those scripts carry `#Requires -Version 7`; only the machine bootstrap (`scripts/machine/`, `scripts/lib/`) still runs on Windows PowerShell 5.1, so a new machine can run it before `pwsh` exists |
 | Node.js LTS | IDE hooks; `npx` starts most MCP servers |
 | One IDE: [Cursor](https://cursor.com), [Claude Code](https://claude.ai/code), or Codex | Loads the plugin |
 | `gh` (optional) | When `profile.ticketSystem` is `github-issues` |
@@ -66,6 +67,10 @@ Slash commands in Cursor: `scripts/machine/Install-UserCursorCommands.ps1` links
 
 `mcp.json` ships empty. Add the servers your tracker and tools need. Keep tokens in user
 environment variables, never in the file. Restart the IDE completely after setting a variable.
+Pin each `npx` server to a version (`some-mcp-server@1.2.3`, never `@latest`): `npx -y` runs fresh
+package code that holds your tokens, so a version should move only in a reviewed commit.
+`scripts/machine/Install-ClaudeAdapter.ps1 -Check` reports a workspace `.mcp.json` or `CLAUDE.md`
+that no longer matches this folder; a plain run replaces it and keeps the old copy as `*.previous`.
 
 ## 5. Models (tiers)
 
@@ -79,8 +84,8 @@ Policy is [_shared/model-routing.md](_shared/model-routing.md). Each IDE maps ti
 | Work Plan steps | fast / standard / deep by the step's `[low]` / `[med]` / `[high]` tag |
 | Subagents | fast or standard by role |
 
-After setup, run `/doctor --lanes` once and record what each tier honored in your IDE's
-`model-usage.md`.
+After setup, run `/doctor --lanes` once; it records what each tier honored in your user-local
+`adapters/<ide>/lane-probe.local.md`. The tracked `model-usage.md` changes only in a reviewed commit.
 
 ### Claude Code
 

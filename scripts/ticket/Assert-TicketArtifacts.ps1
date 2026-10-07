@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Verify that a ticket phase actually produced its required artifacts.
@@ -49,7 +50,12 @@
     Work item, with or without the ticket prefix (TICKET-42 or 42).
 
 .PARAMETER Phase
-    start | implement | close
+    start | implement | prepush | close
+
+    prepush runs the work checks of close (verify receipts, review stamps with no open
+    Blocker/Major, frontend Drive) and nothing that is written at close (timestamps,
+    ledger, context). prep-pr runs it before any commit, and the push gate runs it before
+    a <ticket> product branch is pushed, so unreviewed or untested work never leaves the machine.
 
 .PARAMETER Json
     Emit { phase, ticket, mode, pass, missing[], found[] } instead of human-readable lines.
@@ -67,7 +73,7 @@ param(
     [string]$Ticket,
 
     [Parameter(Mandatory)]
-    [ValidateSet('start', 'implement', 'close')]
+    [ValidateSet('start', 'implement', 'prepush', 'close')]
     [string]$Phase,
 
     # Override the repo root (for testing against fixtures).
@@ -81,18 +87,11 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'lib/ManifestFields.ps1')
 $script:ResolvedRepoPathsCache = $null
+$script:ResolveError = $null
+$script:LocalFalseRepos = @{}
 
-# Read ticket prefix from profile.json (default 'WI' for TMO).
-# This script does not dot-source _ServiceLauncherLib.ps1.
-function Get-TicketPrefix {
-    $p = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
-    if (Test-Path -LiteralPath $p) {
-        try { $c = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json
-              if ($c.ticketPrefix) { return [string]$c.ticketPrefix } } catch { }
-    }
-    return 'WI'
-}
-$_prefix = Get-TicketPrefix
+# Read ticket prefix from profile.json. This script does not dot-source _ServiceLauncherLib.ps1.
+$_prefix = Get-TicketPrefix   # lib/TicketPrefix.ps1, via ManifestFields.ps1
 
 $digits = $Ticket -replace '[^\d]', ''
 if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
@@ -274,6 +273,19 @@ function Test-PlanFile {
         if ($untaggedSteps.Count -gt 0) {
             $missing.Add("$($planFile.Name) -- Work Plan step(s) $($untaggedSteps -join ', ') missing a [low]|[med]|[high] tag (see ticket-plan-output.md)")
             return
+        }
+
+        # A bug plan is RED first (bug-fix.md section 5): its first step writes or runs the
+        # failing test, or says why there can be none. Checked at start only, like the digest,
+        # so a plan approved before this rule does not fail implement or close.
+        if ($CheckDigest -and $workType -eq 'bug') {
+            $first = $stepLines[0]
+            $red = ($first -replace '(?i)no-test:.*$', '') -match '(?i)\b(test|tests|spec|red|repro|reproduce|regression|characteri[sz]ation)\b'
+            $waived = $first -match '(?i)no-test:\s*\S.{9,}'
+            if (-not $red -and -not $waived) {
+                $missing.Add("$($planFile.Name) -- a bug plan's first Work Plan step must be RED (write or run the failing test) or say 'no-test: <reason>' (see skills/start-ticket/references/bug-fix.md section 5)")
+                return
+            }
         }
 
         if ($hasHighStep) {
@@ -460,7 +472,11 @@ function Get-CloseRepoNames {
         if ($props -notcontains 'repo') { continue }
         $name = [string]$entry.repo
         if (-not $name) { continue }
-        if (($props -contains 'local') -and ($null -ne $entry.local) -and -not [bool]$entry.local) { continue }
+        if (($props -contains 'local') -and ($null -ne $entry.local) -and -not [bool]$entry.local) {
+            $skipPath = if (($props -contains 'path') -and $entry.path) { [string]$entry.path } else { $null }
+            $script:LocalFalseRepos[$name] = $skipPath
+            continue
+        }
         $path = $null
         if (($props -contains 'path') -and $entry.path) { $path = [string]$entry.path }
         $list.Add([pscustomobject]@{ repo = $name; path = $path })
@@ -481,7 +497,10 @@ function Get-ResolvedRepoPaths {
     $ErrorActionPreference = 'Continue'
     try {
         $json = & $resolveScript -Ticket $Key -Json 2>$null
-        if ($LASTEXITCODE -ne 0 -or -not $json) { return $map }
+        if ($LASTEXITCODE -ne 0 -or -not $json) {
+            $script:ResolveError = "Resolve-TicketRoot.ps1 -Ticket $Key exited $LASTEXITCODE"
+            return $map
+        }
         $resolved = $json | ConvertFrom-Json
         foreach ($r in @($resolved.repos)) {
             if (-not $r) { continue }
@@ -490,9 +509,80 @@ function Get-ResolvedRepoPaths {
             if ($exists -and $r.path) { $map[[string]$r.repo] = [string]$r.path }
         }
     }
-    catch { }
+    catch {
+        # A failed lookup used to leave every repo as a JSON-only check. Close says so now.
+        $script:ResolveError = "Resolve-TicketRoot.ps1 failed: $($_.Exception.Message)"
+    }
     finally { $ErrorActionPreference = $prev }
     return $map
+}
+
+function Get-ProfileJson {
+    $profilePath = Join-Path $RepoRoot 'profile.json'
+    if (-not (Test-Path -LiteralPath $profilePath)) { return $null }
+    try { return (Get-Content -LiteralPath $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { return $null }
+}
+
+function Get-TicketBaseBranch {
+    $base = Get-ManifestField 'baseBranch'
+    if ($base) { return [string]$base }
+    $prof = Get-ProfileJson
+    if ($prof -and ($prof.PSObject.Properties.Name -contains 'baseBranchDefault') -and $prof.baseBranchDefault) {
+        return [string]$prof.baseBranchDefault
+    }
+    return 'main'
+}
+
+# Files this ticket changed in one repo: everything since the merge-base with the base
+# branch (origin/<base> first), plus staged, unstaged, and untracked files. $null when no
+# base resolves -- callers then keep their older, weaker check instead of guessing.
+function Get-WorkChangedFiles {
+    param([Parameter(Mandatory)][string]$RepoPath)
+    $base = Get-TicketBaseBranch
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $ref = $null
+        foreach ($candidate in @("origin/$base", $base)) {
+            & git -C $RepoPath rev-parse --verify --quiet "$candidate^{commit}" 2>$null | Out-Null
+            if ($LASTEXITCODE -eq 0) { $ref = $candidate; break }
+        }
+        if (-not $ref) { return $null }
+        $mb = (& git -C $RepoPath merge-base $ref HEAD 2>$null | Select-Object -First 1)
+        if ($LASTEXITCODE -ne 0 -or -not $mb) { return $null }
+        $files = @(& git -C $RepoPath diff --name-only $mb 2>$null) + @(& git -C $RepoPath ls-files --others --exclude-standard 2>$null)
+        return ,@($files | Where-Object { $_ } | ForEach-Object { $_ -replace '\\', '/' } | Sort-Object -Unique)
+    }
+    finally { $ErrorActionPreference = $prev }
+}
+
+function Test-DocsOnlyPath {
+    param([string]$Path)
+    foreach ($g in @('*.md', '*.markdown', '*.txt', 'docs/*', '*/docs/*')) { if ($Path -like $g) { return $true } }
+    return $false
+}
+
+# A spike skips verify, review, and the Drive. That is right for an investigation and an
+# escape hatch for anything else, so the tracker's item type (manifest ticket.adoType) has to agree.
+function Test-SpikeClassification {
+    $ticket = Get-ManifestField 'ticket'
+    $adoType = if ($ticket -and ($ticket.PSObject.Properties.Name -contains 'adoType')) { [string]$ticket.adoType } else { '' }
+    if ($adoType -in @('Bug', 'Issue', 'User Story', 'Product Backlog Item', 'Feature')) {
+        $missing.Add("$Key-manifest.json -- workType is spike but the work item is a $adoType; a spike skips verify, review, and the Drive. Re-run the router or set workType to match.")
+    }
+}
+
+# local:false means "not cloned here", so close skips the repo. A repo that is checked out
+# after all must be verified and reviewed like the rest.
+function Test-LocalFalseRepos {
+    $resolved = Get-ResolvedRepoPaths
+    foreach ($name in @($script:LocalFalseRepos.Keys)) {
+        $path = $script:LocalFalseRepos[$name]
+        if (-not $path -and $resolved.ContainsKey($name)) { $path = $resolved[$name] }
+        if ($path -and (Test-Path -LiteralPath $path)) {
+            $missing.Add("$Key-manifest.json -- affectedRepos.$name is local:false but it is checked out at $path; set local:true so close verifies and reviews it")
+        }
+    }
 }
 
 function Test-VerifyReceipt {
@@ -520,17 +610,34 @@ function Test-VerifyReceipt {
             $missing.Add("$label.repos.$($repo.repo).pass must be boolean true")
             continue
         }
+        $path = $repo.path
+        if (-not $path -and $resolved.ContainsKey($repo.repo)) { $path = $resolved[$repo.repo] }
+        $hasCheckout = $path -and (Test-Path -LiteralPath $path)
         if (($names -contains 'tests') -and ([string]$entry.tests -eq 'not-run')) {
             $why = if ($names -contains 'reason') { [string]$entry.reason } else { '' }
+            # "Not run" is honest only when there was nothing to test: a docs-only change.
+            if ($hasCheckout) {
+                $changedFiles = Get-WorkChangedFiles -RepoPath $path
+                $code = @($changedFiles | Where-Object { $_ -and -not (Test-DocsOnlyPath $_) })
+                if ($null -ne $changedFiles -and $code.Count) {
+                    $shown = ($code | Select-Object -First 3) -join ', '
+                    $missing.Add("$label.repos.$($repo.repo) -- tests not run ($why) but the change touches code ($shown); run verify-repo, then Set-VerifyReceipt.ps1")
+                    continue
+                }
+            }
             $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): tests not run: $why)")
             continue
         }
         # The receipt must describe the work that ships: same check as the review stamp.
-        # Receipts with no recorded work (no mode) or no checkout stay a JSON check.
-        $path = $repo.path
-        if (-not $path -and $resolved.ContainsKey($repo.repo)) { $path = $resolved[$repo.repo] }
-        if (-not (Get-StampEntryValue $entry 'mode') -or -not $path -or -not (Test-Path -LiteralPath $path)) {
+        # A receipt with no recorded work (no mode, from before receipts recorded it) stays a
+        # JSON check. On a real close a repo with no checkout fails: mark it local:false.
+        if (-not (Get-StampEntryValue $entry 'mode')) {
             $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass)")
+            continue
+        }
+        if (-not $hasCheckout) {
+            if ($Root) { $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): pass)"); continue }
+            $missing.Add("$label.repos.$($repo.repo) -- no checkout found for $($repo.repo), so the receipt cannot be checked against the work; check the path, or set affectedRepos local:false if it is not cloned here")
             continue
         }
         $check = Test-ReviewedWorkPresent -RepoPath $path -Entry $entry
@@ -567,6 +674,15 @@ function Test-ReviewFingerprints {
             $missing.Add("$label.verdict is '$verdict' -- needs Ready, Ready with fixes, or No change")
             continue
         }
+        # Ready with fixes means Minor/Nit work is left. A recorded Major (or Blocker) means
+        # the reviewed work is not done: fix it, then re-run /review-changes so a new stamp
+        # covers the fixed work (severity-and-output.md, Verdict rules).
+        $entryFindings = @(if ($entry.PSObject.Properties.Name -contains 'findings') { $entry.findings })
+        $open = Get-FindingCounts $entryFindings
+        if ($open.Blocker -or $open.Major) {
+            $missing.Add("$label has $($open.Blocker) Blocker and $($open.Major) Major finding(s) open -- fix them, then re-run /review-changes so the stamp covers the fixed work")
+            continue
+        }
         $mode = Get-StampEntryValue $entry 'mode'
         if (-not $mode) { $mode = $stampMode }
         $noChange = ($verdict.Replace('*', '').Trim() -eq 'No change')
@@ -585,7 +701,10 @@ function Test-ReviewFingerprints {
         $path = $repo.path
         if (-not $path -and $resolved.ContainsKey($repo.repo)) { $path = $resolved[$repo.repo] }
         if (-not $path -or -not (Test-Path -LiteralPath $path)) {
-            $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo): $verdict)")
+            # Fixture runs (-Root) stay a JSON check; a real close needs the checkout to
+            # prove the reviewed work is what ships.
+            if ($Root) { $found.Add("$Key-manifest.json (reviewReady.repos.$($repo.repo): $verdict)"); continue }
+            $missing.Add("$label -- no checkout found for $($repo.repo), so the stamp cannot be checked against the work; check the path, or set affectedRepos local:false if it is not cloned here")
             continue
         }
         $check = Test-ReviewedWorkPresent -RepoPath $path -Entry $entry -StampMode $stampMode
@@ -631,6 +750,27 @@ function Test-UiEvidence {
     foreach ($name in $hit) {
         if ((-not $paths.ContainsKey($name)) -and $resolved.ContainsKey($name)) { $paths[$name] = $resolved[$name] }
     }
+    # The Drive is for UI changes, not for every change in a repo that has a UI: a
+    # backend-only fix in a repo that also serves pages has nothing to Drive. profile.uiGlobs
+    # names the UI file types; a repo whose changed files match none of them is exempt.
+    # With no uiGlobs, or no base to diff against, the repo still needs the Drive.
+    $prof = Get-ProfileJson
+    $uiGlobs = @(if ($prof -and ($prof.PSObject.Properties.Name -contains 'uiGlobs')) { $prof.uiGlobs })
+    if ($uiGlobs.Count) {
+        $exempt = @()
+        foreach ($name in $hit) {
+            if (-not $paths.ContainsKey($name) -or -not (Test-Path -LiteralPath $paths[$name])) { continue }
+            $changedFiles = Get-WorkChangedFiles -RepoPath $paths[$name]
+            if ($null -eq $changedFiles) { continue }
+            $ui = @($changedFiles | Where-Object { $f = $_; @($uiGlobs | Where-Object { $f -like $_ }).Count })
+            if (-not $ui.Count) { $exempt += $name }
+        }
+        if ($exempt.Count) {
+            $found.Add("$Key-manifest.json (stackSmoke not required: no UI files changed in $($exempt -join ', '))")
+            $hit = @($hit | Where-Object { $exempt -notcontains $_ })
+            if (-not $hit.Count) { return }
+        }
+    }
     $decision = Get-StackSmokeDecision -Stamp $stamp -RepoPaths $paths
     if ($decision.effective -eq 'passed') {
         $found.Add("$Key-manifest.json (stackSmoke: Tested, $($hit -join ', '))")
@@ -640,7 +780,13 @@ function Test-UiEvidence {
 }
 
 function Test-CloseWork {
-    if ($workType -eq 'spike') { return }
+    if ($workType -eq 'spike') { Test-SpikeClassification; return }
+    $null = Get-CloseRepoNames   # records local:false entries
+    $null = Get-ResolvedRepoPaths
+    if (-not $Root -and $script:ResolveError) {
+        $missing.Add("repo paths -- $($script:ResolveError); close cannot compare receipts and stamps with the work. Fix Resolve-TicketRoot, then re-run.")
+    }
+    Test-LocalFalseRepos
     Test-VerifyReceipt
     Test-ReviewFingerprints
     Test-UiEvidence
@@ -674,6 +820,10 @@ switch ($Phase) {
     'implement' {
         Test-Manifest 'run /start-ticket first, or re-run its router step'
         Test-PlanFile
+    }
+    'prepush' {
+        Test-Artifact "$Key-manifest.json" 'drives verify/review fan-out' | Out-Null
+        Test-CloseWork
     }
     'close' {
         Test-Artifact "$Key-manifest.json" 'drives verify/review fan-out' | Out-Null

@@ -7,7 +7,8 @@ model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specific
 
 **Day-to-day usage:** [USER-MANUAL.md](USER-MANUAL.md). **First clone:** [CUSTOMIZE.md](CUSTOMIZE.md).
 **New laptop:** [MACHINE-SETUP.md](MACHINE-SETUP.md). **Maintainers:** [TEMPLATE.md](TEMPLATE.md)
-(core vs overlay). **Finding a doc:** [INDEX.md](INDEX.md).
+(core vs overlay). **Finding a doc:** [INDEX.md](INDEX.md). **Terms** (manifest, tier, lane,
+receipt): [glossary](_shared/glossary.md).
 
 > Place this folder at `<your-app>/.cursor`, or at `source/repos/.cursor` (or any sibling name) in a
 > multi-repo workspace. Paths in the docs are relative to this folder.
@@ -22,8 +23,10 @@ model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specific
   lanes. Small `Set-*` scripts write it; no step writes a side file.
 - **Mechanical gates:** `scripts/ticket/Assert-TicketArtifacts.ps1` checks each phase. The close
   gate needs a passing verify result per repo (`Set-VerifyReceipt.ps1`) and a review stamp
-  (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed. A clean base-branch
-  merge is fine. A merge that contains its own edits, or any later commit, means review again.
+  (`Set-ReviewReady.ps1`) whose reviewed work is still what got committed, with no open Blocker or
+  Major. A clean base-branch merge is fine. A merge that contains its own edits, or any later
+  commit, means review again. `-Phase prepush` runs the same work checks before `/prep-pr` commits,
+  and the push gate runs them on a product branch that names the ticket.
 - **Routing and tiers:** `ticket-router` writes a manifest so later steps load only the docs the
   ticket needs. Work runs on fast / standard / deep / frontier tiers
   ([_shared/model-routing.md](_shared/model-routing.md)). Engineering mode routes each step to its
@@ -31,8 +34,10 @@ model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specific
 - **Hooks, written once:** `hooks/core/` holds session context, the commit guard, the push gate,
   the ticket nudge, the closeout guard, and context usage. IDE adapters call it. Swallowed hook
   errors go to `scripts/.hook-errors.log`, and `/doctor` warns when it is not empty.
-- **Optional stack smoke:** `/start-stack` runs `profile.stacks.startCommand`. A smoke pass you ask
-  for is stamped with `Set-StackSmoke.ps1` and shown at review and closeout. It never blocks close.
+- **Stack smoke:** `/start-stack` runs `profile.stacks.startCommand`. A smoke pass (a Drive) you
+  ask for is stamped with `Set-StackSmoke.ps1` and shown at review and closeout. It is a close gate
+  only when an affected repo has profile layer `frontend` and the change touches a
+  `profile.uiGlobs` file type.
 - **Retrospective ledger:** each close leaves one row in `plans/ticket-ledger.md` (user-local),
   with E / C / $tok scores, measured context %, lanes, and the workflow epoch.
 
@@ -46,13 +51,13 @@ model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specific
 4. Run tickets:
 
 ```text
-Chat 1  /start-ticket <ticket> bug|feature|spike   → approve plan → build in this chat
+Chat 1  /start-ticket <ticket> bug|feature|spike|refactor   → approve plan → build in this chat
 Chat 2  /review-changes
 Chat 3  /complete-task → /prep-pr
 ```
 
-Branch mode is three chats. Worktree mode (`--worktree`, only when `profile.worktreeSupported`)
-adds `/implement` in the ticket window. Those ticket commands load the tier contract on their own.
+Worktree mode (`--worktree`, only when `profile.worktreeSupported`) adds `/implement` in the
+ticket window. Chat counts per mode and full steps: [USER-MANUAL.md](USER-MANUAL.md). Those ticket commands load the tier contract on their own.
 Pin engineering mode for ad-hoc work, or for a long chat.
 
 ## Folder map
@@ -101,6 +106,13 @@ scripts/Assert-DocBudget.ps1 -WarnOnly  # line budgets only
 Human docs (`README.md`, `USER-MANUAL.md`, `MACHINE-SETUP.md`, `CUSTOMIZE.md`) and `AGENTS.md` are
 exempt. Before adding any always-on doc or MCP tool, read the token-class law in
 [_shared/severity-and-output.md](_shared/severity-and-output.md).
+
+**Docs stay true by check, not by care.** `Assert-DocLinks.ps1` fails a broken link and a
+backticked path into this folder that does not exist. Changing a gate, stamp script, hook, or
+lifecycle skill? Update the doc that describes it in the same branch, or add a commit trailer
+`Docs-Unaffected: <ruleId>: <why>` (`scripts/ticket/Assert-DocSync.ps1`). Changing a fact the docs
+state (what blocks close, chat counts, ...)? Edit its claim in `scripts/ticket/doc-claims.psd1`;
+the claim then fails any doc that still says the old thing.
 
 ## Upgrading core in a project
 

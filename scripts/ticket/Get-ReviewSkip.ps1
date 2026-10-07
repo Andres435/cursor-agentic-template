@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Decide whether /complete-task should skip review-diff per repo.

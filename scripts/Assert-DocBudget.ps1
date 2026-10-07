@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Growth gate for workflow documentation. Fails when any doc file exceeds its

@@ -7,7 +7,7 @@ This folder no longer holds slash entries. A command file whose name matches a s
 |---|---|
 | Fill profile, env card, and specialist on a new product | `/start-new-project` |
 | Pin for ad-hoc work or a long chat. Do not type it in the same message as a ticket command | `/engineering-mode` |
-| Start a ticket | `/start-ticket <id> bug\|feature\|spike` |
+| Start a ticket | `/start-ticket <id> bug\|feature\|spike\|refactor` |
 | Build in a fresh chat | `/implement <id>` |
 | Start, swap, or stop the local stack | `/start-stack`, `/swap-stack`, `/stop-stack` |
 | Review ticket files; stage the clean ones | `/review-changes` |
@@ -18,7 +18,9 @@ This folder no longer holds slash entries. A command file whose name matches a s
 | Health check | `/doctor` |
 | Machine setup | `/onboard` |
 
-Branch mode is three chats: `/start-ticket` (plan and build), `/review-changes`, `/complete-task`.
-`/implement` is only for a fresh chat. Plan shapes (`bug-fix`, `feature-plan`, `tech-spike`, `document-spike`) are not slash commands.
+Branch mode: `/start-ticket` (plan and build), `/review-changes`, `/complete-task`. Chat counts per
+mode: [USER-MANUAL.md](../USER-MANUAL.md). `/implement` is only for a fresh chat.
+Stack smoke (`Get-StackSmoke.ps1`) is a close gate when a frontend repo's change touches a
+`uiGlobs` file type (a user-confirmed Drive), and optional for the rest. Plan shapes (`bug-fix`, `feature-plan`, `tech-spike`, `document-spike`) are not slash commands.
 
 Icons: run `scripts/Install-UserCursorCommands.ps1`, then reload. Cursor paints badges on user skills, not on plugin copies.

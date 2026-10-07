@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   agentic-flow:
     runs-on: ${{ matrix.os }}
@@ -12,20 +15,38 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+
       - name: Assert agentic flow (fail-closed)
         shell: pwsh
+        env:
+          # Doc-sync base: a push compares against the previous head; a pull request uses
+          # GITHUB_BASE_REF (origin/<base>), which fetch-depth: 0 makes available.
+          DOCSYNC_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: ./scripts/ticket/Assert-AgenticFlow.ps1
 
       - name: Script Pester tests
         shell: pwsh
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
-          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0 -MaximumVersion 5.99.99
-          Invoke-Pester ./scripts/ticket,./scripts/lib,./scripts/worktree -Output Detailed -CI
+          Install-Module Pester -Force -Scope CurrentUser -RequiredVersion 5.9.1
+          Invoke-Pester ./scripts -Output Detailed -CI
+
+      # Advisory for now: findings print in the log and never fail the job. Raise to an error
+      # gate once the existing warnings are worked down.
+      - name: PSScriptAnalyzer (warn-only)
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -RequiredVersion 1.25.0
+          $found = @(Invoke-ScriptAnalyzer -Path ./scripts -Recurse -Severity Error,Warning)
+          $found | Format-Table -AutoSize RuleName, Severity, ScriptName, Line | Out-String -Width 200 | Write-Host
+          Write-Host "PSScriptAnalyzer: $($found.Count) finding(s), advisory"
 
       - name: Assert-TicketArtifacts fixture checks
         shell: pwsh
@@ -35,14 +56,17 @@ jobs:
           ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase implement -Root $fixture
           ./scripts/ticket/Assert-TicketArtifacts.ps1 -Ticket WI00001 -Phase close    -Root $fixture
 
-      - name: Hook smoke tests (Cursor)
+      # Every *.test.js runs, so a new test file cannot be left out of CI. Each file is
+      # its own runner (not node:test), hence one node process per file.
+      - name: Hook tests (core, Cursor and Claude bridges)
+        shell: pwsh
         run: |
-          node hooks/tests/closeout-guard.test.js
-          node hooks/tests/session-context.test.js
-          node hooks/tests/git-push-agentic-flow.test.js
-          node hooks/tests/ticket-command-nudge.test.js
-          node hooks/tests/commit-guard.test.js
-          node hooks/tests/context-usage.test.js
-
-      - name: Hook smoke tests (Claude Code bridges)
-        run: node adapters/claude/hooks/tests/claude-hooks.test.js
+          $files = @(Get-ChildItem hooks/tests, adapters/claude/hooks/tests -Filter *.test.js | Sort-Object FullName)
+          if (-not $files.Count) { throw 'No hook test files found' }
+          $failed = @()
+          foreach ($f in $files) {
+            Write-Host "== $($f.Name)"
+            node $f.FullName
+            if ($LASTEXITCODE -ne 0) { $failed += $f.Name }
+          }
+          if ($failed.Count) { throw "Hook tests failed: $($failed -join ', ')" }

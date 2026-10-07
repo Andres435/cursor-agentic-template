@@ -104,9 +104,9 @@ function parsesAsJson(text) {
 function runResolve(ticket) {
   const scriptPath = resolveScript();
   if (!fs.existsSync(scriptPath)) return null;
-  // pwsh first; Windows PowerShell only when pwsh is not installed, so a slow
-  // resolve can never run twice and outlast the hook timeout.
-  const shells = process.platform === "win32" ? ["pwsh", "powershell"] : ["pwsh"];
+  // PowerShell 7 only: every script carries #Requires -Version 7, and Windows PowerShell
+  // 5.1 misreads BOM-less UTF-8. Without pwsh the hook just has no resolve (MACHINE-SETUP.md).
+  const shells = ["pwsh"];
   for (const shell of shells) {
     try {
       const result = execFileSync(
@@ -133,7 +133,9 @@ function runResolve(ticket) {
  * manifest missing                       → "start-ticket"
  * manifest exists, no reviewReady stamp  → "review-changes"
  * reviewReady set, completedAtUtc null   → "complete-task"
- * completedAtUtc set                     → "closed"
+ * completedAtUtc set                     → "closed", unless reopened (reopenedAtUtc set and no
+ *                                          reclosedAtUtc): a reopen keeps completedAtUtc, so it
+ *                                          is open again and takes the rows above
  * TMO_PLANS_DIR overrides plans/ (tests).
  */
 function resolveNextAction(ticket) {
@@ -145,7 +147,8 @@ function resolveNextAction(ticket) {
     writeHookError("session-context", error);
     return "start-ticket";
   }
-  if (manifest.completedAtUtc) return "closed";
+  const reopened = manifest.reopenedAtUtc && !manifest.reclosedAtUtc;
+  if (manifest.completedAtUtc && !reopened) return "closed";
   if (manifest.reviewReady) return "complete-task";
   return "review-changes";
 }

@@ -62,4 +62,16 @@ Describe 'Update-TicketLedger column migration' {
         $text | Should -Match 'f1/s0/d0 inline:d2'
         $text | Should -Match 'CtxS on 1 of 1 scored branch rows'
     }
+
+    It 'refuses a free-text Lanes value and writes no row' {
+        $root = Join-Path $TestDrive 'lanes-free-text'
+        $plans = Join-Path $root 'plans'
+        New-Item -ItemType Directory -Path $plans -Force | Out-Null
+        $out = & $script:PwshHost -NonInteractive -NoProfile -File $script:LedgerScript `
+            -Root $root -Ticket TICKET-00003 -Type spike -Mode investigate -Efficiency 3 -Contextualization 3 -CostTokens 4 `
+            -Lanes 'opus x3 verify (deep)' 2>&1 | Out-String
+        $LASTEXITCODE | Should -Not -Be 0
+        $out | Should -Match 'is not fN/sN/dN'
+        Test-Path -LiteralPath (Join-Path $plans 'ticket-ledger.md') | Should -BeFalse
+    }
 }
