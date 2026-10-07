@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Stamp stackSmoke (a user-confirmed Drive) onto a ticket manifest.

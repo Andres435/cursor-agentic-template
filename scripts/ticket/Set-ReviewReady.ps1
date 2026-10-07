@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Stamp reviewReady (verdict + staged fingerprint) onto a ticket manifest.
@@ -133,6 +134,9 @@ foreach ($name in ($verdictMap.Keys | Sort-Object)) {
     }
     $where = if ($path) { $path } else { 'an unresolved path' }
     $entryVerdict = [string]$verdictMap[$name]
+    $entryFindings = @(if ($findingsMap.ContainsKey($name)) { $findingsMap[$name] })
+    $conflict = Get-VerdictFindingConflict -Verdict $entryVerdict -Findings $entryFindings
+    if ($conflict) { throw "$name`: $conflict (see _shared/severity-and-output.md, Verdict rules)." }
     $noChange = ($entryVerdict.Replace('*', '').Trim() -ieq 'No change')
     $fp = if ($path) { Get-StagedDiffFingerprint -RepoPath $path } else { $null }
     $headSha = if ($path) { Get-GitHeadSha -RepoPath $path } else { $null }
@@ -152,7 +156,7 @@ foreach ($name in ($verdictMap.Keys | Sort-Object)) {
         headSha     = $headSha
         fingerprint = $fp
         fpVersion   = 2
-        findings    = if ($findingsMap.ContainsKey($name)) { @($findingsMap[$name]) } else { @() }
+        findings    = $entryFindings
     }
     if ($null -ne $reposObj.PSObject.Properties[$name]) {
         $reposObj.$name = $entry

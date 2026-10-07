@@ -37,7 +37,11 @@ The work-type template supplies the content (`skills/start-ticket/references/bug
 
 Split a step larger than one lane can hold. `-Phase start` fails an untagged step, a `[high]`
 step with no `architect` line in Engineering Decisions, or a `priorFindings` id missing from that
-section.
+section. A bug plan's first step is RED or says `no-test: <reason>`.
+
+No customer data in a plan: name a customer, user, email, or account by its id or a role
+("the payee"), never by the real value. Plans get pasted into PRs, tracker comments, and chats.
+Link repo files by repo-relative path, not `C:\Users\...`.
 
 ### Plan digest
 
@@ -49,10 +53,10 @@ the gist without reading everything.
 - **Judgment calls:** <one clause per Engineering Decisions entry — or "None">
 - **Risk / blast radius:** <what could break — or "Low: <why>">; certainty H/M/L (bug: root cause, feature/refactor: design)
 - **ADRs followed:** <cite by number when adrIndex is set — or "N/A">
-- **Artifacts gate:** PASS (`scripts/Assert-TicketArtifacts.ps1 -Phase start`)
 ```
 
-Four lines, not four paragraphs. **Judgment calls** summarizes Engineering Decisions; on disagreement
+Three lines, not three paragraphs. The artifacts gate result is reported in chat when
+`/start-ticket` runs it; the plan never pre-states it. **Judgment calls** summarizes Engineering Decisions; on disagreement
 the section wins. Never edit the digest after approval; a changed intent is a new plan. An open
 decision stops the plan — do not persist TBD ([engineering-decisions.md](engineering-decisions.md)).
 

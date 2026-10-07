@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Record one repo's verify-repo result on the ticket manifest (manifest.verify).

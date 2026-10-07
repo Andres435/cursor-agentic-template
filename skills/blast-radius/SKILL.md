@@ -60,6 +60,10 @@ Below 4 the fact is **unproven**. Say so instead of writing it up as settled.
 5. **Prove the one fact** at level 4 when it is cheap: the nearest scoped test
    ([../../_shared/test-verification.md](../../_shared/test-verification.md)) or a small script
    against the real code. Paste the decisive output lines.
+   - **While planning** (read-only Plan mode, and no ad-hoc scripts per `AGENTS.md`): go only as far as
+     level 3, or level 4 by running a test that **already exists**. When the fact needs a new test,
+     write `proof: level 3; level 4 = <the test to write>` in Engineering Decisions and make that test
+     the plan's first step, so implementation proves it before it changes anything.
 
 ## Hand back
 

@@ -10,7 +10,9 @@
  *   allow everything else. Workflow-repo commits carry no ticket, so they are not asked.
  */
 
-const { gitCalls, workflowRoot, stagedUserPlans } = require("./git-target.js");
+const fs = require("fs");
+const path = require("path");
+const { gitCalls, workflowRoot, stagedUserPlans, unquote } = require("./git-target.js");
 const { detectTicket, loadProfile } = require("./session-context.js");
 
 const PLANS_RULE =
@@ -22,6 +24,32 @@ function forcedPlansPath(args) {
   const forced = tokens.some((t) => t === "-f" || t === "--force" || /^-[a-zA-Z]*f[a-zA-Z]*$/.test(t));
   if (!forced) return null;
   return tokens.find((t) => /^["']?(?:\.[\\/])?plans(?:[\\/]|["']?$)/.test(t)) || null;
+}
+
+const MESSAGE_FILE = /(?:^|\s)(?:-F|--file)(?:=|\s+)("[^"]+"|'[^']+'|\S+)/;
+
+/**
+ * True when this commit's own message names a work item (profile.ticketPrefix + digits): the
+ * -m/--message text, or the contents of a -F/--file message file, or for `-F -` the stdin text
+ * (heredoc / here-string) that follows the commit in the command. A ticket id in the directory
+ * (`cd .../<ticket> && git commit`) or the file path does not count.
+ */
+function messageNamesTicket(call, command, profile) {
+  const names = (text) => Boolean(detectTicket([text], profile));
+  const args = String(call.args || "");
+  const file = args.match(MESSAGE_FILE);
+  if (file && unquote(file[1]) === "-") {
+    const at = String(command || "").search(/\bcommit\b/i);
+    return at >= 0 && names(String(command).slice(at));
+  }
+  if (file) {
+    try {
+      if (names(fs.readFileSync(path.resolve(call.dir, unquote(file[1])), "utf8"))) return true;
+    } catch {
+      // unreadable message file: fall through to the inline message, if any
+    }
+  }
+  return names(args.replace(MESSAGE_FILE, " "));
 }
 
 function decide(event) {
@@ -51,9 +79,11 @@ function decide(event) {
   }
 
   // Product-repo commits name their ticket; workflow-repo commits have none to name.
-  const productCommit = commits.some((call) => !workflowRoot(call.dir));
+  const productCommits = commits.filter((call) => !workflowRoot(call.dir));
   const profile = loadProfile();
-  if (!productCommit || detectTicket([command], profile)) return { action: "allow" };
+  if (!productCommits.length || productCommits.every((call) => messageNamesTicket(call, command, profile))) {
+    return { action: "allow" };
+  }
 
   const cwdTicket = detectTicket([cwd], profile);
   const suggested = cwdTicket || String((profile && profile.ticketPrefix) || "WI") + "#####";

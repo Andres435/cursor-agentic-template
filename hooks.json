@@ -10,12 +10,12 @@
     "beforeShellExecution": [
       {
         "command": "node ./adapters/cursor/hooks/git-commit-ticket.js",
-        "matcher": "git(\\.exe)?\\s+(commit|add)\\b",
+        "matcher": "\\bgit(\\.exe)?\\b[^\\n]*\\b(commit|add)\\b",
         "timeout": 8
       },
       {
         "command": "node ./adapters/cursor/hooks/git-push-agentic-flow.js",
-        "matcher": "git(\\.exe)?\\s+push\\b",
+        "matcher": "\\bgit(\\.exe)?\\b[^\\n]*\\bpush\\b",
         "timeout": 120
       }
     ],

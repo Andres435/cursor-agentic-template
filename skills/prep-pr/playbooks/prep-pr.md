@@ -90,11 +90,19 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
 6. **Create PR**:
    - Do not commit, push, create a PR, link a PR, or write the tracker without approval. In
      execute-approved-package mode, do not rebuild the package; execute only the approved actions.
+   - **Before the first commit:** run `.\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase prepush`.
+     On `FAIL`, commit nothing and report what it names (a missing verify receipt, a stale or
+     open-Major review stamp, a frontend Drive not confirmed). The push hook runs the same check
+     on a branch that names the ticket, so skipping it here only moves the failure to the push.
    - Before push in each repo: `git fetch origin`, merge `origin/<baseBranch>`
      (`profile.baseBranchDefault`). Resolve conflicts and include the merge commit; do not open or
      update a PR against a branch that is behind base.
    - After the PR exists, apply the tracker's "in review" state if the adapter defines one.
-   - Do not run the retrospective from this command — that is `/complete-task`.
+   - **Close the ticket.** When this chat ran `/complete-task`, return to its step 6 (retrospective,
+     ledger row, `-Phase close`). When `/prep-pr` runs in a fresh chat, nobody else will: run
+     [../../complete-task/references/task-retrospective.md](../../complete-task/references/task-retrospective.md)
+     here, then `Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase close`, exactly as
+     complete-task step 6 does. A ticket with a PR and no ledger row is a close that never ran.
 
 ## Cross-Repo PR Matrix
 

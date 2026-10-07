@@ -9,7 +9,7 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `skills/<name>/SKILL.md` | One folder per skill. `playbooks/` and `references/` sit beside it |
 | `skills/start-new-project/` | Fills `profile.json` for a new product |
 | `skills/architect/`, `skills/blast-radius/` | Design lanes and what-could-break proof for shared changes |
-| `scripts/ticket/` | Artifact gate, epoch, ledger, review stamp, verify receipt, stack smoke, lanes, measured Ctx% |
+| `scripts/ticket/` | Artifact gate, epoch, ledger, review stamp, verify receipt, stack smoke, lanes, measured Ctx%, doc claims and doc-sync (`doc-claims.psd1`: a project appends its own claims) |
 | `scripts/machine/` | Machine init, user-level slash links, git hooks, Claude overlay |
 | `scripts/runtime/Set-ActiveStack.ps1` | One stack owner file |
 | `hooks/core/` + `hooks.json` | Shared hook logic; IDE bridges live under `adapters/`. `hook-log.js` writes swallowed errors to `scripts/.hook-errors.log` |
@@ -37,7 +37,7 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `scripts/runtime/` besides the stack owner | The profile start command |
 | `USER-MANUAL.md` | Project notes below the core section |
 | `mcp.json` | Project MCP servers |
-| `scripts/machine/Install-CursorExtensions.ps1`, `Apply-CursorUserConfig.ps1`, `New-CockpitWorkspace.ps1` | Optional bootstrap phases. Machine init skips each one that is absent |
+| `Install-CursorExtensions.ps1`, `Apply-CursorUserConfig.ps1`, `New-CockpitWorkspace.ps1` in `scripts/machine/` | Optional bootstrap phases. Machine init skips each one that is absent |
 
 ## Versioning
 

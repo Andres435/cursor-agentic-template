@@ -13,16 +13,11 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/adapters/claude/hooks/git-commit-ticket.js\"",
-            "timeout": 8
-          },
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/adapters/claude/hooks/git-push-agentic-flow.js\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/adapters/claude/hooks/git-guard.js\"",
             "timeout": 120
           }
         ]

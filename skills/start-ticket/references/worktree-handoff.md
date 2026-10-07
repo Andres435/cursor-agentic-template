@@ -25,7 +25,7 @@ Loaded by [../playbooks/start-ticket.md](../playbooks/start-ticket.md) only when
 
 ## Runtime heal (step 8)
 
-When the profile has `scripts/runtime/Initialize-TicketRuntime.ps1`, it was started in the
+When the overlay ships `Initialize-TicketRuntime.ps1` (under `scripts/runtime/`), it was started in the
 background at step 5 and is awaited after the start gate. It confirms each worktree is on
 `<ticket>`, restores dependencies the profile names, and never starts the app or a browser.
 

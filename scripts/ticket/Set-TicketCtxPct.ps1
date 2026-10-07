@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Record one chat's context-window occupancy on the ticket manifest (report-context).

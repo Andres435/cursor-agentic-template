@@ -22,14 +22,14 @@ the affected repo path from `scripts/ticket/Resolve-TicketRoot.ps1`.
 `deepLane` in its adapter: [Cursor](adapters/cursor/model-usage.md),
 [Cursor GPT chat](adapters/gpt/model-usage.md), [Claude Code](adapters/claude/model-usage.md),
 [Codex](adapters/codex/model-usage.md). IDE actions are neutral verbs —
-[_shared/harness-verbs.md](_shared/harness-verbs.md). Branch mode is three chats.
+[_shared/harness-verbs.md](_shared/harness-verbs.md). Chat counts per mode: [USER-MANUAL.md](USER-MANUAL.md).
 
 **Engineering mode** (`/engineering-mode`, or the adapter's way to pin it) makes a chat an
 orchestrator that routes each piece of work to its tier's model —
 [skills/engineering-mode/SKILL.md](skills/engineering-mode/SKILL.md).
 
-**Codex:** the model selected for the session is deep and stays inline. Fast and standard
-`spawn_agent` calls take `model` from [adapters/codex/model-usage.md](adapters/codex/model-usage.md).
+**Codex:** Codex has no `@` include, so read
+[adapters/codex/model-usage.md](adapters/codex/model-usage.md) before any dispatch; it maps the tiers.
 
 ## Available Agents
 

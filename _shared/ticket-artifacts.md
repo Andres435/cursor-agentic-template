@@ -90,8 +90,10 @@ scripts/Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start
     ignored; any other commit after the review fails, so review again and re-stamp. Conflict edits
     inside that merge commit are not checked.
 
-  A spike skips both. `stackSmoke` is optional unless an affected repo has profile layer `frontend`.
-  Then close fails unless effective status is `passed` on the current work. A spike skips that check.
+  A spike skips both, so a spike whose tracker item is a Bug, Issue, story, or Feature fails.
+  `stackSmoke` is optional unless an affected repo has profile layer `frontend` and the change
+  touches a profile `uiGlobs` file type. Then close fails unless effective status is `passed` on
+  the current work. `-Phase prepush` runs these work checks alone, before commit and push.
 
 Exit code `0` = pass, `1` = fail. `-Json` returns `{ phase, ticket, mode, pass, missing[], found[] }`.
 

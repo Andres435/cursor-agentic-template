@@ -64,7 +64,8 @@ For each selected repo (working-tree mode):
    .\.cursor\scripts\Select-TicketStagePaths.ps1 -RepoPath <resolved path> -Json
    ```
 
-   `candidates` are the review target. `denied` paths (secret-shaped names) are notes only:
+   `candidates` are the review target. `denied` paths (secret-shaped names, and secret-shaped
+   content added by this change) are notes only:
    no findings, and never `git add`.
 2. No candidates in that repo → verdict `No change`. If every selected repo has no candidates,
    stop and report. Do not stamp Ready.
@@ -74,6 +75,10 @@ For each selected repo (working-tree mode):
    - Clean candidate → `git add -- <path>`
    - Blocker or Major cites it → `git restore --staged -- <path>` (the working-tree edit stays)
    - Never `git add -A`, `git add .`, or a denied path.
+5. **Fix loop.** A Blocker or Major ends this review, not the ticket: the verdict follows the
+   [verdict rules](../../../_shared/severity-and-output.md#verdict-rules), the stamp records the
+   findings, and close fails while they are open. Tell the user: fix them (in this chat or the
+   build chat), then run `/review-changes` again; the new stamp replaces this one.
 
 Pre-merge mode: diff source is the three-dot range above. Do not run the selector to change the index.
 

@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Record compact PR + static-analysis feedback on the ticket manifest (manifest.feedback).

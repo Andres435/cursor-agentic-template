@@ -43,6 +43,7 @@ Open `profile.json` and fill in your project's values:
 | `repos[].path` | Path relative to the `.cursor` folder (`.` for same repo) |
 | `specialists` | Match names to agent files in `agents/` |
 | `stacks.startCommand` | Command to start your dev server (e.g. `npm run dev`) |
+| `uiGlobs` | File types that count as UI (default `*.js`, `*.jsx`, `*.ts`, `*.tsx`, `*.css`, `*.scss`, `*.html`). Close needs a user-confirmed Drive only when a `frontend` repo's change touches one; add your templates (e.g. `*.vue`, `*.cshtml`) |
 
 **Multi-repo:** add one object per repo to `repos[]` in dependency order (e.g. `["shared", "api", "web"]`).
 
@@ -69,12 +70,12 @@ in `profile.json` → `specialists`.
 
 ### GitHub Issues
 
-Add `skills/start-ticket/references/github-ticket-workflow.md` with your intake steps.
+Add `github-ticket-workflow.md` under `skills/start-ticket/references/` with your intake steps.
 See `skills/start-ticket/references/ticket-intake-generic.md` for the pattern.
 
 ### Azure DevOps (ADO)
 
-Add `skills/start-ticket/references/ado-ticket-workflow.md` (fetch, required fields, the State
+Add `ado-ticket-workflow.md` under `skills/start-ticket/references/` (fetch, required fields, the State
 moves you allow) and, if you write fields back, `ado-field-mapping.md`. Use
 `ticket-intake-generic.md` as the pattern. Add an `ado` server to `mcp.json` (token in a user
 environment variable). Then set `ticketSystem: "ado"` and `ticketPrefix: "WI"` in `profile.json`.

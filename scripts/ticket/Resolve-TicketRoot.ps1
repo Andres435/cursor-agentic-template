@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Resolves whether a ticket runs in branch mode (canonical clones) or worktree

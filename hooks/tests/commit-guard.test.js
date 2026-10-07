@@ -13,6 +13,14 @@ const path = require("path");
 
 const { decide } = require("../core/commit-guard.js");
 const PRE_COMMIT = path.join(__dirname, "..", "git-hooks", "pre-commit");
+// Ticket ids come from profile.json ticketPrefix, as the guard reads them.
+const PREFIX = (() => {
+  try {
+    return String(JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "profile.json"), "utf8")).ticketPrefix || "WI");
+  } catch {
+    return "WI";
+  }
+})();
 
 function git(dir, args) {
   const r = spawnSync("git", ["-C", dir].concat(args), { encoding: "utf8" });
@@ -26,10 +34,10 @@ function write(dir, rel, text) {
   fs.writeFileSync(p, text || "x\n");
 }
 
-// A fake tmo-agentic clone (the two marker files) and an unrelated product repo.
+// A fake workflow clone (the two marker files) and an unrelated product repo.
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "commit-guard-"));
-const WORKFLOW = path.join(TMP, "tmo-agentic");
-const PRODUCT = path.join(TMP, "TmoPro");
+const WORKFLOW = path.join(TMP, "workflow");
+const PRODUCT = path.join(TMP, "product");
 for (const dir of [WORKFLOW, PRODUCT]) {
   fs.mkdirSync(dir, { recursive: true });
   git(dir, ["init", "-q"]);
@@ -83,6 +91,28 @@ test("asks for a work item on a product-repo commit", () => {
 
 test("allows a product-repo commit that names a work item", () => {
   assert.strictEqual(decide({ command: 'git commit -m "fix: thing [WI21952]"', cwd: PRODUCT }).action, "allow");
+});
+
+test("a work item in the directory does not count as the message's", () => {
+  const ticketDir = path.join(PRODUCT, PREFIX + "12345");
+  fs.mkdirSync(ticketDir, { recursive: true });
+  const d = decide({ command: `cd "${ticketDir}" && git commit -m "fix the thing"`, cwd: PRODUCT });
+  assert.strictEqual(d.action, "ask");
+  assert.strictEqual(d.suggested, PREFIX + "#####");
+});
+
+test("reads a -F message file, not its path", () => {
+  write(PRODUCT, "msg-ok.txt", "fix: thing [" + PREFIX + "21952]\n");
+  write(PRODUCT, PREFIX + "21952-msg.txt", "fix: thing\n");
+  assert.strictEqual(decide({ command: "git commit -F msg-ok.txt", cwd: PRODUCT }).action, "allow");
+  assert.strictEqual(decide({ command: "git commit -F " + PREFIX + "21952-msg.txt", cwd: PRODUCT }).action, "ask");
+});
+
+test("reads the stdin message of git commit -F - (heredoc or here-string)", () => {
+  const heredoc = "git commit -F - <<'EOF'\nfix: thing [" + PREFIX + "21952]\nEOF";
+  assert.strictEqual(decide({ command: heredoc, cwd: PRODUCT }).action, "allow");
+  const noTicket = "git commit -F - <<'EOF'\nfix: thing\nEOF";
+  assert.strictEqual(decide({ command: noTicket, cwd: PRODUCT }).action, "ask");
 });
 
 test("echo of git commit is not a commit", () => {

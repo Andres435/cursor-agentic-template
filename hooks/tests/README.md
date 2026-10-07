@@ -20,11 +20,11 @@ node hooks/tests/context-usage.test.js
 | Test file | Under test | What it checks |
 |---|---|---|
 | `closeout-guard.test.js` | `core/closeout-guard.js` via the Cursor adapter | Deny closeout dumps, allow other files, degrade on bad JSON |
-| `session-context.test.js` | `core/session-context.js` via the Cursor adapter | Packet shape, env keys, graceful degrade without PowerShell |
-| `git-push-agentic-flow.test.js` | `core/push-gate.js`, both adapters | Gate only pushes of the workflow clone; `echo "git push"` is not a push |
+| `session-context.test.js` | `core/session-context.js` via the Cursor adapter | Packet shape, env keys, graceful degrade without PowerShell, a reopened ticket stays open |
+| `git-push-agentic-flow.test.js` | `core/push-gate.js`, both adapters, Claude `git-guard.js` | A failing workflow clone is denied through Cursor, Claude Bash, and Claude PowerShell; a ticket branch with a manifest runs `-Phase prepush`; a crash fails closed; `echo "git push"` is not a push |
 | `ticket-command-nudge.test.js` | `core/ticket-nudge.js` via the Cursor adapter | Fire only on a leading slash command; engineering-mode names the playbook |
-| `commit-guard.test.js` | `core/commit-guard.js`, `git-hooks/pre-commit` | Deny user-local plans/ files; ask for a WI id only in product repos |
+| `commit-guard.test.js` | `core/commit-guard.js`, `git-hooks/pre-commit` | Deny user-local plans/ files; ask for a ticket id only in product repos, read from the message (`-m`, `-F`, `-F -`), not the directory |
 | `context-usage.test.js` | `core/context-usage.js`, Claude Stop hook | Measured context from a transcript; per-session record |
 
-All exit 0 on success, 1 on failure. Safe to run without TmoPro or PowerShell installed;
+All exit 0 on success, 1 on failure. Safe to run without a product repo or PowerShell installed (tests that need `pwsh` say skipped);
 `session-context.test.js` stubs the Resolve-TicketRoot path (script not found → graceful degrade).

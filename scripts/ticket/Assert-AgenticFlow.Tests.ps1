@@ -67,3 +67,67 @@ Describe 'Assert-AgenticFlow worktype-templates' {
         (Invoke-Gate $root) | Should -Not -Match 'worktype-templates'
     }
 }
+
+Describe 'Assert-AgenticFlow ide-neutral bans' {
+    It 'fails a model name in any case and a Codex tool name, but not ordinary words' {
+        $root = New-FlowRoot 'neutral'
+        Write-Doc $root 'INDEX.md' ''
+        Write-Doc $root 'skills/a/SKILL.md' "Dispatch to an opus lane.`nCall spawn_agent with the tier.`nThe SQL composer builds the query."
+        $out = Invoke-Gate $root
+        $out | Should -Match "skills/a/SKILL.md:1 names a model \('opus'\)"
+        $out | Should -Match "skills/a/SKILL.md:2 names an IDE tool \('spawn_agent'\)"
+        $out | Should -Not -Match "SKILL.md:3"
+    }
+}
+
+Describe 'Assert-AgenticFlow read-only reviewer' {
+    It 'fails a code-reviewer that can edit, and passes once the edit tools are disallowed' {
+        $root = New-FlowRoot 'reviewer'
+        Write-Doc $root 'INDEX.md' ''
+        $front = "---`nname: code-reviewer`ndescription: Reviews changes.`n"
+        Write-Doc $root 'agents/code-reviewer.md' ($front + "disallowedTools: Write`n---`n# Reviewer")
+        $out = Invoke-Gate $root
+        $out | Should -Match "code-reviewer.md must list 'Edit' in disallowedTools"
+        $out | Should -Match "code-reviewer.md must list 'NotebookEdit' in disallowedTools"
+        $out | Should -Not -Match "must list 'Write'"
+
+        Write-Doc $root 'agents/code-reviewer.md' ($front + "disallowedTools: Edit, Write, NotebookEdit`n---`n# Reviewer")
+        (Invoke-Gate $root) | Should -Not -Match 'disallowedTools'
+    }
+}
+
+Describe 'Assert-AgenticFlow doc claims' {
+    It 'fails a forbidden phrase with file:line, a missing required phrase, and a vanished anchor' {
+        $root = New-FlowRoot 'claims'
+        Write-Doc $root 'INDEX.md' ''
+        Write-Doc $root 'scripts/ticket/doc-claims.psd1' @'
+@{
+    Claims = @(
+        @{
+            Id      = 'gate-required'
+            Why     = 'Close needs the Drive.'
+            Anchor  = @{ File = 'src/gate.txt'; Pattern = 'function Test-UiEvidence' }
+            Require = @( @{ File = 'MANUAL.md'; Pattern = 'Drive is required' } )
+            Forbid  = @( @{ Pattern = 'does not block close'; Except = @('notes/*') } )
+        }
+    )
+    CoChange = @()
+}
+'@
+        Write-Doc $root 'src/gate.txt' 'function Test-UiEvidence { }'
+        Write-Doc $root 'MANUAL.md' "Intro.`nSkipping it does not block close."
+        Write-Doc $root 'notes/history.md' 'It once did not: does not block close.'
+        $out = Invoke-Gate $root
+        $out | Should -Match "doc-claims: gate-required -- MANUAL.md:2 contradicts the claim"
+        $out | Should -Match "doc-claims: gate-required -- MANUAL.md must match /Drive is required/"
+        $out | Should -Not -Match 'doc-claims: .*notes/history\.md'
+        $out | Should -Not -Match 'anchor gone'
+
+        Write-Doc $root 'src/gate.txt' 'function Test-Renamed { }'
+        Write-Doc $root 'MANUAL.md' 'The Drive is required to close.'
+        $out = Invoke-Gate $root
+        $out | Should -Match 'doc-claims: gate-required -- anchor gone: src/gate.txt'
+        $out | Should -Not -Match 'contradicts the claim'
+        $out | Should -Not -Match 'must match'
+    }
+}

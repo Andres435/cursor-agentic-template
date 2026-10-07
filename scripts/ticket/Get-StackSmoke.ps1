@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Read stackSmoke and report Never tested / Tested / Untested latest.

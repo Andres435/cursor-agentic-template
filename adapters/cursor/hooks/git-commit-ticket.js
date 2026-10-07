@@ -5,6 +5,7 @@
 // this file only speaks Cursor's contract ({ permission, user_message, agent_message }).
 
 const { decide } = require("../../../hooks/core/commit-guard.js");
+const { writeHookError } = require("../../../hooks/core/hook-log.js");
 
 let raw = "";
 process.stdin.setEncoding("utf8");
@@ -29,7 +30,9 @@ process.stdin.on("end", () => {
           d.suggested +
           " in the message (do not commit until they confirm).";
     process.stdout.write(JSON.stringify({ permission: d.action, user_message: d.reason, agent_message: agent }));
-  } catch (_err) {
+  } catch (err) {
+    // Logged for /doctor; the git pre-commit hook is the backstop for staged plans/ files.
+    writeHookError("cursor:git-commit-ticket", err);
     process.stdout.write(JSON.stringify({ permission: "allow" }));
   }
 });

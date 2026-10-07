@@ -218,6 +218,30 @@ test("nextAction is 'closed' when completedAtUtc is set", () => {
   });
 });
 
+test("nextAction treats a reopened ticket as open until it is re-closed", () => {
+  const { resolveNextAction } = require(path.join(__dirname, "..", "core", "session-context.js"));
+  withTempPlans((dir) => {
+    const prev = process.env.TMO_PLANS_DIR;
+    process.env.TMO_PLANS_DIR = dir;
+    try {
+      const file = path.join(dir, TICKET_A + "-manifest.json");
+      const closed = { mode: "branch", reviewReady: { mode: "staged" }, completedAtUtc: "2026-10-01T00:00:00Z" };
+      fs.writeFileSync(file, JSON.stringify(closed));
+      assert.strictEqual(resolveNextAction(TICKET_A), "closed");
+      fs.writeFileSync(file, JSON.stringify(Object.assign({}, closed, { reopenedAtUtc: "2026-10-03T00:00:00Z" })));
+      assert.strictEqual(resolveNextAction(TICKET_A), "complete-task");
+      fs.writeFileSync(
+        file,
+        JSON.stringify(Object.assign({}, closed, { reopenedAtUtc: "2026-10-03T00:00:00Z", reclosedAtUtc: "2026-10-04T00:00:00Z" }))
+      );
+      assert.strictEqual(resolveNextAction(TICKET_A), "closed");
+    } finally {
+      if (prev === undefined) delete process.env.TMO_PLANS_DIR;
+      else process.env.TMO_PLANS_DIR = prev;
+    }
+  });
+});
+
 // Branch-mode fallback: a chat at the workspace root has no ticket in its path.
 const { detectTicketFromBranches } = require(path.join(__dirname, "..", "core", "session-context.js"));
 

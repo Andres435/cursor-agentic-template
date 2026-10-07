@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Append or update one ticket's row in plans/ticket-ledger.md and recompute the
@@ -154,15 +155,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Read ticket prefix from profile.json (default 'WI' for TMO).
-function Get-TicketPrefix {
-    $p = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
-    if (Test-Path -LiteralPath $p) {
-        try { $c = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json
-              if ($c.ticketPrefix) { return [string]$c.ticketPrefix } } catch { }
-    }
-    return 'WI'
-}
+# Read ticket prefix from profile.json.
+. (Join-Path (Join-Path $PSScriptRoot 'lib') 'TicketPrefix.ps1')
 $TICKET_PREFIX = Get-TicketPrefix
 # Match any prefix+digits row so a rewrite still migrates WI / TICKET- / # ledgers.
 $TICKET_ROW_PATTERN = '^\|\s*[A-Za-z]+-?\d+'
@@ -365,6 +359,11 @@ elseif (-not $Rewrite -and -not $MarkRated) {
     $ctxS = if ($PSBoundParameters.ContainsKey('ContextPctStart')) { $ContextPctStart } else { Get-ManifestCtx -TicketKey $key -Phase 'start' }
     $ctxR = if ($PSBoundParameters.ContainsKey('ContextPctReview')) { $ContextPctReview } else { Get-ManifestCtx -TicketKey $key -Phase 'review' }
     $lanesValue = if ($PSBoundParameters.ContainsKey('Lanes')) { $Lanes } else { Get-ManifestLanes -TicketKey $key }
+    # Lanes is a count per tier (Set-TicketLanes.ps1), e.g. f2/s1/d0 inline:d3. Free text
+    # ("opus x3 verify") cannot be trended, and a model name breaks the IDE-neutral core.
+    if ($lanesValue -and $lanesValue -notmatch '^f\d+/s\d+/d\d+(\s+inline:[fsd]\d+(/[fsd]\d+)*)?$') {
+        throw "Lanes '$lanesValue' is not fN/sN/dN [inline:dN] (e.g. f2/s1/d0 inline:d3). Write it with Set-TicketLanes.ps1."
+    }
 
     $rows.Add((New-LedgerRow -Ticket $key -Type (Get-Blank $Type) -Closed $closedDate `
         -Mode $resolvedMode -Hours (Get-Blank $Hours) -Pts (Get-Blank $Points) `

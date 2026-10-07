@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Name the ticket this workspace is on, from the current branch of each profile repo.

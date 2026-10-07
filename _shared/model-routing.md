@@ -68,8 +68,8 @@ the user. On the fast tier it says once that classification and review are weake
 
 1. **Explicit model.** Every dispatch passes `model` from the adapter. Omitting it inherits the
    orchestrator — the defect this contract exists to prevent.
-2. **Lanes.** One lane is one contiguous run of Work Plan steps with the same tag and the same repo
-   path. Steps stay in plan order; one writer per repo path at a time.
+2. **Lanes.** A lane is one dispatched subagent run. An implement lane covers one contiguous run of
+   Work Plan steps with the same tag and the same repo path. Steps stay in plan order; one writer per repo path at a time.
 3. **Lean packet.** Inline the step text. Pass the ticket id, the repo path from
    `Resolve-TicketRoot.ps1`, the manifest's `specialists[]` agent for that repo (else general-purpose),
    that repo's `explore-repo` key files, and a reminder to read the repo's `rules/`. Pointers,

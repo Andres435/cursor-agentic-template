@@ -95,6 +95,14 @@ Use these headings only when they have content. The verdict (and Confidence Scor
 **Ready** | **Ready with fixes** | **Not ready** -- one-line rationale.
 ```
 
+### Verdict rules
+
+The findings decide the verdict, not the reviewer's mood. Any **Blocker** → **Not ready**. Any
+**Major** → **Ready with fixes** (or Not ready). Only Minor/Nit → **Ready** or Ready with fixes.
+`Set-ReviewReady.ps1` refuses a stamp that breaks this, and close fails while a stamp still
+records a Blocker or Major: fix them in any chat, then re-run `/review-changes` so a new stamp
+covers the fixed work.
+
 ## Token-class law
 
 Every token paid in this workspace falls into one of three classes. Misidentifying them wastes budget or causes stale context.

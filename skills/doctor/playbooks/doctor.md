@@ -89,8 +89,10 @@ Follow [model-routing.md](../../../_shared/model-routing.md).
    fail: the platform substituted a model.
 
 Fail with: `lane probe: <tier> asked <selector>, got <reply> — record an unhonored tier in the
-adapter`. Record every result (pass or unhonored, with the selector used and the date) in the
-adapter that owns the tier ([../../../adapters/README.md](../../../adapters/README.md)). Then run
+adapter`. Record every result (pass or unhonored, with the selector used and the date) in
+`adapters/<ide>/lane-probe.local.md` (user-local, gitignored as `*.local.md`). Change the adapter
+that owns the tier ([../../../adapters/README.md](../../../adapters/README.md)) only when the team
+mapping must change, in a reviewed commit, never with one machine's results. Then run
 any extra lane check the active adapter lists under its tier table (Claude Code has one).
 
 ### 6. Workflow epoch
@@ -105,6 +107,14 @@ has enough closes (`profile.json` `epochRerateAfter`) and no rating: rate the wo
 cohort, then run `scripts/ticket/Update-TicketLedger.ps1 -MarkRated`. A re-rate is a warning, not a
 failure.
 
+### 7. Installed overlay is current
+
+When the workspace root has a `CLAUDE.md` or `.mcp.json` (the Claude Code overlay), run
+`scripts/machine/Install-ClaudeAdapter.ps1 -Check`. A stale copy loads old instructions or MCP
+versions into every session there. On exit 1 print its `[FAIL]` lines as
+`[WARN] installed overlay stale — run scripts/machine/Install-ClaudeAdapter.ps1` (it keeps the old
+copy as `*.previous`). With no overlay installed, print `[PASS] installed overlay — none`.
+
 ## Output
 
 ```text
@@ -113,9 +123,10 @@ failure.
 [PASS] artifact gate — WI00001 start/close pass
 [PASS] stacks.startCommand — shell command or existing file
 [PASS] workflow epoch — 1a2b3c4d, 2 close(s), re-rate after 3
+[PASS] installed overlay — CLAUDE.md and .mcp.json current
 ```
 
-Print a summary line: `Workspace OK (5/5)` or `Workspace needs attention (4/5 — see above)`. The
+Print a summary line: `Workspace OK (6/6)` or `Workspace needs attention (5/6 — see above)`. The
 lane probe stays out of that count. On an epoch failure, fix the ledger row with
 `Update-TicketLedger.ps1`; on a re-rate warning, rate the cohort, then run
 `Update-TicketLedger.ps1 -MarkRated`.

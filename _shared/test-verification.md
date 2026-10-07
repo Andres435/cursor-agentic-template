@@ -23,6 +23,8 @@ full-repo suite.
 2. Bugs: if a relevant test already fails, that is RED. If none exists, add the smallest regression
    test in the nearest fixture, confirm it fails for the expected reason, make the smallest
    production change, re-run it, then the nearest broader scope. Refactor only while green.
+   When no test can reach the code (a page with no test project), the plan's first step says
+   `no-test: <reason>` and the Drive is the proof.
 3. Features: list observable behaviors from the acceptance criteria and ship them as slices — the
    smallest behavior that proves the path first, broaden only after it is green.
 4. Quote pass/fail counts. Do not paste full logs unless the user asks.

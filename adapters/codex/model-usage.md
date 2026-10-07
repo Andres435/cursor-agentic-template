@@ -5,6 +5,9 @@ description: Model tiers mapped to Codex spawn_agent for a Codex parent. The pic
 
 # Codex Model Usage
 
+**Status: experimental.** No Codex parent has run `/doctor --lanes` yet, so this mapping is
+unverified. Prefer Cursor or Claude Code for ticket work until it has.
+
 Use this file when the parent session is Codex. Tiers and routing rules stay in
 [_shared/model-routing.md](../../_shared/model-routing.md). Load this file from `AGENTS.md`; Codex
 has no `@` include. Deep is the model selected for the session and stays inline. Do not ask for a

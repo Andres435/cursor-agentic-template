@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Workflow epoch: an id computed from the watched workflow contract, plus the

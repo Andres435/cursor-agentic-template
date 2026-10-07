@@ -57,7 +57,9 @@ List affected repos, services, controllers, handlers, UI surfaces, database obje
 ## 5. Regression test first
 
 The Work Plan's first code step is RED: an existing failing test, or the smallest focused regression
-test in the nearest fixture, failing for the expected reason. Then the smallest production change,
+test in the nearest fixture, failing for the expected reason. When no test can exist (a page with
+no test project in reach), step 1 says `no-test: <reason>` instead; `-Phase start` fails a bug plan
+whose first step does neither. Then the smallest production change,
 the focused test, the nearest broader scope; refactor only while green. Strict RED → GREEN → REFACTOR:
 [../../tdd-red-green-refactor/SKILL.md](../../tdd-red-green-refactor/SKILL.md).
 

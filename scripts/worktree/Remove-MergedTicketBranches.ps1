@@ -1,3 +1,4 @@
+#Requires -Version 7
 <#
 .SYNOPSIS
     Deletes local ticket branches whose work has already landed on their base branch.

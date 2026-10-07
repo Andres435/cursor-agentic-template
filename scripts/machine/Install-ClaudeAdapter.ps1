@@ -18,7 +18,13 @@
     Folder that should receive CLAUDE.md. Defaults to the parent of this folder.
 
 .PARAMETER Force
-    Overwrite an existing CLAUDE.md / .mcp.json.
+    Rewrite CLAUDE.md / .mcp.json even when they already match. A copy that differs
+    from the repo is replaced without -Force (the old file is kept as *.previous):
+    a stale overlay loads wrong instructions into every Claude session.
+
+.PARAMETER Check
+    Report whether the installed CLAUDE.md / .mcp.json match the repo; write nothing.
+    Exit 1 when either is stale or missing. /doctor runs this.
 
 .PARAMETER Quiet
     Suppress the banner and start-command footer.
@@ -30,6 +36,9 @@
     .\Install-ClaudeAdapter.ps1
 
 .EXAMPLE
+    .\Install-ClaudeAdapter.ps1 -Check
+
+.EXAMPLE
     .\Install-ClaudeAdapter.ps1 -WorkspaceRoot C:\src\my-app -Force
 #>
 
@@ -37,6 +46,7 @@
 param(
     [string]$WorkspaceRoot,
     [switch]$Force,
+    [switch]$Check,
     [switch]$Quiet,
     [switch]$WhatIf
 )
@@ -61,19 +71,57 @@ if (Test-Path -LiteralPath $manifest) {
     } catch { }
 }
 
+$script:stale = 0
+
+# Same text after line endings and trailing whitespace are normalized.
+function Get-NormalizedText {
+    param([string]$Text)
+    return ([string]$Text -replace "`r`n", "`n").TrimEnd()
+}
+
+function Test-SameText {
+    param([string]$Path, [string]$Expected)
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    return (Get-NormalizedText (Get-Content -LiteralPath $Path -Raw)) -ceq (Get-NormalizedText $Expected)
+}
+
+# -Check: report one installed file against the text it should hold. Never writes.
+function Test-Installed {
+    param([string]$Dest, [string]$Expected, [string]$Label)
+    if (-not (Test-Path -LiteralPath $Dest)) {
+        Write-LauncherFail "$Label missing: $Dest (run Install-ClaudeAdapter.ps1)"
+        $script:stale++
+    } elseif (-not (Test-SameText $Dest $Expected)) {
+        Write-LauncherFail "$Label is stale: $Dest differs from this folder (run Install-ClaudeAdapter.ps1 to refresh)"
+        $script:stale++
+    } else {
+        Write-LauncherOk "$Label is current: $Dest"
+    }
+}
+
+# Before replacing a copy that differs, keep it beside the new one.
+function Save-Previous {
+    param([string]$Dest)
+    $prev = "$Dest.previous"
+    Copy-Item -LiteralPath $Dest -Destination $prev -Force
+    Write-LauncherSkip "Kept the old copy as $prev"
+}
+
 function Install-ClaudeMarkdown {
     if (-not (Test-Path -LiteralPath $template)) { throw "Missing Claude overlay template: $template" }
     if (-not (Test-Path -LiteralPath $WorkspaceRoot)) { throw "Workspace folder does not exist: $WorkspaceRoot" }
     $dest = Join-Path $WorkspaceRoot 'CLAUDE.md'
-    if ((Test-Path -LiteralPath $dest) -and -not $Force) {
-        Write-LauncherSkip "CLAUDE.md already exists: $dest (pass -Force to replace)"
+    $text = (Get-Content -LiteralPath $template -Raw).Replace('{{folder}}', $folder).Replace('{{plugin}}', $plugin)
+    if ($Check) { Test-Installed -Dest $dest -Expected $text -Label 'CLAUDE.md'; return }
+    if ((Test-Path -LiteralPath $dest) -and -not $Force -and (Test-SameText $dest $text)) {
+        Write-LauncherOk "CLAUDE.md is current: $dest"
         return
     }
     if ($WhatIf) {
         Write-LauncherDoing "[WhatIf] Would write $dest from adapters/claude/workspace-CLAUDE.md"
         return
     }
-    $text = (Get-Content -LiteralPath $template -Raw).Replace('{{folder}}', $folder).Replace('{{plugin}}', $plugin)
+    if ((Test-Path -LiteralPath $dest) -and -not (Test-SameText $dest $text)) { Save-Previous $dest }
     [System.IO.File]::WriteAllText($dest, $text, (New-Object System.Text.UTF8Encoding $false))
     Write-LauncherOk "Wrote CLAUDE.md -> $dest"
 }
@@ -87,16 +135,19 @@ function Install-McpFile {
         return
     }
     $dest = Join-Path $WorkspaceRoot '.mcp.json'
-    if ((Test-Path -LiteralPath $dest) -and -not $Force) {
-        Write-LauncherSkip ".mcp.json already exists: $dest (pass -Force to replace)"
+    $text = Get-Content -LiteralPath $mcpSource -Raw
+    if ($Check) { Test-Installed -Dest $dest -Expected $text -Label '.mcp.json'; return }
+    if ((Test-Path -LiteralPath $dest) -and -not $Force -and (Test-SameText $dest $text)) {
+        Write-LauncherOk ".mcp.json is current: $dest"
         return
     }
     if ($WhatIf) { Write-LauncherDoing "[WhatIf] Would copy $mcpSource -> $dest"; return }
+    if ((Test-Path -LiteralPath $dest) -and -not (Test-SameText $dest $text)) { Save-Previous $dest }
     Copy-Item -LiteralPath $mcpSource -Destination $dest -Force
     Write-LauncherOk "Copied mcp.json -> $dest"
 }
 
-if (-not $Quiet) {
+if (-not $Quiet -and -not $Check) {
     Write-Host ""
     Write-Host "=== Claude Code adapter ===" -ForegroundColor Cyan
     Write-Host "Plugin folder: $RepoRoot" -ForegroundColor DarkGray
@@ -106,7 +157,7 @@ if (-not $Quiet) {
 Install-ClaudeMarkdown
 Install-McpFile
 
-if (-not $Quiet) {
+if (-not $Quiet -and -not $Check) {
     Write-Host ""
     Write-Host "Start Claude Code with:" -ForegroundColor Green
     Write-Host "  cd `"$WorkspaceRoot`""
@@ -115,3 +166,5 @@ if (-not $Quiet) {
     Write-Host "Details: adapters/claude/README.md"
     Write-Host ""
 }
+
+if ($Check) { exit ([int]($script:stale -gt 0)) }

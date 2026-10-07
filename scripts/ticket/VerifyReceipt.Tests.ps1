@@ -107,6 +107,29 @@ Describe 'Set-ReviewReady -Findings' {
         $entry.findings[0] | Should -Be 'Major: finding 1'
         Get-ChildItem -LiteralPath $repo -Recurse -Force -File | ForEach-Object { $_.IsReadOnly = $false }
     }
+
+    It 'refuses a verdict its findings contradict, and accepts one they allow' {
+        $root = New-ManifestRoot 'verdict-rules'
+        $repo = Join-Path $TestDrive 'verdict-repo'
+        New-Item -ItemType Directory -Path $repo -Force | Out-Null
+        & git -C $repo init -q
+        Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'one'
+        & git -C $repo add a.txt
+        $stamp = Join-Path $PSScriptRoot 'Set-ReviewReady.ps1'
+        $paths = @{ app = $repo } | ConvertTo-Json -Compress
+        $major = '{"app":["Major: null check missing"]}'
+        $blocker = '{"app":["**Blocker** SQL built from user input"]}'
+
+        { & $stamp -Ticket WI00020 -Mode staged -Verdicts '{"app":"Ready"}' -Findings $major -RepoPaths $paths -Root $root } |
+            Should -Throw '*Major finding(s) mean the verdict is Ready with fixes or Not ready*'
+        { & $stamp -Ticket WI00020 -Mode staged -Verdicts '{"app":"Ready with fixes"}' -Findings $blocker -RepoPaths $paths -Root $root } |
+            Should -Throw '*Blocker finding(s) mean the verdict is Not ready*'
+        (Get-Manifest $root).PSObject.Properties.Name | Should -Not -Contain 'reviewReady'
+
+        & $stamp -Ticket WI00020 -Mode staged -Verdicts '{"app":"Ready with fixes"}' -Findings $major -RepoPaths $paths -Root $root
+        (Get-Manifest $root).reviewReady.repos.app.verdict | Should -Be 'Ready with fixes'
+        Get-ChildItem -LiteralPath $repo -Recurse -Force -File | ForEach-Object { $_.IsReadOnly = $false }
+    }
 }
 
 Describe 'Set-TicketFeedback' {
