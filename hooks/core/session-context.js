@@ -136,10 +136,10 @@ function runResolve(ticket) {
  * completedAtUtc set                     → "closed", unless reopened (reopenedAtUtc set and no
  *                                          reclosedAtUtc): a reopen keeps completedAtUtc, so it
  *                                          is open again and takes the rows above
- * TMO_PLANS_DIR overrides plans/ (tests).
+ * AGENTIC_PLANS_DIR overrides plans/ (tests).
  */
 function resolveNextAction(ticket) {
-  const plansDir = process.env.TMO_PLANS_DIR || path.join(REPO_ROOT, "plans");
+  const plansDir = process.env.AGENTIC_PLANS_DIR || path.join(REPO_ROOT, "plans");
   let manifest;
   try {
     manifest = JSON.parse(fs.readFileSync(path.join(plansDir, ticket + "-manifest.json"), "utf8"));
@@ -161,7 +161,7 @@ function buildPacket(hints) {
     : null;
   const ticket =
     detectTicket(hints, profile) ||
-    detectTicketFromBranches(profile, path.join(REPO_ROOT, ".."), process.env.TMO_PLANS_DIR || path.join(REPO_ROOT, "plans"));
+    detectTicketFromBranches(profile, path.join(REPO_ROOT, ".."), process.env.AGENTIC_PLANS_DIR || path.join(REPO_ROOT, "plans"));
   if (!ticket && !slice) return null;
 
   const compact = {};

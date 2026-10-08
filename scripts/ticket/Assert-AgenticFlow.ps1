@@ -37,6 +37,9 @@ $ErrorActionPreference = 'Stop'
 $violations = [System.Collections.Generic.List[string]]::new()
 function Fail { param([string]$Msg) $violations.Add($Msg) }
 
+. (Join-Path $PSScriptRoot 'lib/TicketPrefix.ps1')
+$ticketPrefix = Get-TicketPrefix -Root $Root
+
 # Child scripts call `exit`, so they must run in a subprocess. The workflow
 # requires PowerShell 7: invoking Windows PowerShell 5.1 here can misdecode
 # BOM-less UTF-8 scripts and turn punctuation inside strings into parse errors.
@@ -131,7 +134,7 @@ if (-not (Test-Path -LiteralPath $profilePath)) {
 # ---- 4. Retired artifacts banned -------------------------------------------
 $plansDir = Join-Path $Root 'plans'
 if (Test-Path -LiteralPath $plansDir) {
-    foreach ($pat in @('WI*-impl-prompt.md', 'WI*-workitem.json', 'scorecard-trend.md')) {
+    foreach ($pat in @("$ticketPrefix*-impl-prompt.md", "$ticketPrefix*-workitem.json", 'scorecard-trend.md')) {
         @(Get-ChildItem -LiteralPath $plansDir -Filter $pat -ErrorAction SilentlyContinue) | ForEach-Object {
             Fail "retired-artifact: plans/$($_.Name) was superseded -- delete it (see _shared/ticket-artifacts.md)"
         }
@@ -161,16 +164,16 @@ try {
 }
 
 # ---- 5. No hardcoded worktree paths in skills/** and commands/*.md --
-# Match only when a real ticket number (digits) appears — WI<n> is a documentation
+# Match only when a real ticket number (digits) appears — <prefix><n> is a documentation
 # placeholder and is intentionally allowed in skill descriptions.
-$pathPat = 'source[/\\\\]worktrees[/\\\\]WI\d+'
+$pathPat = 'source[/\\\\]worktrees[/\\\\]' + [regex]::Escape($ticketPrefix) + '\d+'
 foreach ($dir in @((Join-Path $Root 'skills'), (Join-Path $Root 'commands'))) {
     if (-not (Test-Path -LiteralPath $dir)) { continue }
     Get-ChildItem -LiteralPath $dir -Recurse -Filter '*.md' | ForEach-Object {
         $rel = $_.FullName.Substring($Root.Length + 1)
         $content = Get-Content -LiteralPath $_.FullName -Raw
         if ($content -match $pathPat) {
-            Fail "hardcoded-path: $rel contains literal 'source/worktrees/WI' -- use Resolve-TicketRoot"
+            Fail "hardcoded-path: $rel contains literal 'source/worktrees/$ticketPrefix<n>' -- use Resolve-TicketRoot"
         }
     }
 }
@@ -592,8 +595,7 @@ if (-not (Test-Path -LiteralPath $claimsPath)) {
     if ($claimRegistry) {
         # The file universe: tracked plus new untracked files, as git sees them, so a
         # violation is caught before its first commit. Ticket files and scratch are out.
-        . (Join-Path $PSScriptRoot 'lib/TicketPrefix.ps1')
-        $claimTicketGlob = 'plans/' + (Get-TicketPrefix -Root $Root) + '*'
+        $claimTicketGlob = 'plans/' + $ticketPrefix + '*'
         $claimFiles = @()
         Push-Location -LiteralPath $Root
         try {
