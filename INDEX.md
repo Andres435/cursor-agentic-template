@@ -92,6 +92,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [adapters/codex/README.md](adapters/codex/README.md) · [model-usage.md](adapters/codex/model-usage.md) | Codex install and tier map | Codex, spawn_agent |
 | [output-styles/engineering-mode.md](output-styles/engineering-mode.md) | Claude Code engineering-mode output style | output style |
 | [rules/model-usage.mdc](rules/model-usage.mdc) · [rules/workspace-context.mdc](rules/workspace-context.mdc) | Cursor rule stubs | rules |
+| [rules/security.mdc](rules/security.mdc) | review must not introduce a security gap | security, secrets, SQL injection, auth |
 | [commands/_README.md](commands/_README.md) | why commands are skills | commands, slash menu |
 | [hooks/tests/README.md](hooks/tests/README.md) | running hook tests | hooks, tests, script-path-guard |
 | [environments/README.md](environments/README.md) · [worktrees.md](environments/worktrees.md) | env cards; worktree opt-in | environments, worktrees |

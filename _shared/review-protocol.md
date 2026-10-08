@@ -20,6 +20,7 @@ report shape.
 
 Load only the rules relevant to the diff's languages and file types. Common starting points:
 
+- [../rules/security.mdc](../rules/security.mdc) — do not introduce a gap: secrets, injection, auth on private records.
 - Linting / style rules from `rules/` that match the changed languages.
 - Cross-repo dependency and commit discipline: `_shared/cross-repo-workflow.md` (when multi-repo).
 - Workspace repo map: `rules/workspace-context.mdc`.
@@ -34,7 +35,7 @@ than skipping silently.
 - **Correctness** — behavior changes match the ticket, edge cases handled, regression paths covered.
 - **Conventions** — naming, visibility, async patterns, and local project style.
 - **Architecture** — service boundaries, DI registration, dependency direction.
-- **Security** — parameterized queries, no secrets, no PII in logs, authorization on sensitive endpoints.
+- **Security** — the diff must not open a gap the previous code did not have. Parameterized queries, no secrets, no private data in logs, and authorization on sensitive endpoints. Same bar as [../rules/security.mdc](../rules/security.mdc).
 - **Tests** — new behavior has focused tests; bug fixes have regression tests or a clear reason tests
   are not practical. For UI/auth/host-bound diffs, cite `scripts/Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes) instead of a generic "needs a runtime test" finding. Missing smoke is residual risk, not a Blocker.
 - **Database alignment** — when schema changes, verify all affected migration/query paths stay aligned.

@@ -9,10 +9,10 @@ color: red
 
 # Stop Stack
 
-Release the recorded stack owner. Stop the process the profile start command launched only if the user names that stop command. Do not invent one.
+Stop the services `Start-TicketStack.ps1` recorded, then release the owner. Do not invent a second stop command.
 
 ```powershell
-./scripts/runtime/Set-ActiveStack.ps1 -Clear
+./scripts/runtime/Stop-TicketStack.ps1
 ```
 
 Report the exit status. Stopping does not erase a recorded smoke stamp; `Get-StackSmoke.ps1` marks it

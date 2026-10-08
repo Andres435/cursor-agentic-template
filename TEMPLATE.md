@@ -34,7 +34,7 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `CUSTOMIZE.md` | Checklist |
 | `agents/` | Specialists |
 | `environments/` | Env cards |
-| `scripts/runtime/` besides the stack owner | The profile start command |
+| `scripts/runtime/` besides the stack owner | `Start-TicketStack.ps1` reads `profile.stacks.services`. `/start-new-project` fills that list |
 | `USER-MANUAL.md` | Project notes below the core section |
 | `mcp.json` | Project MCP servers |
 | `Install-CursorExtensions.ps1`, `Apply-CursorUserConfig.ps1`, `New-CockpitWorkspace.ps1` in `scripts/machine/` | Optional bootstrap phases. Machine init skips each one that is absent |

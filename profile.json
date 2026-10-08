@@ -35,7 +35,8 @@
   "integrations": [],
   "stacks": {
     "default": "dev",
-    "startCommand": "npm run dev"
+    "startCommand": "npm run dev",
+    "services": []
   },
   "epochRerateAfter": 3,
   "slashCommands": [
