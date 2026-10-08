@@ -94,6 +94,7 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
      On `FAIL`, commit nothing and report what it names (a missing verify receipt, a stale or
      open-Major review stamp, a frontend Drive not confirmed). The push hook runs the same check
      on a branch that names the ticket, so skipping it here only moves the failure to the push.
+   - **Commit message trailer:** with the work staged, run `.\.cursor\scripts\ticket\Get-AgenticProof.ps1 -Ticket <ticket> -Repo <repo>` and add its one line as the last trailer of the commit message ([agentic-proof](../../../_shared/agentic-proof.md)). It refuses when the verify receipt or review stamp no longer matches the staged work; fix that first. After the commit, `Assert-AgenticProof.ps1 -RepoPath <repo>` should print `[PASS]`.
    - Before push in each repo: `git fetch origin`, merge `origin/<baseBranch>`
      (`profile.baseBranchDefault`). Resolve conflicts and include the merge commit; do not open or
      update a PR against a branch that is behind base.

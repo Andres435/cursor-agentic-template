@@ -115,6 +115,14 @@ versions into every session there. On exit 1 print its `[FAIL]` lines as
 `[WARN] installed overlay stale — run scripts/machine/Install-ClaudeAdapter.ps1` (it keeps the old
 copy as `*.previous`). With no overlay installed, print `[PASS] installed overlay — none`.
 
+### 10. Enforcement upkeep (informational)
+
+Run `scripts/ticket/Get-EnforcementUpkeep.ps1` (`-Days 30` default; `-Days 90` monthly). It prints `[INFO]` lines for
+`Docs-Unaffected` waivers per rule (thin reasons flagged), the size of the `doc-claims.psd1` registry, and
+`scripts/.hook-errors.log` counts per hook. It never fails and stays out of the count. Act on it monthly:
+read any rule with many waivers (its co-change rule may be wrong), retire a claim once a check covers its fact,
+and fix a hook that keeps logging errors.
+
 ## Output
 
 ```text

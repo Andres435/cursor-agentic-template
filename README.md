@@ -1,8 +1,9 @@
 # cursor-agentic-template
 
 A ticket-driven agentic workflow for any product. Cursor, Claude Code, and Codex each load it as a
-plugin (`.cursor-plugin/`, `.claude-plugin/`, `.codex-plugin/`). The shared core names verbs and
-model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specifics live in
+plugin (`.cursor-plugin/`, `.claude-plugin/`, `.codex-plugin/`). Claude Code is the only IDE that has run the
+enforcement gates end to end; Cursor is untested against them and the Codex adapter is experimental. The
+shared core names verbs and model tiers. [adapters/](adapters/README.md) maps them per IDE. Product specifics live in
 [profile.json](profile.json), not in the core.
 
 **Day-to-day usage:** [USER-MANUAL.md](USER-MANUAL.md). **First clone:** [CUSTOMIZE.md](CUSTOMIZE.md).

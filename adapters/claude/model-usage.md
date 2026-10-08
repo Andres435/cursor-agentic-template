@@ -58,6 +58,7 @@ Verb → tool map: [harness-verbs](../../_shared/harness-verbs.md).
 | `review-diff` | `agentic:code-reviewer` if your overlay adds one, else `general-purpose` with the review-changes prompt | standard (+ deep second opinion when the plan has a `[high]` step) | Never skip the review. |
 | `pr-feedback-fetch` | `general-purpose` | fast | Direct match. |
 | `peer-review-pr` | same as `review-diff` | standard | Coworker PR comments; read-only; no severity labels. |
+| script create/update | plugin agent `agentic:script-engineer` | standard | Not a subagent-function; see `skills/script-authoring`. |
 
 One `Agent` call per independent repo/area, batched in a single message so they run concurrently.
 **Pass `model` from the Tier column** — an omitted `model` inherits this chat's model. All other

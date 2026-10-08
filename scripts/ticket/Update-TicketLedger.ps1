@@ -61,6 +61,11 @@
     Re-read the ledger, migrate old 11-column rows, and write the current header
     without changing any ticket's values.
 
+.PARAMETER Regenerate
+    Recompute Reopened, Days and PRFind for every existing row from that ticket's
+    manifest in plans/, changing no other cell. A row whose manifest is missing is
+    left alone. Those three columns are never typed: they always come from manifests.
+
 .PARAMETER Remove
     Delete this ticket's row. For a row entered by mistake -- the file itself must
     never be hand-edited, so removal has to be a switch, not a manual delete.
@@ -145,6 +150,9 @@ param(
     [Parameter(ParameterSetName = 'Rewrite')]
     [switch]$Rewrite,
 
+    [Parameter(Mandatory, ParameterSetName = 'Regenerate')]
+    [switch]$Regenerate,
+
     [Parameter(Mandatory, ParameterSetName = 'Rated')]
     [switch]$MarkRated,
 
@@ -171,12 +179,13 @@ if (-not (Test-Path -LiteralPath $PlansDir)) { New-Item -ItemType Directory -Pat
 # The epoch comes from the workflow that ran the close (this script's own clone), not -Root.
 $EpochId = Get-WorkflowEpochId -Root (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent)
 
-$Columns = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'CtxS%', 'CtxR%', 'Ctx%', 'PR', 'Lanes', 'Epoch')
+$Columns = @('Ticket', 'Type', 'Closed', 'Mode', 'Hours', 'Pts', 'E', 'C', '$tok', 'CtxS%', 'CtxR%', 'Ctx%', 'PR', 'Lanes', 'Epoch', 'Reopened', 'Days', 'PRFind')
 
 function New-LedgerRow {
     param([string]$Ticket, [string]$Type, [string]$Closed, [string]$Mode,
           [string]$Hours, [string]$Pts, [string]$E, [string]$C, [string]$Tok,
-          [string]$CtxS, [string]$CtxR, [string]$Ctx, [string]$Pr, [string]$Lanes, [string]$Epoch)
+          [string]$CtxS, [string]$CtxR, [string]$Ctx, [string]$Pr, [string]$Lanes, [string]$Epoch,
+          [string]$Reopened = '', [string]$Days = '', [string]$PRFind = '')
     [pscustomobject]@{
         Ticket = $Ticket
         Type   = $Type
@@ -193,6 +202,9 @@ function New-LedgerRow {
         PR     = $Pr
         Lanes  = $Lanes
         Epoch  = $Epoch
+        Reopened = $Reopened
+        Days   = $Days
+        PRFind = $PRFind
     }
 }
 
@@ -258,6 +270,58 @@ function Get-ManifestLanes {
     }
 }
 
+# A manifest field that may be a string or (after ConvertFrom-Json) a DateTime. $null when empty/unparseable.
+function ConvertTo-UtcInstant {
+    param($Value)
+    if ($null -eq $Value) { return $null }
+    if ($Value -is [datetime]) { return $Value.ToUniversalTime() }
+    $s = [string]$Value
+    if ([string]::IsNullOrWhiteSpace($s)) { return $null }
+    $parsed = [datetimeoffset]::MinValue
+    $styles = [System.Globalization.DateTimeStyles]::AssumeUniversal
+    if ([datetimeoffset]::TryParse($s, [System.Globalization.CultureInfo]::InvariantCulture, $styles, [ref]$parsed)) {
+        return $parsed.UtcDateTime
+    }
+    return $null
+}
+
+# Objective outcome columns, computed from plans/<key>-manifest.json and never typed.
+# Returns $null when there is no readable manifest; otherwise Reopened/Days/PRFind, each '' when its field is absent.
+function Get-ManifestOutcomes {
+    param([string]$TicketKey)
+    $mfPath = Join-Path $PlansDir "$TicketKey-manifest.json"
+    if (-not (Test-Path -LiteralPath $mfPath)) { return $null }
+    try {
+        $mf = Get-Content -LiteralPath $mfPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $mf) { return $null }
+        $names = @($mf.PSObject.Properties.Name)
+        $out = @{ Reopened = ''; Days = ''; PRFind = '' }
+
+        $reopened = $false
+        if ($names -contains 'reopenedAtUtc') {
+            $reopened = -not [string]::IsNullOrWhiteSpace([string]$mf.reopenedAtUtc)
+            $out.Reopened = if ($reopened) { 'yes' } else { 'no' }
+        }
+
+        if ($names -contains 'startedAtUtc') {
+            $start = ConvertTo-UtcInstant $mf.startedAtUtc
+            $end = $null
+            if ($reopened -and $names -contains 'reclosedAtUtc') { $end = ConvertTo-UtcInstant $mf.reclosedAtUtc }
+            if (-not $end -and $names -contains 'completedAtUtc') { $end = ConvertTo-UtcInstant $mf.completedAtUtc }
+            if ($start -and $end -and $end -ge $start) {
+                $out.Days = ([math]::Round(($end - $start).TotalDays, 1, [MidpointRounding]::AwayFromZero)).ToString('F1', [System.Globalization.CultureInfo]::InvariantCulture)
+            }
+        }
+
+        if (($names -contains 'feedback') -and $mf.feedback -and ($mf.feedback.PSObject.Properties.Name -contains 'items')) {
+            $out.PRFind = [string]@(@($mf.feedback.items) | Where-Object { $_ -and $_.kind -in @('thread', 'sonar') }).Count
+        }
+        return $out
+    } catch {
+        return $null
+    }
+}
+
 # ---------------------------------------------------------------- read existing
 $rows = [System.Collections.Generic.List[object]]::new()
 
@@ -271,7 +335,8 @@ if (Test-Path -LiteralPath $OutPath) {
         $cells = Convert-LedgerCells -Cells $cells
         $rows.Add((New-LedgerRow -Ticket $cells[0] -Type $cells[1] -Closed $cells[2] -Mode $cells[3] `
             -Hours $cells[4] -Pts $cells[5] -E $cells[6] -C $cells[7] -Tok $cells[8] `
-            -CtxS $cells[9] -CtxR $cells[10] -Ctx $cells[11] -Pr $cells[12] -Lanes $cells[13] -Epoch $cells[14]))
+            -CtxS $cells[9] -CtxR $cells[10] -Ctx $cells[11] -Pr $cells[12] -Lanes $cells[13] -Epoch $cells[14] `
+            -Reopened $cells[15] -Days $cells[16] -PRFind $cells[17]))
     }
 }
 $ratedEpochs = @(Get-LedgerRatedEpochs -LedgerPath $OutPath)
@@ -321,6 +386,18 @@ if ($SeedFromCloseouts) {
     }
     Write-Host "Seeded $seeded row(s) from WI*-closeout.md." -ForegroundColor Cyan
 }
+elseif ($Regenerate) {
+    $filled = 0
+    foreach ($r in $rows) {
+        $o = Get-ManifestOutcomes -TicketKey $r.Ticket
+        if (-not $o) { continue }
+        $r.Reopened = $o.Reopened
+        $r.Days = $o.Days
+        $r.PRFind = $o.PRFind
+        $filled++
+    }
+    Write-Host "Regenerated outcome columns for $filled of $($rows.Count) row(s)." -ForegroundColor Cyan
+}
 elseif (-not $Rewrite -and -not $MarkRated) {
     $digits = $Ticket -replace '[^\d]', ''
     if (-not $digits) { throw "Could not read a work item number from '$Ticket'." }
@@ -365,6 +442,9 @@ elseif (-not $Rewrite -and -not $MarkRated) {
         throw "Lanes '$lanesValue' is not fN/sN/dN [inline:dN] (e.g. f2/s1/d0 inline:d3). Write it with Set-TicketLanes.ps1."
     }
 
+    $outcomes = Get-ManifestOutcomes -TicketKey $key
+    if (-not $outcomes) { $outcomes = @{ Reopened = ''; Days = ''; PRFind = '' } }
+
     $rows.Add((New-LedgerRow -Ticket $key -Type (Get-Blank $Type) -Closed $closedDate `
         -Mode $resolvedMode -Hours (Get-Blank $Hours) -Pts (Get-Blank $Points) `
         -E (Get-Blank $(if ($PSBoundParameters.ContainsKey('Efficiency')) { $Efficiency } else { $null })) `
@@ -374,7 +454,8 @@ elseif (-not $Rewrite -and -not $MarkRated) {
         -Ctx (Get-Blank $ctxClose) `
         -Pr (Get-Blank $Pr) `
         -Lanes (Get-Blank $lanesValue) `
-        -Epoch $EpochId))
+        -Epoch $EpochId `
+        -Reopened $outcomes.Reopened -Days $outcomes.Days -PRFind $outcomes.PRFind))
     }
 }
 
@@ -393,6 +474,12 @@ function Measure-Ctx {
     return [string]([math]::Round((($vals | Measure-Object -Average).Average), 0)) + '%'
 }
 
+$reopenedCount = @($rows | Where-Object { $_.Reopened -eq 'yes' }).Count
+$dayVals = @($rows | ForEach-Object { $_.Days } | Where-Object { $_ -match '^\d+(\.\d+)?$' } |
+    ForEach-Object { [double]::Parse($_, [System.Globalization.CultureInfo]::InvariantCulture) })
+$avgDays = if ($dayVals.Count) {
+    ([math]::Round((($dayVals | Measure-Object -Average).Average), 1, [MidpointRounding]::AwayFromZero)).ToString('F1', [System.Globalization.CultureInfo]::InvariantCulture)
+} else { 'n/a' }
 $scoredCount = @($rows | Where-Object { $_.E -match '^\d$' }).Count
 $avgCtxS = Measure-Ctx 'CtxS'
 $avgCtxR = Measure-Ctx 'CtxR'
@@ -413,9 +500,9 @@ $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine('`/implement` is not recorded. This file is user-local (never committed); see')
 [void]$sb.AppendLine('`plans/examples/ticket-ledger.example.md` for its shape.')
 [void]$sb.AppendLine('')
-[void]$sb.AppendLine('| Tickets | Scored | Avg E | Avg C | Avg $tok | Avg CtxS% | Avg CtxR% | Avg Ctx% |')
-[void]$sb.AppendLine('|---|---|---|---|---|---|---|---|')
-[void]$sb.AppendLine("| $($rows.Count) | $scoredCount | $(Measure-Axis 'E') | $(Measure-Axis 'C') | $(Measure-Axis 'Tok') | $avgCtxS | $avgCtxR | $avgCtx |")
+[void]$sb.AppendLine('| Tickets | Scored | Avg E | Avg C | Avg $tok | Avg CtxS% | Avg CtxR% | Avg Ctx% | Reopened | Avg Days |')
+[void]$sb.AppendLine('|---|---|---|---|---|---|---|---|---|---|')
+[void]$sb.AppendLine("| $($rows.Count) | $scoredCount | $(Measure-Axis 'E') | $(Measure-Axis 'C') | $(Measure-Axis 'Tok') | $avgCtxS | $avgCtxR | $avgCtx | $reopenedCount | $avgDays |")
 $branchScored = @($sorted | Where-Object { $_.Mode -eq 'branch' -and $_.E -match '^\d$' })
 $coverageWindow = @($branchScored | Select-Object -Last 11)
 $coverageHave = @($coverageWindow | Where-Object { $_.CtxS -match '^~?\d+$' }).Count
@@ -426,6 +513,8 @@ $coverageLabel = if ($coverageOf -ge 11) { "last $coverageOf" } else { "$coverag
 [void]$sb.AppendLine('')
 # Epoch: the workflow contract a row closed under. Compare rows within one epoch only.
 [void]$sb.AppendLine('`Epoch` is the workflow contract a row closed under; compare rows within one epoch. Blank = before epochs were recorded.')
+[void]$sb.AppendLine('')
+[void]$sb.AppendLine('E, C and $tok are self-rated; Reopened, Days and PRFind are computed from manifests.')
 if ($ratedEpochs.Count) {
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('Rated: ' + ($ratedEpochs -join ', '))
@@ -434,7 +523,7 @@ if ($ratedEpochs.Count) {
 [void]$sb.AppendLine('| ' + ($Columns -join ' | ') + ' |')
 [void]$sb.AppendLine('|' + ('---|' * $Columns.Count))
 foreach ($r in $sorted) {
-    [void]$sb.AppendLine("| $($r.Ticket) | $($r.Type) | $($r.Closed) | $($r.Mode) | $($r.Hours) | $($r.Pts) | $($r.E) | $($r.C) | $($r.Tok) | $($r.CtxS) | $($r.CtxR) | $($r.Ctx) | $($r.PR) | $($r.Lanes) | $($r.Epoch) |")
+    [void]$sb.AppendLine("| $($r.Ticket) | $($r.Type) | $($r.Closed) | $($r.Mode) | $($r.Hours) | $($r.Pts) | $($r.E) | $($r.C) | $($r.Tok) | $($r.CtxS) | $($r.CtxR) | $($r.Ctx) | $($r.PR) | $($r.Lanes) | $($r.Epoch) | $($r.Reopened) | $($r.Days) | $($r.PRFind) |")
 }
 
 # UTF-8 with NO BOM. Set-Content -Encoding utf8 on PS 5.1 emits a BOM, which then

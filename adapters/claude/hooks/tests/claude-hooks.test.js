@@ -390,8 +390,8 @@ check("every declared hook script exists", () => {
       }
     }
   }
-  // git-guard.js runs the commit and push bridges in one process, so 6 entries wire 7 bridges.
-  assert(seen.length === 6, "expected 6 wired hooks, found " + seen.length);
+  // git-guard.js runs the commit and push bridges in one process, so 7 entries wire 8 bridges.
+  assert(seen.length === 7, "expected 7 wired hooks, found " + seen.length);
   assert(seen.includes("git-guard.js"), "git-guard.js is not wired");
 });
 

@@ -17,6 +17,11 @@
         "command": "node ./adapters/cursor/hooks/git-push-agentic-flow.js",
         "matcher": "\\bgit(\\.exe)?\\b[^\\n]*\\bpush\\b",
         "timeout": 120
+      },
+      {
+        "command": "node ./adapters/cursor/hooks/script-path-guard.js",
+        "matcher": ".(ps1|py)\b",
+        "timeout": 3
       }
     ],
     "beforeSubmitPrompt": [

@@ -39,7 +39,7 @@ spike's story-point or timebox field.
      compact pass/fail packet. Parent concatenates packets only; do not read
      [../../../_shared/test-verification.md](../../../_shared/test-verification.md) in this chat.
    - **Write the verify receipt** — the close gate reads it. One call per returned packet:
-     `.\.cursor\scripts\Set-VerifyReceipt.ps1 -Ticket <ticket> -Repo <repo> -Tests pass|fail|not-run -Sonar ok|error|not-run [-Failing <names>] [-Reason "<why not run>"]`.
+     `.\.cursor\scripts\Set-VerifyReceipt.ps1 -Ticket <ticket> -Repo <repo> -Tests pass|fail|not-run -Sonar ok|error|not-run -Evidence <.trx or log of the run> [-Failing <names>] [-Reason "<why not run>"]` (`-Evidence` is required for pass/fail; not-run needs `-Reason` instead).
      The packet's static-analysis field maps to `-Sonar` (`ok`, `error`, or `not-run` when the
      project has none or it was skipped). `not-run` tests need `-Reason` (for example docs-only).
    - Summarize changed behavior and affected repos; list tests, linters, static analysis, manual

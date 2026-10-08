@@ -73,6 +73,9 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [skills/start-ticket/references/ticket-intake-generic.md](skills/start-ticket/references/ticket-intake-generic.md) | pattern for a tracker intake reference | intake, tracker |
 | [skills/architect/SKILL.md](skills/architect/SKILL.md) | design across a module or repo boundary | architect, design lanes |
 | [skills/architect/references/design-lane-prompt.md](skills/architect/references/design-lane-prompt.md) · [design-red-flags.md](skills/architect/references/design-red-flags.md) | architect lane prompt and red flags | design lane, red flags |
+| [agents/script-engineer.md](agents/script-engineer.md) | creating or changing a .ps1/.py script | script, PowerShell, Pester, PSScriptAnalyzer |
+| [skills/script-authoring/SKILL.md](skills/script-authoring/SKILL.md) | before writing any script: where it may live, standards, tests | script, ps1, tmp, scratch, Requires, StrictMode, Pester |
+| [_shared/agentic-proof.md](_shared/agentic-proof.md) | the commit trailer that carries verify/review proof out of the local manifest; what may leave the machine; pipeline step | agentic proof, Agentic-Proof trailer, fingerprint, PR pipeline, server-side |
 | [skills/blast-radius/SKILL.md](skills/blast-radius/SKILL.md) | what a shared change could break | blast radius, shared module, public API |
 | [skills/tdd-red-green-refactor/SKILL.md](skills/tdd-red-green-refactor/SKILL.md) | test-first work | TDD, characterization |
 | [skills/environment-context/SKILL.md](skills/environment-context/SKILL.md) | ticket names an integration or runtime setup | environment card |
@@ -90,7 +93,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [output-styles/engineering-mode.md](output-styles/engineering-mode.md) | Claude Code engineering-mode output style | output style |
 | [rules/model-usage.mdc](rules/model-usage.mdc) · [rules/workspace-context.mdc](rules/workspace-context.mdc) | Cursor rule stubs | rules |
 | [commands/_README.md](commands/_README.md) | why commands are skills | commands, slash menu |
-| [hooks/tests/README.md](hooks/tests/README.md) | running hook tests | hooks, tests |
+| [hooks/tests/README.md](hooks/tests/README.md) | running hook tests | hooks, tests, script-path-guard |
 | [environments/README.md](environments/README.md) · [worktrees.md](environments/worktrees.md) | env cards; worktree opt-in | environments, worktrees |
 | [user/README.md](user/README.md) | recommended IDE settings and keybindings | settings, keybindings |
 | [plans/README.md](plans/README.md) | what lives under `plans/` (user-local) | plans, artifacts |

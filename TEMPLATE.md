@@ -50,3 +50,12 @@ Do not `git merge` a product repo into this template.
 2. A hook test or a doc-budget check.
 3. `skills/<name>/SKILL.md` with `icon` and `color`. Playbooks live in `playbooks/`, not a repo-root folder and not `PLAYBOOK.md` beside `SKILL.md`.
 4. Porting from a product repo: diff its workflow commits since the last port, apply the generic hunks, and keep the template's profile-driven pieces (ticket prefix, `adrIndex`, ledger row pattern). Name the source commits in the port commit message.
+
+## Last port
+
+The newest product workflow state this template has absorbed. Start the next port with
+`git diff <sha>..main` in the source repo, limited to generic paths.
+
+| Source | Base | Date | Left out |
+|---|---|---|---|
+| tmo-agentic-workspace `main` | `d570d37` (plus the prep-pr path fix in its PR #18) | 2026-10-08 | product evals (`evals/`, `Assert-EvalArtifacts`, `plugin-eval.yml`), product NuGet credential code, the source's tech-debt list and its own doc claims |

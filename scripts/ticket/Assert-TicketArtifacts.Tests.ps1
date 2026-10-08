@@ -125,6 +125,38 @@ Describe 'Assert-TicketArtifacts -Phase start: Work Plan content checks' {
         $result.ExitCode | Should -Be 0
     }
 
+    It 'passes: steps grouped under ### subheadings inside the Work Plan' {
+        $fixture = New-FixtureRoot -Root $TestDrive `
+            -EngineeringDecisions 'None -- fixture, no scope or contract calls to make.' `
+            -WorkPlanSection @'
+## Work Plan
+
+### Foundational
+1. **[low]** Fixture step one
+
+### Verification
+2. **[low]** Fixture step two
+'@
+        $result = Invoke-Assert -Root $fixture.Root -Phase 'start'
+        $result.ExitCode | Should -Be 0
+    }
+
+    It 'passes: a sibling ## section after the Work Plan is not read as steps' {
+        $fixture = New-FixtureRoot -Root $TestDrive `
+            -EngineeringDecisions 'None -- fixture, no scope or contract calls to make.' `
+            -WorkPlanSection @'
+## Work Plan
+
+1. [low] Fixture step one
+
+## Testing Plan
+
+1. Untagged numbered line that belongs to another section
+'@
+        $result = Invoke-Assert -Root $fixture.Root -Phase 'start'
+        $result.ExitCode | Should -Be 0
+    }
+
     It 'fails: an untagged step, naming the step number' {
         $fixture = New-FixtureRoot -Root $TestDrive `
             -EngineeringDecisions 'None -- fixture, no scope or contract calls to make.' `
@@ -366,7 +398,9 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'first try'
         & git -C $repo add a.txt
         Add-ManifestFields $root @{ affectedRepos = @([pscustomobject]@{ repo = 'app'; local = $true; path = $repo }) }
-        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar ok -RepoPath $repo -Root $root
+        $ev = Join-Path $TestDrive 'stale-receipt-evidence.log'
+        Set-Content -LiteralPath $ev -Value 'Passed! total 3'
+        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar ok -Evidence $ev -RepoPath $repo -Root $root
         # Review finds a Major; the fix is staged and re-reviewed, but verify is not re-run.
         Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'fixed'
         & git -C $repo add a.txt
@@ -375,10 +409,37 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $stale = Invoke-Assert -Root $root -Phase 'close'
         $stale.ExitCode | Should -Be 1
         $stale.Output | Should -Match 'tests ran on older work'
-        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar ok -RepoPath $repo -Root $root
+        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar ok -Evidence $ev -RepoPath $repo -Root $root
         $fresh = Invoke-Assert -Root $root -Phase 'close'
         $fresh.ExitCode | Should -Be 0
         Get-ChildItem -LiteralPath $repo -Recurse -Force -File | ForEach-Object { $_.IsReadOnly = $false }
+    }
+
+    It 'checks verify evidence: missing, malformed, changed file fail; intact and legacy pass' {
+        $sha = 'ab' * 32
+        $evFile = Join-Path $TestDrive 'close-evidence.log'
+        [System.IO.File]::WriteAllText($evFile, 'Passed! total 3')
+        $realSha = (Get-FileHash -LiteralPath $evFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        $cases = @(
+            @{ name = 'missing'; fail = 'evidence missing'; json = '{"repos":{"app":{"pass":true,"tests":"pass","sonar":"ok","evidenceVersion":1}}}' }
+            @{ name = 'malformed'; fail = 'evidence missing'; json = '{"repos":{"app":{"pass":true,"tests":"pass","sonar":"ok","evidenceVersion":1,"evidence":{"path":"x.log","sha256":"nothex","bytes":1,"kind":"log"}}}}' }
+            @{ name = 'changed'; fail = 'evidence file changed'; json = ('{"repos":{"app":{"pass":true,"tests":"pass","sonar":"ok","evidenceVersion":1,"evidence":{"path":"' + ($evFile -replace '\\', '/') + '","sha256":"' + $sha + '","bytes":1,"kind":"log"}}}}') }
+            @{ name = 'intact'; fail = $null; json = ('{"repos":{"app":{"pass":true,"tests":"pass","sonar":"ok","evidenceVersion":1,"evidence":{"path":"' + ($evFile -replace '\\', '/') + '","sha256":"' + $realSha + '","bytes":15,"kind":"log"}}}}') }
+            @{ name = 'gone'; fail = $null; json = ('{"repos":{"app":{"pass":true,"tests":"pass","sonar":"ok","evidenceVersion":1,"evidence":{"path":"' + ($TestDrive -replace '\\', '/') + '/deleted.trx","sha256":"' + $sha + '","bytes":1,"kind":"trx"}}}}') }
+            @{ name = 'legacy'; fail = $null; json = '{"repos":{"app":{"pass":true,"tests":"pass","sonar":"ok"}}}' }
+        )
+        foreach ($c in $cases) {
+            $root = Join-Path $TestDrive "close-evidence-$($c.name)"
+            New-StampedCloseRoot $root
+            Set-VerifyJson $root $c.json
+            $result = Invoke-Assert -Root $root -Phase 'close'
+            if ($c.fail) {
+                $result.ExitCode | Should -Be 1 -Because $c.name
+                $result.Output | Should -Match $c.fail -Because $c.name
+            } else {
+                $result.ExitCode | Should -Be 0 -Because $c.name
+            }
+        }
     }
 
     It 'fails a bug close with no verify results on the manifest' {
@@ -637,7 +698,9 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         & git -C $repo commit -q -m dev
         & git -C $repo checkout -q main
         & git -C $repo merge -q --no-ff dev -m 'merge dev' 2>$null | Out-Null
-        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar not-run -RepoPath $repo -Root $root
+        $ev = Join-Path $TestDrive 'merge-evidence.log'
+        Set-Content -LiteralPath $ev -Value 'Passed! total 3'
+        & (Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1') -Ticket WI00009 -Repo app -Tests pass -Sonar not-run -Evidence $ev -RepoPath $repo -Root $root
 
         (Invoke-Assert -Root $root -Phase 'close').ExitCode | Should -Be 0
 

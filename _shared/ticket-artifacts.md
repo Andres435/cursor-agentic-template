@@ -83,7 +83,7 @@ scripts/Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start
   row are written *during* `complete-task`, so a load-time close gate always fails.
 - `complete-task` runs `-Phase close` inside the retrospective, after the ledger row is written.
   A non-spike close also requires, for each local affected repo:
-  - `verify.repos.<repo>` on the manifest with boolean `pass: true` (`scripts/Set-VerifyReceipt.ps1`), taken on the work that ships (its `headSha` and fingerprint follow the review stamp's rule, so tests run before a later fix fail);
+  - `verify.repos.<repo>` on the manifest with boolean `pass: true` and `evidence` (the test-output file hash, `.trx` counts; `scripts/Set-VerifyReceipt.ps1 -Evidence`), taken on the work that ships (its `headSha` and fingerprint follow the review stamp's rule, so tests run before a later fix fail);
   - a `reviewReady` entry (`scripts/Set-ReviewReady.ps1`) with verdict Ready, Ready with fixes, or
     No change. When the repo path exists, the reviewed work must still be there: the staged diff,
     or the first-parent commits since the stamp's `headSha`. A later merge of the base branch is

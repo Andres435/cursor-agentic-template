@@ -41,7 +41,9 @@ copy in `%LOCALAPPDATA%` can be blocked by application control.
 If an application allowlist (for example ThreatLocker) guards the machine, keep the workspace
 clones and this template clone under the one allowed root, and never let agents write helper scripts
 to temp or a scratchpad: only scripts run from the allowed root. Each blocked run is an approval
-prompt for you.
+prompt for you. To have the `script-path-guard` hook deny those attempts before they reach the
+allowlist, set the user environment variable `AGENTIC_SCRIPT_ALLOW_ROOT` to a regular expression for
+the allowed path, for example `[\\/]source[\\/]repos[\\/]`. Unset, the hook allows everything.
 
 ## 3. Bootstrap
 

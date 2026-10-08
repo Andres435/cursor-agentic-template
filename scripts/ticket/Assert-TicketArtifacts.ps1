@@ -245,9 +245,12 @@ function Test-PlanFile {
             return
         }
 
+        # The section ends at the next heading of the same or a higher level, so steps grouped
+        # under ### subheadings inside "## Work Plan" still count.
+        $workPlanLevel = ([regex]::Match($planLines[$workPlanIdx], '#+')).Length
         $workPlanEndIdx = $planLines.Count
         for ($li = $workPlanIdx + 1; $li -lt $planLines.Count; $li++) {
-            if ($planLines[$li] -match '^\s*#{1,4}\s') { $workPlanEndIdx = $li; break }
+            if ($planLines[$li] -match '^\s*(#{1,4})\s' -and $Matches[1].Length -le $workPlanLevel) { $workPlanEndIdx = $li; break }
         }
         $workPlanSection = if ($workPlanEndIdx -gt $workPlanIdx + 1) { $planLines[($workPlanIdx + 1)..($workPlanEndIdx - 1)] } else { @() }
 
@@ -627,6 +630,29 @@ function Test-VerifyReceipt {
             }
             $found.Add("$Key-manifest.json (verify.repos.$($repo.repo): tests not run: $why)")
             continue
+        }
+        # Receipts written with evidenceVersion must carry a hashed evidence file. Older receipts
+        # (no evidenceVersion) stay a JSON check.
+        if (($names -contains 'tests') -and ([string]$entry.tests -eq 'pass') -and ($names -contains 'evidenceVersion')) {
+            $ev = if ($names -contains 'evidence') { $entry.evidence } else { $null }
+            $evShaOk = $ev -and ($ev.PSObject.Properties.Name -contains 'sha256') -and ([string]$ev.sha256 -match '^[0-9a-fA-F]{64}$')
+            if (-not $evShaOk) {
+                $missing.Add("$label.repos.$($repo.repo) -- evidence missing; re-run Set-VerifyReceipt.ps1 with -Evidence <.trx or log>")
+                continue
+            }
+            $evPath = if ($ev.PSObject.Properties.Name -contains 'path') { [string]$ev.path } else { '' }
+            $evFull = $null
+            if ($evPath) {
+                if ([System.IO.Path]::IsPathRooted($evPath)) { $evFull = $evPath }
+                elseif ($hasCheckout) { $evFull = Join-Path $path $evPath }
+            }
+            if ($evFull -and (Test-Path -LiteralPath $evFull -PathType Leaf)) {
+                $nowSha = (Get-FileHash -LiteralPath $evFull -Algorithm SHA256).Hash
+                if ($nowSha -ne ([string]$ev.sha256).ToUpperInvariant()) {
+                    $missing.Add("$label.repos.$($repo.repo) -- evidence file changed since the receipt ($evPath); re-run Set-VerifyReceipt.ps1 with -Evidence <.trx or log>")
+                    continue
+                }
+            }
         }
         # The receipt must describe the work that ships: same check as the review stamp.
         # A receipt with no recorded work (no mode, from before receipts recorded it) stays a
