@@ -59,16 +59,21 @@ the close back to it. Nothing creates that file any more.
 
 ## Time Calculation (complete-task / prep-pr)
 
-Run after setting the appropriate close timestamp (`completedAtUtc` or `reclosedAtUtc`).
+Run `scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket>` after setting the close timestamp
+(`completedAtUtc` or `reclosedAtUtc`). Use its hours and point bucket. Do not recompute them.
+`/address-pr-comments` opens and closes a `pr-feedback` span with `-BeginSpan` and `-EndSpan`.
+The script does not write a tracker field. Write the point bucket only when the tracker has one,
+and never for a spike.
 
 ### Segments
 
-Build one or two closed segments, then sum capped hours across them:
+The script sums every closed span. Gaps between spans are zero.
 
 | Segment | When included | Interval |
 |---|---|---|
 | Original | `startedAtUtc` and `completedAtUtc` both set | `[startedAtUtc, completedAtUtc]` |
 | Reopen | `reopenedAtUtc` and `reclosedAtUtc` both set | `[reopenedAtUtc, reclosedAtUtc]` |
+| PR feedback | a closed `pr-feedback` span | that span's start and end |
 
 Idle time between `completedAtUtc` and `reopenedAtUtc` is **not** counted.
 

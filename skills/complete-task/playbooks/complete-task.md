@@ -78,8 +78,10 @@ spike's story-point or timebox field.
 4. **Session time and tracker readiness**
    - Follow [../references/session-time-tracking.md](../references/session-time-tracking.md).
    - Stamp `completedAtUtc` on the manifest on first close; when `reopenedAtUtc` is set, stamp
-     `reclosedAtUtc` instead and never overwrite `completedAtUtc`. Display hours and both segments;
-     do not ask the user for hours unless the timestamps are missing. For a spike, hours stay local.
+     `reclosedAtUtc` instead and never overwrite `completedAtUtc`. Then run
+     `./scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket>` and use its hours and point bucket.
+     Do not recompute them. Do not ask the user for hours unless the timestamps are missing.
+     For a spike, hours stay local and the point bucket is not written to the tracker.
    - Prepare commit messages, PR title/body, and tracker field updates **if**
      `profile.ticketSystem` is not `none`. PR title: `<ticket>: <title>`. Commit messages summarize
      total work done (subject + body).

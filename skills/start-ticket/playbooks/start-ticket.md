@@ -96,7 +96,9 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - Run the router and write the manifest **now**, before any branch or provisioning, with
      `startedAtUtc` and `mode` — a late manifest loses the session clock.
    - **Reopen** (manifest has `completedAtUtc`): set `reopenedAtUtc` to now and `reclosedAtUtc` to
-     `null`; never overwrite `startedAtUtc` or `completedAtUtc`.
+     `null`; never overwrite `startedAtUtc` or `completedAtUtc`. Then the short retrospective in
+     [../../complete-task/references/task-retrospective.md](../../complete-task/references/task-retrospective.md)
+     (After PR feedback, or on reopen). Do not write the first ledger row here.
    - Ambiguous repos or integration after the profile list: ask before provisioning.
 
 4. **Worktree only** — provision per [../references/worktree-handoff.md](../references/worktree-handoff.md#provision-step-4).

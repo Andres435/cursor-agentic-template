@@ -89,21 +89,23 @@ ticket window, review, close. Later commands read the mode from the manifest.
 
 ## Commands
 
-| You want | Type |
-| --- | --- |
-| Fill the profile for a new project | `/start-new-project` |
-| Machine setup after the profile exists | `/onboard` |
-| Pin model routing for the chat | `/engineering-mode` |
-| Health check (profile, hooks, gates, lanes) | `/doctor` |
-| Start a ticket | `/start-ticket <ticket> bug\|feature\|spike\|refactor` |
-| Build the approved plan (resume / worktree) | `/implement <ticket>` |
-| Run the local apps | `/start-stack <ticket>` |
-| Give the stack to another ticket / stop it | `/swap-stack <ticket>` / `/stop-stack` |
-| Review ticket files; stage the clean ones | `/review-changes` |
-| Closeout and approval package | `/complete-task` |
-| Commit / push / PR / tracker write-back, after you approve | `/prep-pr` |
-| Address PR comments | `/address-pr-comments <ticket>` |
-| Peer-review a coworker's PR | `/peer-review <id>` |
+<!-- gen:commands:start -->
+| You want                                                   | Type                                                |
+| ---------------------------------------------------------- | --------------------------------------------------- |
+| Fill the profile for a new project                         | `/start-new-project`                                |
+| Machine setup after the profile exists                     | `/onboard`                                          |
+| Pin model routing for the chat                             | `/engineering-mode`                                 |
+| Health check (profile, hooks, gates, lanes)                | `/doctor`                                           |
+| Start a ticket                                             | `/start-ticket <ticket> bug|feature|spike|refactor` |
+| Build the approved plan (resume / worktree)                | `/implement <ticket>`                               |
+| Run the local apps                                         | `/start-stack <ticket>`                             |
+| Give the stack to another ticket / stop it                 | `/swap-stack <ticket>` / `/stop-stack`              |
+| Review ticket files; stage the clean ones                  | `/review-changes`                                   |
+| Closeout and approval package                              | `/complete-task`                                    |
+| Commit / push / PR / tracker write-back, after you approve | `/prep-pr`                                          |
+| Address PR comments                                        | `/address-pr-comments <ticket>`                     |
+| Peer-review a coworker's PR                                | `/peer-review <id>`                                 |
+<!-- gen:commands:end -->
 
 `bug-fix`, `feature-plan`, and `tech-spike` are plan shapes `/start-ticket` reads, not commands.
 

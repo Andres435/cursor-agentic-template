@@ -38,16 +38,15 @@ jobs:
           Install-Module Pester -Force -Scope CurrentUser -RequiredVersion 5.9.1
           Invoke-Pester ./scripts -Output Detailed -CI
 
-      # Errors fail the job; warnings are listed for working down (settings: PSScriptAnalyzerSettings.psd1).
-      - name: PSScriptAnalyzer (fails on Error)
+      # Error and Warning both fail the job (settings: PSScriptAnalyzerSettings.psd1).
+      - name: PSScriptAnalyzer (fails on Warning)
         shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -RequiredVersion 1.25.0
           $found = @(Invoke-ScriptAnalyzer -Path ./scripts -Recurse -Settings ./PSScriptAnalyzerSettings.psd1)
           $found | Format-Table -AutoSize RuleName, Severity, ScriptName, Line | Out-String -Width 200 | Write-Host
-          $errors = @($found | Where-Object Severity -eq 'Error')
-          Write-Host "PSScriptAnalyzer: $($found.Count) finding(s), $($errors.Count) error(s)"
-          if ($errors.Count) { exit 1 }
+          Write-Host "PSScriptAnalyzer: $($found.Count) finding(s)"
+          if ($found.Count) { exit 1 }
 
       - name: Assert-TicketArtifacts fixture checks
         shell: pwsh

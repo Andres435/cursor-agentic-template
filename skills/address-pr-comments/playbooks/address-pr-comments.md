@@ -31,6 +31,7 @@ missing or ambiguous, ask before continuing.
      `docSet`). It roots this chat at the resolved ticket root. PR feedback can arrive after
      `/complete-task`, so skip its implement-artifact expectations if no implementation chat is
      pending — but still root at the resolved path and load the manifest.
+   - Open the PR-feedback span: `./scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket> -BeginSpan pr-feedback`.
 
 1. **Load or fetch compact feedback**
    - Reuse `manifest.feedback` unless the user asked to refresh. Otherwise `dispatch`
@@ -95,6 +96,10 @@ missing or ambiguous, ask before continuing.
    - Never mark analysis findings fixed manually; push and let the next CI scan update gate status.
    - Post a final summary: PR links, commit hashes, fixed and WontFix thread ids with reasons,
      unresolved findings, verification results.
+   - Close the span: `./scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket> -EndSpan pr-feedback`.
+   - Run the short retrospective in
+     [../../complete-task/references/task-retrospective.md](../../complete-task/references/task-retrospective.md)
+     (After PR feedback, or on reopen). Do not write the first ledger row here.
 
 ## Output Shape
 

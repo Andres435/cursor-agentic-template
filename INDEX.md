@@ -27,6 +27,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [_shared/severity-and-output.md](_shared/severity-and-output.md) | severity labels, chat output budget, token-class law | blocker, major, output budget, ctxPct |
 | [_shared/subagent-functions.md](_shared/subagent-functions.md) | fan-out contracts | explore-repo, why-repo, branch-setup, verify-repo, review-diff, peer-review-pr |
 | [_shared/review-protocol.md](_shared/review-protocol.md) | review focus areas and rule sources | code review, conventions, security, tests |
+| [_shared/performance-ci.md](_shared/performance-ci.md) | review of query cost and pipeline gates | performance, N+1, unbounded query, CI, pipeline gate |
 | [_shared/model-routing.md](_shared/model-routing.md) | tier contract for plans and lanes | tier, fast, standard, deep, frontier |
 | [_shared/harness-verbs.md](_shared/harness-verbs.md) | IDE-neutral verbs and their per-IDE tools | ask-user, dispatch, enter-plan, report-context |
 | [_shared/adr-policy.md](_shared/adr-policy.md) | `profile.adrIndex` is set | ADR, consult, cite |

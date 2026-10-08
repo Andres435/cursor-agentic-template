@@ -72,6 +72,58 @@ function Test-AnyGlob([string]$Path, $Globs) {
     return $false
 }
 
+function Get-GeneratedSpans {
+    param([string]$Text)
+    $lines = $Text -split "`r?`n"
+    $spans = @()
+    $start = 0
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '<!-- gen:[^>]*:start -->') { $start = $i + 2 }
+        elseif ($start -and $lines[$i] -match '<!-- gen:[^>]*:end -->') {
+            $spans += [pscustomobject]@{ From = $start; To = $i }
+            $start = 0
+        }
+    }
+    return $spans
+}
+
+function Test-CountsAsTouch {
+    param([string]$Rel)
+    $full = Join-Path $Root ($Rel -replace '/', [IO.Path]::DirectorySeparatorChar)
+    if (-not (Test-Path -LiteralPath $full)) { return $true }
+    $untracked = Invoke-Git @('ls-files', '--others', '--exclude-standard', '--', $Rel)
+    if ($untracked.Ok -and @($untracked.Lines | Where-Object { $_ })) { return $true }
+    $text = [IO.File]::ReadAllText($full)
+    $spans = @(Get-GeneratedSpans $text)
+    $patterns = @()
+    if ($registry.ContainsKey('Claims')) {
+        foreach ($claim in @($registry.Claims)) {
+            if (-not $claim.ContainsKey('Require')) { continue }
+            foreach ($req in @($claim.Require)) {
+                if ($req.File -eq $Rel) { $patterns += [string]$req.Pattern }
+            }
+        }
+    }
+    if (-not $spans.Count -and -not $patterns.Count) { return $true }
+    $chunks = @()
+    $chunks += (Invoke-Git @('diff', '-U0', $mb, '--', $Rel)).Lines
+    $chunks += (Invoke-Git @('diff', '-U0', '--', $Rel)).Lines
+    $newLine = 0
+    foreach ($line in $chunks) {
+        if ($line -match '^@@ -\d+(?:,\d+)? \+(\d+)') { $newLine = [int]$Matches[1]; continue }
+        if ($line.StartsWith('+++') -or $line.StartsWith('---') -or -not $line.StartsWith('+')) { continue }
+        $body = $line.Substring(1)
+        foreach ($span in $spans) {
+            if ($newLine -ge $span.From -and $newLine -le $span.To) { return $true }
+        }
+        foreach ($pat in $patterns) {
+            if ($body -match $pat) { return $true }
+        }
+        $newLine++
+    }
+    return $false
+}
+
 $registryPath = Join-Path $Root 'scripts/ticket/doc-claims.psd1'
 if (-not (Test-Path -LiteralPath $registryPath)) {
     Write-Output "[FAIL] doc-sync: scripts/ticket/doc-claims.psd1 not found"
@@ -139,7 +191,7 @@ foreach ($rule in $rules) {
     $ignore = if ($rule.ContainsKey('Ignore')) { $rule.Ignore } else { @() }
     $hits = @($changed | Where-Object { (Test-AnyGlob $_ $rule.When) -and -not (Test-AnyGlob $_ $ignore) } | Sort-Object)
     if (-not $hits.Count) { continue }
-    $touched = @($changed | Where-Object { Test-AnyGlob $_ $rule.Touch })
+    $touched = @($changed | Where-Object { (Test-AnyGlob $_ $rule.Touch) -and (Test-CountsAsTouch $_) })
     if ($touched.Count) { continue }
 
     $applicable = @($waivers | Where-Object { -not $_.Rule -or $_.Rule -eq $rule.Id })
