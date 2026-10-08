@@ -36,6 +36,7 @@ function Get-ServiceField {
 
 function Test-LocalPortListening {
     param([int]$Port)
+    if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) { return $false }
     $listeners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
     return $listeners.Count -gt 0
 }
