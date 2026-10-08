@@ -9,7 +9,8 @@ description: Index of workspace agents and routing guidance for ticket work.
 keeps it complete. Terms (mode, manifest, epoch, ctxPct, lanes, receipts): [_shared/glossary.md](_shared/glossary.md).
 
 **Running scripts:** run the repo's own scripts or inline commands; never write a helper script to
-temp or a scratchpad and run it, and edit files with the edit tools. If an application allowlist
+temp or a scratchpad and run it, and edit files with the edit tools. New or changed scripts follow
+[skills/script-authoring/SKILL.md](skills/script-authoring/SKILL.md) (agent: [agents/script-engineer.md](agents/script-engineer.md)); a throwaway goes in the gitignored `tmp/` here. If an application allowlist
 guards the machine, see [MACHINE-SETUP.md](MACHINE-SETUP.md#application-allowlist).
 
 Developer overview: [README.md](README.md). How to run tickets: [USER-MANUAL.md](USER-MANUAL.md).
@@ -88,6 +89,7 @@ Subagent functions never commit, push, or write to the tracker.
 | Work area | Route |
 |---|---|
 | Frontend + backend spanning features | [agents/fullstack-specialist.md](agents/fullstack-specialist.md) |
+| Create or change a .ps1/.py script | [skills/script-authoring/SKILL.md](skills/script-authoring/SKILL.md) → [agents/script-engineer.md](agents/script-engineer.md) |
 | Design a change that crosses a module or repo boundary | [skills/architect/SKILL.md](skills/architect/SKILL.md) |
 | What could this change break (shared module, public API, schema) | [skills/blast-radius/SKILL.md](skills/blast-radius/SKILL.md) |
 | _(add project-specific rows)_ | — |

@@ -27,9 +27,10 @@ One line per term; the owner doc has the rule. Not loaded by default: read it wh
 | Subagent function | A reusable read-only subagent with a fixed packet shape (`explore-repo`, `review-diff`, ...). | [subagent-functions](subagent-functions.md) |
 | Receipt / stamp | A manifest field a script writes to prove a step ran on the current work: `verify`, `reviewReady`, `stackSmoke`, `feedback`. | [ticket-artifacts](ticket-artifacts.md) |
 | `reviewReady` | Review verdict per repo plus the reviewed work (`headSha`, fingerprint). Close and skip both check it still matches. | [Set-ReviewReady](../scripts/ticket/Set-ReviewReady.ps1) |
-| `verify` | verify-repo result per repo, with the work it ran on. Close fails when the tests ran on older work. | [Set-VerifyReceipt](../scripts/ticket/Set-VerifyReceipt.ps1) |
+| `verify` | verify-repo result per repo, with the work it ran on and the test-output evidence (hash, `.trx` counts). Close fails when the tests ran on older work or the evidence is missing or changed. | [Set-VerifyReceipt](../scripts/ticket/Set-VerifyReceipt.ps1) |
 | Drive | Walking the changed flow in the browser on a running stack. Only the user says a Drive passed; `stackSmoke` records it. | [runtime-verify](runtime-verify.md) |
 | `stackSmoke` | User-confirmed Drive of the changed flow. A close gate when an affected repo has profile layer `frontend`. | [Set-StackSmoke](../scripts/ticket/Set-StackSmoke.ps1) |
+| Agentic proof | One commit trailer (`Agentic-Proof: v1 fp=... verify=pass ... review=ready`) a verifier can recompute from the commit's diff. Advisory; self-asserted. | [agentic-proof](agentic-proof.md) |
 | Fingerprint | SHA-256 of the canonical diff (`fpVersion` 2) that names "the work" for stamps. | [ManifestFields](../scripts/ticket/lib/ManifestFields.ps1) |
 | `ctxPct` | How full each chat's context window was: `start`, `review`, `close`. Hook-measured or blank, never estimated. | [Set-TicketCtxPct](../scripts/ticket/Set-TicketCtxPct.ps1) |
 | `CtxS%` / `CtxR%` / `Ctx%` | Ledger columns for `ctxPct.start` / `.review` / `.close`. | [task-retrospective](../skills/complete-task/references/task-retrospective.md) |

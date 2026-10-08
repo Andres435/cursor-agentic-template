@@ -17,6 +17,15 @@ BeforeAll {
         '{"mode":"branch"}' | Set-Content -LiteralPath (Join-Path $plans 'WI00020-manifest.json') -Encoding UTF8
         return $root
     }
+    function New-Evidence([string]$Name, [string]$Content = 'Passed! total 3') {
+        $p = Join-Path $TestDrive $Name
+        [System.IO.File]::WriteAllText($p, $Content)
+        return $p
+    }
+    function New-Trx([string]$Name, [int]$Total, [int]$Passed, [int]$Failed) {
+        $xml = '<?xml version="1.0" encoding="utf-8"?><TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><ResultSummary outcome="Completed"><Counters total="' + $Total + '" executed="' + $Total + '" passed="' + $Passed + '" failed="' + $Failed + '" error="0" /></ResultSummary></TestRun>'
+        return New-Evidence $Name $xml
+    }
     function Get-Manifest([string]$Root) {
         return (Get-Content -LiteralPath (Join-Path $Root 'plans/WI00020-manifest.json') -Raw | ConvertFrom-Json)
     }
@@ -25,9 +34,9 @@ BeforeAll {
 Describe 'Set-VerifyReceipt' {
     It 'writes one entry per repo on the manifest and replaces a repo on a second call' {
         $root = New-ManifestRoot 'upsert'
-        & $script:Verify -Ticket WI00020 -Repo app -Tests fail -Sonar ok -Failing 'SomeTest' -Root $root
-        & $script:Verify -Ticket WI00020 -Repo api -Tests pass -Sonar ok -Root $root
-        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Root $root
+        & $script:Verify -Ticket WI00020 -Repo app -Tests fail -Sonar ok -Failing 'SomeTest' -Evidence (New-Evidence 'u1.log') -Root $root
+        & $script:Verify -Ticket WI00020 -Repo api -Tests pass -Sonar ok -Evidence (New-Evidence 'u2.log') -Root $root
+        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence (New-Evidence 'u3.log') -Root $root
         $got = (Get-Manifest $root).verify.repos
         @($got.PSObject.Properties).Count | Should -Be 2
         $got.app.pass | Should -BeTrue
@@ -41,7 +50,7 @@ Describe 'Set-VerifyReceipt' {
         @{ tests = 'pass'; sonar = 'ok'; failing = @('Flaky') }
     ) {
         $root = New-ManifestRoot "fail-$tests-$sonar-$($failing.Count)"
-        & $script:Verify -Ticket WI00020 -Repo app -Tests $tests -Sonar $sonar -Failing $failing -Root $root
+        & $script:Verify -Ticket WI00020 -Repo app -Tests $tests -Sonar $sonar -Failing $failing -Evidence (New-Evidence 'f.log') -Root $root
         $entry = (Get-Manifest $root).verify.repos.app
         $entry.pass | Should -BeFalse
         $entry.pass | Should -BeOfType [bool]
@@ -73,12 +82,68 @@ Describe 'Set-VerifyReceipt' {
         & git -C $repo commit -q -m init
         Set-Content -LiteralPath (Join-Path $repo 'a.txt') -Value 'two'
         & git -C $repo add a.txt
-        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -RepoPath $repo -Root $root
+        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence (New-Evidence 'w.log') -RepoPath $repo -Root $root
         $entry = (Get-Manifest $root).verify.repos.app
         $entry.mode | Should -Be 'staged'
         $entry.fingerprint | Should -Match '^[0-9a-f]{64}$'
         $entry.fpVersion | Should -Be 2
         $entry.headSha | Should -Match '^[0-9a-f]{40}$'
+    }
+
+    It 'records trx evidence with counts, hash, bytes and kind' {
+        $root = New-ManifestRoot 'ev-trx'
+        $trx = New-Trx 'ok.trx' 5 5 0
+        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence $trx -Root $root
+        $entry = (Get-Manifest $root).verify.repos.app
+        $entry.evidenceVersion | Should -Be 1
+        $entry.evidence.kind | Should -Be 'trx'
+        $entry.evidence.sha256 | Should -Be (Get-FileHash -LiteralPath $trx -Algorithm SHA256).Hash.ToLowerInvariant()
+        $entry.evidence.bytes | Should -Be (Get-Item -LiteralPath $trx).Length
+        $entry.evidence.path | Should -Not -Match '\\'
+        $entry.evidence.counts.total | Should -Be 5
+        $entry.evidence.counts.passed | Should -Be 5
+        $entry.evidence.counts.failed | Should -Be 0
+    }
+
+    It 'refuses pass or fail without -Evidence' -ForEach @('pass', 'fail') {
+        $root = New-ManifestRoot "ev-none-$_"
+        { & $script:Verify -Ticket WI00020 -Repo app -Tests $_ -Sonar ok -Root $root } | Should -Throw '*-Evidence*'
+    }
+
+    It 'refuses an evidence file that does not exist' {
+        $root = New-ManifestRoot 'ev-missing'
+        { & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence (Join-Path $TestDrive 'nope.trx') -Root $root } |
+            Should -Throw '*not found*'
+    }
+
+    It 'refuses a pass whose trx has failures or zero tests, but records a fail' {
+        $root = New-ManifestRoot 'ev-bad-trx'
+        { & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence (New-Trx 'f.trx' 4 3 1) -Root $root } |
+            Should -Throw '*failed*'
+        { & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence (New-Trx 'z.trx' 0 0 0) -Root $root } |
+            Should -Throw '*zero*'
+        (Get-Manifest $root).PSObject.Properties.Name | Should -Not -Contain 'verify'
+        & $script:Verify -Ticket WI00020 -Repo app -Tests fail -Sonar ok -Evidence (New-Trx 'f2.trx' 4 3 1) -Root $root
+        $entry = (Get-Manifest $root).verify.repos.app
+        $entry.pass | Should -BeFalse
+        $entry.evidence.counts.failed | Should -Be 1
+    }
+
+    It 'hashes a log evidence file only' {
+        $root = New-ManifestRoot 'ev-log'
+        & $script:Verify -Ticket WI00020 -Repo app -Tests pass -Sonar ok -Evidence (New-Evidence 'run.log') -Root $root
+        $entry = (Get-Manifest $root).verify.repos.app
+        $entry.evidence.kind | Should -Be 'log'
+        $entry.evidence.sha256 | Should -Match '^[0-9a-f]{64}$'
+        $entry.evidence.PSObject.Properties.Name | Should -Not -Contain 'counts'
+    }
+
+    It 'records no evidence for not-run' {
+        $root = New-ManifestRoot 'ev-not-run'
+        & $script:Verify -Ticket WI00020 -Repo app -Tests not-run -Sonar not-run -Reason 'docs-only' -Root $root
+        $entry = (Get-Manifest $root).verify.repos.app
+        $entry.evidence | Should -BeNullOrEmpty
+        $entry.PSObject.Properties.Name | Should -Not -Contain 'evidenceVersion'
     }
 
     It 'refuses a ticket with no manifest' {

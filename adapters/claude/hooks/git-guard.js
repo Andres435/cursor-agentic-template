@@ -9,12 +9,16 @@
 
 const commit = require("./git-commit-ticket.js");
 const push = require("./git-push-agentic-flow.js");
+const script = require("./script-path-guard.js");
 const { writeHookError } = require("../../../hooks/core/hook-log.js");
 
 const RANK = { deny: 2, ask: 1 };
 
 function decide(input) {
   const command = String(((input && input.tool_input) || {}).command || "");
+  // A script outside source/repos is denied first, in this same single process.
+  const blocked = script.handle(input);
+  if (blocked) return blocked;
   if (!/\bgit(\.exe)?\b/i.test(command)) return null;
   const answers = [commit.handle(input), push.handle(input)].filter(Boolean);
   if (!answers.length) return null;

@@ -101,10 +101,10 @@ result, so its own context window stays lean (the subagent burns its own window 
   tests: pass | fail | not-run(reason)
   failing: [FullyQualifiedName -> one-line reason]   # <=10
   sonar: OK | ERROR(condition) | skipped(not enrolled) | skipped(no key)
+  evidence: <.trx or saved test output path>   # not for not-run
   ```
 - **Parent records it:** the subagent stays read-only. The parent runs `scripts/Set-VerifyReceipt.ps1`
-  per packet (`OK`→`ok`, `ERROR`→`error`, `skipped(...)`→`not-run`; `not-run` tests pass `-Reason`).
-  That receipt is what `Assert-TicketArtifacts -Phase close` reads.
+  per packet with `-Evidence <evidence>` (`OK`→`ok`, `ERROR`→`error`, `skipped(...)`→`not-run`; `not-run` tests pass `-Reason`). `Assert-TicketArtifacts -Phase close` reads it.
 
 ## `review-diff(repo) -> findings`
 

@@ -23,6 +23,7 @@ node hooks/tests/context-usage.test.js
 | `session-context.test.js` | `core/session-context.js` via the Cursor adapter | Packet shape, env keys, graceful degrade without PowerShell, a reopened ticket stays open |
 | `git-push-agentic-flow.test.js` | `core/push-gate.js`, both adapters, Claude `git-guard.js` | A failing workflow clone is denied through Cursor, Claude Bash, and Claude PowerShell; a ticket branch with a manifest runs `-Phase prepush`; a crash fails closed; `echo "git push"` is not a push |
 | `ticket-command-nudge.test.js` | `core/ticket-nudge.js` via the Cursor adapter | Fire only on a leading slash command; engineering-mode names the playbook |
+| `script-path-guard.test.js` | `core/script-path-guard.js`, both adapters | Deny writing or running .ps1/.py outside the allowed script root (opt-in: set `AGENTIC_SCRIPT_ALLOW_ROOT`); allow repo, relative and inert commands |
 | `commit-guard.test.js` | `core/commit-guard.js`, `git-hooks/pre-commit` | Deny user-local plans/ files; ask for a ticket id only in product repos, read from the message (`-m`, `-F`, `-F -`), not the directory |
 | `context-usage.test.js` | `core/context-usage.js`, Claude Stop hook | Measured context from a transcript; per-session record |
 

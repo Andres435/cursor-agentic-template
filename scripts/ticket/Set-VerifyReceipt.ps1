@@ -37,11 +37,17 @@
     compares that to the repo, so a receipt taken before a later fix fails.
     Resolved through Resolve-TicketRoot when omitted.
 
+.PARAMETER Evidence
+    Required with -Tests pass or fail; ignored for not-run. A test result file (.trx)
+    or a captured console log. Its path, sha256, byte size and kind (trx|log) are
+    recorded on the entry. A .trx also records counts (total, passed, failed); a pass
+    is refused when failed > 0 or total is 0. Close re-hashes the file if it still exists.
+
 .PARAMETER Root
     Override the workflow repo root (tests).
 
 .EXAMPLE
-    .\Set-VerifyReceipt.ps1 -Ticket TICKET-42 -Repo app -Tests pass -Sonar ok
+    .\Set-VerifyReceipt.ps1 -Ticket TICKET-42 -Repo app -Tests pass -Sonar ok -Evidence TestResults/run.trx
 #>
 
 [CmdletBinding()]
@@ -53,6 +59,7 @@ param(
     [string[]]$Failing,
     [string]$Reason,
     [string]$RepoPath,
+    [string]$Evidence,
     [string]$Root
 )
 
@@ -70,6 +77,41 @@ $RepoRoot = if ($Root) { $Root } else { Get-CursorRepoRoot -FromScriptRoot $PSSc
 $manifestPath = Get-TicketManifestFile -RepoRoot $RepoRoot -TicketKey $Key
 if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Manifest not found: $manifestPath"
+}
+
+$evidenceObj = $null
+if ($Tests -ne 'not-run') {
+    if ([string]::IsNullOrWhiteSpace($Evidence)) {
+        throw "-Tests $Tests needs -Evidence <.trx or log file> so the result is backed by a file, not the agent's word."
+    }
+    if (-not (Test-Path -LiteralPath $Evidence -PathType Leaf)) {
+        throw "Evidence file not found: $Evidence"
+    }
+    $evFull = (Resolve-Path -LiteralPath $Evidence).ProviderPath
+    $evKind = if ($evFull -match '\.trx$') { 'trx' } else { 'log' }
+    $evidenceObj = [ordered]@{
+        path   = ($Evidence -replace '\\', '/')
+        sha256 = (Get-FileHash -LiteralPath $evFull -Algorithm SHA256).Hash.ToLowerInvariant()
+        bytes  = (Get-Item -LiteralPath $evFull).Length
+        kind   = $evKind
+    }
+    if ($evKind -eq 'trx') {
+        $xml = New-Object System.Xml.XmlDocument
+        $xml.Load($evFull)
+        $counters = $xml.SelectSingleNode("//*[local-name()='ResultSummary']/*[local-name()='Counters']")
+        if (-not $counters) { throw "Evidence $Evidence has no ResultSummary/Counters; not a test result file." }
+        $counts = [ordered]@{
+            total  = [int]$counters.GetAttribute('total')
+            passed = [int]$counters.GetAttribute('passed')
+            failed = [int]$counters.GetAttribute('failed')
+        }
+        $evidenceObj.counts = [pscustomobject]$counts
+        if ($Tests -eq 'pass') {
+            if ($counts.failed -gt 0) { throw "-Tests pass but $Evidence reports $($counts.failed) failed test(s)." }
+            if ($counts.total -eq 0) { throw "-Tests pass but $Evidence ran zero tests; a pass with zero tests is not evidence." }
+        }
+    }
+    $evidenceObj = [pscustomobject]$evidenceObj
 }
 
 if (-not $RepoPath -and -not $Root) {
@@ -104,6 +146,10 @@ $entry = [pscustomobject]@{
     fingerprint = $fp
     fpVersion   = 2
     atUtc       = [DateTime]::UtcNow.ToString('o')
+}
+if ($evidenceObj) {
+    $entry | Add-Member -NotePropertyName evidenceVersion -NotePropertyValue 1
+    $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $evidenceObj
 }
 
 # Upsert: keep the other repos' entries.
