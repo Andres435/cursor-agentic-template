@@ -125,7 +125,7 @@ Describe 'Update-TicketLedger objective outcome columns' {
 
     It 'computes no, Days and a blank PRFind for a closed ticket without feedback' {
         $m = '{"startedAtUtc":"2026-10-02T15:00:00Z","completedAtUtc":"2026-10-04T03:00:00Z","reopenedAtUtc":null,"reclosedAtUtc":null}'
-        $root = New-OutcomeRoot -Name 'plain' -Manifests @{ TICKET-00011 = $m }
+        $root = New-OutcomeRoot -Name 'plain' -Manifests @{ 'TICKET-00011' = $m }
         Invoke-Ledger @('-Root', $root, '-Ticket', 'TICKET-00011', '-Type', 'bug', '-Mode', 'branch')
         $c = Get-LedgerCells -Root $root -Ticket 'TICKET-00011'
         $c.Count | Should -Be 18
@@ -134,7 +134,7 @@ Describe 'Update-TicketLedger objective outcome columns' {
 
     It 'uses the last reclosedAtUtc for a reopened ticket and counts only thread and sonar items' {
         $m = '{"startedAtUtc":"2026-10-01T00:00:00Z","completedAtUtc":"2026-10-02T00:00:00Z","reopenedAtUtc":"2026-10-05T00:00:00Z","reclosedAtUtc":"2026-10-06T12:00:00Z","feedback":{"prs":[],"items":[{"kind":"thread"},{"kind":"sonar"},{"kind":"metric"},{"kind":"thread"}]}}'
-        $root = New-OutcomeRoot -Name 'reopen' -Manifests @{ TICKET-00012 = $m }
+        $root = New-OutcomeRoot -Name 'reopen' -Manifests @{ 'TICKET-00012' = $m }
         Invoke-Ledger @('-Root', $root, '-Ticket', 'TICKET-00012', '-Type', 'bug', '-Mode', 'branch')
         $c = Get-LedgerCells -Root $root -Ticket 'TICKET-00012'
         ($c[15..17] -join '|') | Should -Be 'yes|5.5|3'
@@ -142,7 +142,7 @@ Describe 'Update-TicketLedger objective outcome columns' {
 
     It 'uses completedAtUtc when reopened but not reclosed, and counts zero findings' {
         $m = '{"startedAtUtc":"2026-10-01T00:00:00Z","completedAtUtc":"2026-10-02T12:00:00Z","reopenedAtUtc":"2026-10-05T00:00:00Z","reclosedAtUtc":null,"feedback":{"prs":[],"items":[]}}'
-        $root = New-OutcomeRoot -Name 'reopen-open' -Manifests @{ TICKET-00013 = $m }
+        $root = New-OutcomeRoot -Name 'reopen-open' -Manifests @{ 'TICKET-00013' = $m }
         Invoke-Ledger @('-Root', $root, '-Ticket', 'TICKET-00013', '-Type', 'bug', '-Mode', 'branch')
         $c = Get-LedgerCells -Root $root -Ticket 'TICKET-00013'
         ($c[15..17] -join '|') | Should -Be 'yes|1.5|0'
