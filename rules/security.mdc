@@ -1,0 +1,18 @@
+---
+description: Code review must not introduce a security gap. Secrets, injection, and auth on private records.
+globs:
+  - "**/*.{cs,vb,sql,ts,tsx,js}"
+alwaysApply: false
+---
+
+# Security
+
+A review fails a change that opens a gap the previous code did not have. A new endpoint, page, job, or query needs the same control the surrounding code already uses. Removing a check, an auth attribute, or a validation call to make the change work is a Blocker.
+
+- Do not commit secrets: connection strings, PATs, private keys, user secrets, or `.env` values. Do not log them, and do not log private records (account numbers, government ids, full customer records).
+- SQL that includes a request, grid, or other user value is parameterized. Do not concatenate that value into the command text.
+- An endpoint or page that reads or writes a private record checks that the caller is allowed to see that record. A client-supplied id is not that check. A missing check is a Blocker.
+- Do not render unsanitized HTML from user or customer input.
+- Do not disable TLS or certificate checks, widen CORS, add an anonymous auth bypass, or ship a debug endpoint to make a call succeed.
+
+Same bar as the Security line in [_shared/review-protocol.md](../_shared/review-protocol.md). Name the product's private records in the specialist when you customize.

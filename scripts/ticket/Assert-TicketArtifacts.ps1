@@ -322,6 +322,37 @@ function Test-PlanFile {
 }
 
 # Existence and mode in one entry, so a pass reports one line per artifact.
+function Test-ManifestSchema {
+    if (-not $manifestPath -or -not (Test-Path -LiteralPath $manifestPath)) { return }
+    $schemaPath = Join-Path $PSScriptRoot 'manifest.schema.json'
+    $raw = Get-Content -LiteralPath $manifestPath -Raw
+    $schemaOk = $true
+    $schemaError = $null
+    try {
+        $schemaOk = Test-Json -Json $raw -SchemaFile $schemaPath
+    }
+    catch {
+        $schemaOk = $false
+        $schemaError = $_.Exception.Message
+    }
+    if (-not $schemaOk) {
+        if (-not $schemaError) { $schemaError = 'does not match manifest.schema.json' }
+        $missing.Add("$Key-manifest.json -- schema: $schemaError")
+    }
+    else {
+        $found.Add("$Key-manifest.json (schema)")
+    }
+    if ($workType -ne 'spike') { return }
+    $plan = Get-ManifestField 'parallelPlan'
+    if (-not $plan) { return }
+    foreach ($slot in @('scope', 'branchSetup', 'verify', 'review')) {
+        $names = @($plan.PSObject.Properties.Name)
+        if ($names -contains $slot -and @($plan.$slot).Count -gt 0) {
+            $missing.Add("$Key-manifest.json -- spike parallelPlan.$slot must be empty")
+        }
+    }
+}
+
 function Test-Manifest {
     param([string]$Why)
 
@@ -747,11 +778,11 @@ function Get-FrontendRepoNames {
     $profilePath = Join-Path $RepoRoot 'profile.json'
     if (-not (Test-Path -LiteralPath $profilePath)) { return @() }
     try {
-        $profile = Get-Content -LiteralPath $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $stackProfile = Get-Content -LiteralPath $profilePath -Raw -Encoding UTF8 | ConvertFrom-Json
     }
     catch { return @() }
-    if (-not ($profile.PSObject.Properties.Name -contains 'repos') -or -not $profile.repos) { return @() }
-    foreach ($repo in @($profile.repos)) {
+    if (-not ($stackProfile.PSObject.Properties.Name -contains 'repos') -or -not $stackProfile.repos) { return @() }
+    foreach ($repo in @($stackProfile.repos)) {
         if (-not $repo) { continue }
         $props = @($repo.PSObject.Properties.Name)
         if (($props -notcontains 'name') -or ($props -notcontains 'layers') -or -not $repo.name) { continue }
@@ -838,6 +869,7 @@ function Test-LedgerRow {
 
 switch ($Phase) {
     'start' {
+        Test-ManifestSchema
         Test-Manifest 'routing table for every later chat (must include ticket object with title/adoType/state/area/priority)'
         Test-AdrIndex
         Test-TimestampField -Fields @('startedAtUtc') -Why 'startedAtUtc is null or absent; complete-task cannot compute hours without it'
@@ -852,6 +884,7 @@ switch ($Phase) {
         Test-CloseWork
     }
     'close' {
+        Test-ManifestSchema
         Test-Artifact "$Key-manifest.json" 'drives verify/review fan-out' | Out-Null
         Test-TimestampField -Fields @('completedAtUtc', 'reclosedAtUtc') -Why 'no completedAtUtc or reclosedAtUtc set'
         Test-CloseContext

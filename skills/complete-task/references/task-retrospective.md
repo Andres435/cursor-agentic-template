@@ -174,3 +174,14 @@ Declined: roadmap bullet on caching.
 
 If all three answers were `nothing`, that is two lines and no files beyond the ledger. Say so plainly
 rather than manufacturing a finding.
+
+## After PR feedback, or on reopen
+
+Run this from `/address-pr-comments` after verification, and from a reopen `/start-ticket` (manifest
+already has `completedAtUtc`) before any new implementation. It is not the close. Do not write the
+first ledger row here; that stays the close step above.
+
+Ask the same three questions, limited to what the review or the reopen changed: a reversed decision,
+a missed test, or a wrong plan step. Bring the evidence you already have. For each non-`nothing`
+answer, propose one named action and write a ledger update or a lesson only if the user picks it.
+If every answer is `nothing`, stop. No scorecard, no closeout page.

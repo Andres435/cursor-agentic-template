@@ -374,8 +374,8 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
         $root = Join-Path $TestDrive 'close-frontend'
         New-StampedCloseRoot $root
         $utf8 = New-Object System.Text.UTF8Encoding($false)
-        $profile = @{ repos = @(@{ name = 'app'; path = '.'; layers = @('frontend') }) } | ConvertTo-Json -Depth 5
-        [System.IO.File]::WriteAllText((Join-Path $root 'profile.json'), $profile + "`n", $utf8)
+        $profileJson = @{ repos = @(@{ name = 'app'; path = '.'; layers = @('frontend') }) } | ConvertTo-Json -Depth 5
+        [System.IO.File]::WriteAllText((Join-Path $root 'profile.json'), $profileJson + "`n", $utf8)
         $fail = Invoke-Assert -Root $root -Phase 'close'
         $fail.ExitCode | Should -Be 1
         $fail.Output | Should -Match 'stackSmoke'
@@ -644,13 +644,13 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
 
         It 'requires the frontend Drive only when UI files changed (profile uiGlobs)' {
             $utf8 = New-Object System.Text.UTF8Encoding($false)
-            $profile = @{ repos = @(@{ name = 'app'; path = '.'; layers = @('backend', 'frontend') }); uiGlobs = @('*.tsx', '*.js') } | ConvertTo-Json -Depth 5
+            $profileJson = @{ repos = @(@{ name = 'app'; path = '.'; layers = @('backend', 'frontend') }); uiGlobs = @('*.tsx', '*.js') } | ConvertTo-Json -Depth 5
 
             $stamp = Join-Path $PSScriptRoot 'Set-ReviewReady.ps1'
 
             $backend = Join-Path $TestDrive 'ui-backend-only'
             New-CloseRoot -Root $backend -WorkType 'bug' -Ctx @{ start = 40; review = 50; close = 60 }
-            [System.IO.File]::WriteAllText((Join-Path $backend 'profile.json'), $profile, $utf8)
+            [System.IO.File]::WriteAllText((Join-Path $backend 'profile.json'), $profileJson, $utf8)
             $backendRepo = Join-Path $backend 'app'
             New-WorkRepo $backendRepo @('server/Loan.cs')
             Add-ManifestFields $backend @{ affectedRepos = @([pscustomobject]@{ repo = 'app'; local = $true; path = $backendRepo }) }
@@ -661,7 +661,7 @@ Describe 'Assert-TicketArtifacts -Phase close: context percents' {
 
             $ui = Join-Path $TestDrive 'ui-page'
             New-CloseRoot -Root $ui -WorkType 'bug' -Ctx @{ start = 40; review = 50; close = 60 }
-            [System.IO.File]::WriteAllText((Join-Path $ui 'profile.json'), $profile, $utf8)
+            [System.IO.File]::WriteAllText((Join-Path $ui 'profile.json'), $profileJson, $utf8)
             $uiRepo = Join-Path $ui 'app'
             New-WorkRepo $uiRepo @('server/Loan.cs', 'web/pages/loan.js')
             Add-ManifestFields $ui @{ affectedRepos = @([pscustomobject]@{ repo = 'app'; local = $true; path = $uiRepo }) }

@@ -7,9 +7,9 @@ $ErrorActionPreference = 'Stop'
 BeforeAll {
     $script:RemoveScript = Join-Path $PSScriptRoot 'Remove-MergedTicketBranches.ps1'
     $profilePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
-    $profile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
-    $script:Prefix = [string]$profile.ticketPrefix
-    $script:Base = [string]$profile.baseBranchDefault
+    $profileJson = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+    $script:Prefix = [string]$profileJson.ticketPrefix
+    $script:Base = [string]$profileJson.baseBranchDefault
     if (-not $script:Prefix) { $script:Prefix = 'WI' }
     if (-not $script:Base) { $script:Base = 'main' }
     $script:Squashed = $script:Prefix + '21903'

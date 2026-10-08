@@ -42,7 +42,8 @@ Open `profile.json` and fill in your project's values:
 | `repos[].name` | Your repo name(s) |
 | `repos[].path` | Path relative to the `.cursor` folder (`.` for same repo) |
 | `specialists` | Match names to agent files in `agents/` |
-| `stacks.startCommand` | Command to start your dev server (e.g. `npm run dev`) |
+| `stacks.services` | One object per local app: `name`, `command`, `cwd`, `port`, `url`. `/start-new-project` fills this. `Start-TicketStack.ps1` starts each one |
+| `stacks.startCommand` | `./scripts/runtime/Start-TicketStack.ps1` once `services` is filled. A single shell command (e.g. `npm run dev`) or `off` when the list stays empty |
 | `uiGlobs` | File types that count as UI (default `*.js`, `*.jsx`, `*.ts`, `*.tsx`, `*.css`, `*.scss`, `*.html`). Close needs a user-confirmed Drive only when a `frontend` repo's change touches one; add your templates (e.g. `*.vue`, `*.cshtml`) |
 
 **Multi-repo:** add one object per repo to `repos[]` in dependency order (e.g. `["shared", "api", "web"]`).

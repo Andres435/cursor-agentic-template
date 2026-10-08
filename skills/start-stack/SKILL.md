@@ -18,17 +18,15 @@ Start the local stack from `profile.json`. Do not invent a server, a port, or a 
 
 ## Workflow
 
-1. Read `profile.stacks.startCommand`.
-2. If it is missing or `off`, say the stack is disabled and stop.
-3. Claim the one owner file, then run only that command:
+1. Read `profile.stacks`. If `startCommand` is `off` and `services` is empty, say the stack is disabled and stop.
+2. Run only the launcher. It claims the owner when a ticket id was given, then starts each `stacks.services` entry (or the single `startCommand` when the list is empty):
 
 ```powershell
-./scripts/runtime/Set-ActiveStack.ps1 -Ticket <ticket id>
-# then the profile start command, in the shell
+./scripts/runtime/Start-TicketStack.ps1 -Ticket <ticket id>
 ```
 
-4. Report the command's exit status. If the ticket changes UI and the stack started, add one line: "Ask me for a browser smoke pass when you're ready to verify the UI change."
-5. **If the user asked for that smoke pass:** after it finishes, **ask once** whether it passed.
+3. Report the command's exit status. If the ticket changes UI and the stack started, add one line: "Ask me for a browser smoke pass when you're ready to verify the UI change."
+4. **If the user asked for that smoke pass:** after it finishes, **ask once** whether it passed.
    Stamp **only** after they answer:
 
    ```powershell
@@ -42,7 +40,7 @@ Start the local stack from `profile.json`. Do not invent a server, a port, or a 
    `/review-changes` and `/complete-task` read this as optional extra confidence (`Get-StackSmoke.ps1`:
    Never tested / Tested / Untested latest changes). It never gates close. Do **not** stamp on stack
    start alone.
-6. On failure, stop. Do not probe ports or restart a second copy unless the user passes `-Force` to `Set-ActiveStack.ps1`.
+5. On failure, stop. Do not probe ports or restart a second copy unless the user passes `-Force` to `Start-TicketStack.ps1`.
 
 ## Guardrails
 

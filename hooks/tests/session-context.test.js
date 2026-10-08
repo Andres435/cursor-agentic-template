@@ -218,6 +218,32 @@ test("nextAction is 'closed' when completedAtUtc is set", () => {
   });
 });
 
+test("nextAction is complete-task when a PR is stamped and the ledger has no row", () => {
+  const { resolveNextAction } = require(path.join(__dirname, "..", "core", "session-context.js"));
+  withTempPlans((dir) => {
+    fs.writeFileSync(
+      path.join(dir, TICKET_A + "-manifest.json"),
+      JSON.stringify({
+        completedAtUtc: "2026-01-02T00:00:00Z",
+        feedback: { prs: [{ repo: "app", id: 12, url: "https://example/pr/12" }], items: [] },
+      })
+    );
+    const prev = process.env.AGENTIC_PLANS_DIR;
+    process.env.AGENTIC_PLANS_DIR = dir;
+    try {
+      assert.strictEqual(resolveNextAction(TICKET_A), "complete-task");
+      fs.writeFileSync(
+        path.join(dir, "ticket-ledger.md"),
+        "| Ticket | Type |\n|---|---|\n| " + TICKET_A + " | bug |\n"
+      );
+      assert.strictEqual(resolveNextAction(TICKET_A), "closed");
+    } finally {
+      if (prev === undefined) delete process.env.AGENTIC_PLANS_DIR;
+      else process.env.AGENTIC_PLANS_DIR = prev;
+    }
+  });
+});
+
 test("nextAction treats a reopened ticket as open until it is re-closed", () => {
   const { resolveNextAction } = require(path.join(__dirname, "..", "core", "session-context.js"));
   withTempPlans((dir) => {

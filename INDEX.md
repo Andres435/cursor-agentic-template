@@ -27,6 +27,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [_shared/severity-and-output.md](_shared/severity-and-output.md) | severity labels, chat output budget, token-class law | blocker, major, output budget, ctxPct |
 | [_shared/subagent-functions.md](_shared/subagent-functions.md) | fan-out contracts | explore-repo, why-repo, branch-setup, verify-repo, review-diff, peer-review-pr |
 | [_shared/review-protocol.md](_shared/review-protocol.md) | review focus areas and rule sources | code review, conventions, security, tests |
+| [_shared/performance-ci.md](_shared/performance-ci.md) | review of query cost and pipeline gates | performance, N+1, unbounded query, CI, pipeline gate |
 | [_shared/model-routing.md](_shared/model-routing.md) | tier contract for plans and lanes | tier, fast, standard, deep, frontier |
 | [_shared/harness-verbs.md](_shared/harness-verbs.md) | IDE-neutral verbs and their per-IDE tools | ask-user, dispatch, enter-plan, report-context |
 | [_shared/adr-policy.md](_shared/adr-policy.md) | `profile.adrIndex` is set | ADR, consult, cite |
@@ -92,6 +93,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [adapters/codex/README.md](adapters/codex/README.md) · [model-usage.md](adapters/codex/model-usage.md) | Codex install and tier map | Codex, spawn_agent |
 | [output-styles/engineering-mode.md](output-styles/engineering-mode.md) | Claude Code engineering-mode output style | output style |
 | [rules/model-usage.mdc](rules/model-usage.mdc) · [rules/workspace-context.mdc](rules/workspace-context.mdc) | Cursor rule stubs | rules |
+| [rules/security.mdc](rules/security.mdc) | review must not introduce a security gap | security, secrets, SQL injection, auth |
 | [commands/_README.md](commands/_README.md) | why commands are skills | commands, slash menu |
 | [hooks/tests/README.md](hooks/tests/README.md) | running hook tests | hooks, tests, script-path-guard |
 | [environments/README.md](environments/README.md) · [worktrees.md](environments/worktrees.md) | env cards; worktree opt-in | environments, worktrees |

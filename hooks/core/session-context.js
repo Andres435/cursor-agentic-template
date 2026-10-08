@@ -136,8 +136,25 @@ function runResolve(ticket) {
  * completedAtUtc set                     → "closed", unless reopened (reopenedAtUtc set and no
  *                                          reclosedAtUtc): a reopen keeps completedAtUtc, so it
  *                                          is open again and takes the rows above
+ * feedback.prs has a PR and ticket-ledger.md has no row for the ticket → "complete-task"
  * AGENTIC_PLANS_DIR overrides plans/ (tests).
  */
+function ledgerHasTicket(plansDir, ticket) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(plansDir, "ticket-ledger.md"), "utf8");
+  } catch {
+    return false;
+  }
+  const escaped = String(ticket).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp("^\\| " + escaped + " \\|", "m").test(text);
+}
+
+function manifestHasPr(manifest) {
+  const prs = manifest && manifest.feedback && manifest.feedback.prs;
+  return Array.isArray(prs) && prs.some((pr) => pr && (pr.id || pr.url));
+}
+
 function resolveNextAction(ticket) {
   const plansDir = process.env.AGENTIC_PLANS_DIR || path.join(REPO_ROOT, "plans");
   let manifest;
@@ -147,6 +164,7 @@ function resolveNextAction(ticket) {
     writeHookError("session-context", error);
     return "start-ticket";
   }
+  if (manifestHasPr(manifest) && !ledgerHasTicket(plansDir, ticket)) return "complete-task";
   const reopened = manifest.reopenedAtUtc && !manifest.reclosedAtUtc;
   if (manifest.completedAtUtc && !reopened) return "closed";
   if (manifest.reviewReady) return "complete-task";

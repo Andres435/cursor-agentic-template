@@ -330,10 +330,6 @@ if (-not (Test-Path -LiteralPath $pluginManifest)) {
             Fail "plugin-surface: commands/_README.md not found"
             ''
         }
-        $indexText = if (Test-Path -LiteralPath $indexPath) {
-            Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
-        } else { '' }
-
         foreach ($c in $diskCmds) {
             $stem = [IO.Path]::GetFileNameWithoutExtension($c)
             $slash = "/$stem"
@@ -754,6 +750,21 @@ if (Test-Path -LiteralPath $agentsDir) {
             }
         }
     }
+}
+
+# ---- 13b. Generated command table and chat counts ----------------------------
+$generatedDocs = Join-Path $PSScriptRoot 'Sync-GeneratedDocs.ps1'
+if (Test-Path -LiteralPath $generatedDocs) {
+    $genOut = & (Get-PowerShell7Path) -NonInteractive -NoProfile -File $generatedDocs -Check -Root $Root 2>&1
+    foreach ($line in @($genOut)) {
+        $t = $line.ToString().Trim()
+        if ($t -match '^\[FAIL\] (.*)$') { Fail $Matches[1] }
+    }
+    if ($LASTEXITCODE -ne 0 -and -not ($violations | Where-Object { $_ -like 'generated-docs:*' })) {
+        Fail "generated-docs: Sync-GeneratedDocs.ps1 exited $LASTEXITCODE"
+    }
+} else {
+    Fail 'generated-docs: Sync-GeneratedDocs.ps1 not found'
 }
 
 # ---- 14. Docs move with the code they describe ------------------------------

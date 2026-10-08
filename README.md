@@ -51,11 +51,13 @@ receipt): [glossary](_shared/glossary.md).
    ([MACHINE-SETUP.md](MACHINE-SETUP.md)).
 4. Run tickets:
 
+<!-- gen:chats:start -->
 ```text
 Chat 1  /start-ticket <ticket> bug|feature|spike|refactor   → approve plan → build in this chat
 Chat 2  /review-changes
 Chat 3  /complete-task → /prep-pr
 ```
+<!-- gen:chats:end -->
 
 Worktree mode (`--worktree`, only when `profile.worktreeSupported`) adds `/implement` in the
 ticket window. Chat counts per mode and full steps: [USER-MANUAL.md](USER-MANUAL.md). Those ticket commands load the tier contract on their own.

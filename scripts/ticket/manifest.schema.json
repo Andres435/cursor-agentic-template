@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ticket manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "workItemId": { "type": ["integer", "null"] },
+    "workType": { "type": "string", "enum": ["bug", "feature", "spike", "refactor"] },
+    "mode": { "type": "string", "enum": ["branch", "worktree", "investigate"] },
+    "ticket": { "type": ["object", "string", "null"] },
+    "startedAtUtc": { "type": ["string", "null"] },
+    "completedAtUtc": { "type": ["string", "null"] },
+    "reopenedAtUtc": { "type": ["string", "null"] },
+    "reclosedAtUtc": { "type": ["string", "null"] },
+    "timezone": { "type": ["string", "null"] },
+    "affectedRepos": { "type": "array" },
+    "docSet": { "type": "array", "items": { "type": "string" } },
+    "parallelPlan": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "scope": { "type": "array" },
+        "branchSetup": { "type": "array" },
+        "verify": { "type": "array" },
+        "review": { "type": "array" }
+      }
+    },
+    "worktreeRoot": { "type": ["string", "null"] },
+    "ctxPct": { "type": ["object", "null"] },
+    "reviewReady": { "type": ["object", "null"] },
+    "verify": { "type": ["object", "null"] },
+    "feedback": { "type": ["object", "null"] },
+    "stackSmoke": { "type": ["object", "null"] },
+    "lanes": { "type": ["object", "array", "string", "null"] },
+    "spans": { "type": "array" }
+  }
+}

@@ -23,7 +23,7 @@ next to `ticket-intake-generic.md`. Do not ask for hours if the manifest has ses
 
 1. Re-fetch the active ticket before drafting commit or PR text (skip when `ticketSystem` is `none`).
 2. Use the fetched title/type/state as source of truth.
-3. Use **calculated hours** from [../../complete-task/references/session-time-tracking.md](../../complete-task/references/session-time-tracking.md).
+3. Run `./scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket>` and use its hours and point bucket ([../../complete-task/references/session-time-tracking.md](../../complete-task/references/session-time-tracking.md)). Do not recompute them.
 4. Keep tracker writes scoped to this ticket id.
 
 ## Instructions

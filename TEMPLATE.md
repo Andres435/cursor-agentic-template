@@ -34,7 +34,7 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `CUSTOMIZE.md` | Checklist |
 | `agents/` | Specialists |
 | `environments/` | Env cards |
-| `scripts/runtime/` besides the stack owner | The profile start command |
+| `scripts/runtime/` besides the stack owner | `Start-TicketStack.ps1` reads `profile.stacks.services`. `/start-new-project` fills that list |
 | `USER-MANUAL.md` | Project notes below the core section |
 | `mcp.json` | Project MCP servers |
 | `Install-CursorExtensions.ps1`, `Apply-CursorUserConfig.ps1`, `New-CockpitWorkspace.ps1` in `scripts/machine/` | Optional bootstrap phases. Machine init skips each one that is absent |
@@ -59,3 +59,4 @@ The newest product workflow state this template has absorbed. Start the next por
 | Source | Base | Date | Left out |
 |---|---|---|---|
 | tmo-agentic-workspace `main` | `d570d37` (plus the prep-pr path fix in its PR #18) | 2026-10-08 | product evals (`evals/`, `Assert-EvalArtifacts`, `plugin-eval.yml`), product NuGet credential code, the source's tech-debt list and its own doc claims |
+| tmo-agentic-workspace `workflow/close-shippable-tech-debt` | `9062ac6` | 2026-10-08 | product evals, product launchers, the tech-debt list, and `Custom.StoryPointsActual`. Brought hours, the manifest schema, generated docs, the PR nudge, and the analyzer warning gate |
