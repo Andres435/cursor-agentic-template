@@ -203,7 +203,7 @@ check("nextAction is 'start-ticket' when manifest absent", () => {
     const r = run(
       "session-context.js",
       { cwd: "C:\\repos\\WI21053-router" },
-      { TMO_PLANS_DIR: dir }
+      { AGENTIC_PLANS_DIR: dir }
     );
     assertNoCrash(r);
     assert(r.json, "expected JSON output, got: " + r.stdout);
@@ -221,7 +221,7 @@ check("nextAction is 'review-changes' when manifest has no reviewReady", () => {
     const r = run(
       "session-context.js",
       { cwd: "C:\\repos\\WI21053-router" },
-      { TMO_PLANS_DIR: dir }
+      { AGENTIC_PLANS_DIR: dir }
     );
     assertNoCrash(r);
     const ctx = r.json.hookSpecificOutput.additionalContext;
@@ -239,7 +239,7 @@ check("nextAction is 'complete-task' when reviewReady set but completedAtUtc nul
     const r = run(
       "session-context.js",
       { cwd: "C:\\repos\\WI21053-router" },
-      { TMO_PLANS_DIR: dir }
+      { AGENTIC_PLANS_DIR: dir }
     );
     assertNoCrash(r);
     const ctx = r.json.hookSpecificOutput.additionalContext;
@@ -260,7 +260,7 @@ check("nextAction is 'closed' when completedAtUtc is set", () => {
     const r = run(
       "session-context.js",
       { cwd: "C:\\repos\\WI21053-router" },
-      { TMO_PLANS_DIR: dir }
+      { AGENTIC_PLANS_DIR: dir }
     );
     assertNoCrash(r);
     const ctx = r.json.hookSpecificOutput.additionalContext;

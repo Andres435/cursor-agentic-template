@@ -74,10 +74,10 @@ BeforeAll {
     Add-Text $bad 'commands/stray.md' 'Just prose, no pointer to a skill.'                                 # command-shim
     Edit-Text $bad 'profile.json' '"defaultMode": "branch"' '"defaultMode": "sometimes"'                   # profile
     Edit-Text $bad 'profile.json' "    `"doctor`",`n" ''                                                    # slash-menu
-    Add-Text $bad 'plans/WI99999-impl-prompt.md' 'retired'                                                 # retired-artifact
+    Add-Text $bad 'plans/TICKET-99999-impl-prompt.md' 'retired'                                               # retired-artifact
     Add-Text $bad 'plans/TICKET-99998-manifest.json' '{}'                                                       # user-plans
     & git -C $bad add -f plans/TICKET-99998-manifest.json
-    Add-Text $bad 'skills/doctor/SKILL.md' 'See source/worktrees/WI12345 for the tree.'                   # hardcoded-path
+    Add-Text $bad 'skills/doctor/SKILL.md' 'See source/worktrees/TICKET-12345 for the tree.'                   # hardcoded-path
     Add-Text $bad 'skills/doctor/SKILL.md' 'Run this on haiku.'                                           # ide-neutral
     Add-Text $bad 'plans/ticket-ledger.md' "| Ticket | Type | Closed |`n|---|---|---|"                      # ledger-columns
     Edit-Text $bad 'hooks.json' './adapters/cursor/hooks/session-context.js' './adapters/cursor/hooks/gone.js'  # hooks
@@ -114,7 +114,7 @@ Describe 'Assert-AgenticFlow on a copy of this repo' {
         @{ Prefix = 'command-shim';     Detail = 'commands/stray\.md' }
         @{ Prefix = 'profile';          Detail = "defaultMode 'sometimes'" }
         @{ Prefix = 'slash-menu';       Detail = "missing 'doctor'" }
-        @{ Prefix = 'retired-artifact'; Detail = 'WI99999-impl-prompt\.md' }
+        @{ Prefix = 'retired-artifact'; Detail = 'TICKET-99999-impl-prompt\.md' }
         @{ Prefix = 'user-plans';       Detail = 'TICKET-99998-manifest\.json' }
         @{ Prefix = 'hardcoded-path';   Detail = 'skills.doctor.SKILL\.md' }
         @{ Prefix = 'ide-neutral';      Detail = "names a model \('haiku'\)" }

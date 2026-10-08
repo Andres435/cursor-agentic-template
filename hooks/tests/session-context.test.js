@@ -145,7 +145,7 @@ test("nextAction is 'start-ticket' when manifest is absent", () => {
   withTempPlans((dir) => {
     const out = runHook(
       { workspace_roots: ["/source/worktrees/" + TICKET_A] },
-      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", AGENTIC_PLANS_DIR: dir }
     );
     if (out.additional_context) {
       assert.ok(
@@ -164,7 +164,7 @@ test("nextAction is 'review-changes' when manifest has no reviewReady", () => {
     );
     const out = runHook(
       { workspace_roots: ["/source/worktrees/" + TICKET_A] },
-      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", AGENTIC_PLANS_DIR: dir }
     );
     if (out.additional_context) {
       assert.ok(
@@ -184,7 +184,7 @@ test("nextAction is 'complete-task' when reviewReady is set but completedAtUtc i
     );
     const out = runHook(
       { workspace_roots: ["/source/worktrees/" + TICKET_A] },
-      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", AGENTIC_PLANS_DIR: dir }
     );
     if (out.additional_context) {
       assert.ok(
@@ -207,7 +207,7 @@ test("nextAction is 'closed' when completedAtUtc is set", () => {
     );
     const out = runHook(
       { workspace_roots: ["/source/worktrees/" + TICKET_A] },
-      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", TMO_PLANS_DIR: dir }
+      { CURSOR_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "", AGENTIC_PLANS_DIR: dir }
     );
     if (out.additional_context) {
       assert.ok(
@@ -221,8 +221,8 @@ test("nextAction is 'closed' when completedAtUtc is set", () => {
 test("nextAction treats a reopened ticket as open until it is re-closed", () => {
   const { resolveNextAction } = require(path.join(__dirname, "..", "core", "session-context.js"));
   withTempPlans((dir) => {
-    const prev = process.env.TMO_PLANS_DIR;
-    process.env.TMO_PLANS_DIR = dir;
+    const prev = process.env.AGENTIC_PLANS_DIR;
+    process.env.AGENTIC_PLANS_DIR = dir;
     try {
       const file = path.join(dir, TICKET_A + "-manifest.json");
       const closed = { mode: "branch", reviewReady: { mode: "staged" }, completedAtUtc: "2026-10-01T00:00:00Z" };
@@ -236,8 +236,8 @@ test("nextAction treats a reopened ticket as open until it is re-closed", () => 
       );
       assert.strictEqual(resolveNextAction(TICKET_A), "closed");
     } finally {
-      if (prev === undefined) delete process.env.TMO_PLANS_DIR;
-      else process.env.TMO_PLANS_DIR = prev;
+      if (prev === undefined) delete process.env.AGENTIC_PLANS_DIR;
+      else process.env.AGENTIC_PLANS_DIR = prev;
     }
   });
 });
