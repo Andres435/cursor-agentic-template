@@ -4,6 +4,7 @@
 BeforeAll {
     $script:ScriptsDir = Split-Path $PSScriptRoot -Parent
     $script:RepoRoot = Split-Path $script:ScriptsDir -Parent
+    . (Join-Path $script:ScriptsDir 'lib/StackServices.ps1')
 
     function New-StopFixture {
         $fx = Join-Path $script:RepoRoot ("tmp/stack-fixtures/stop-" + [guid]::NewGuid().ToString('N').Substring(0, 6))
@@ -37,7 +38,8 @@ Describe 'Stop-TicketStack' {
             "Start-Process pwsh -ArgumentList '-NoProfile','-Command','Start-Sleep 120'; Start-Sleep 120")
         $child = $null
         foreach ($i in 1..40) {
-            $child = Get-CimInstance Win32_Process -Filter "ParentProcessId=$($wrapper.Id)" | Select-Object -First 1
+            # The launcher's own pid -> parent table, so this runs on Windows and Linux alike.
+            $child = Get-StackProcessTable | Where-Object { $_.Parent -eq $wrapper.Id } | Select-Object -First 1
             if ($child) { break }
             Start-Sleep -Milliseconds 250
         }
@@ -53,13 +55,13 @@ Describe 'Stop-TicketStack' {
             $r = Invoke-Stop $fx @('-Ticket', 'T-1')
             $r.Code | Should -Be 0
             Get-Process -Id $wrapper.Id -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
-            Get-Process -Id $child.ProcessId -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
+            Get-Process -Id $child.Id -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
             Get-Process -Id $second.Id -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
             (Get-Content $marker) -join ',' | Should -Be 'second,first'
             Test-Path (Join-Path $fx 'scripts/runtime/.stack-services.state.json') | Should -BeFalse
             Test-Path (Join-Path $fx 'scripts/.active-stack.json') | Should -BeFalse
         } finally {
-            foreach ($p in @($wrapper.Id, $child.ProcessId, $second.Id)) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }
+            foreach ($p in @($wrapper.Id, $child.Id, $second.Id)) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }
         }
     }
 
