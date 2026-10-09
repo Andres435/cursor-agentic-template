@@ -14,6 +14,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [AGENTS.md](AGENTS.md) | agent routing, subagent functions, domain router | agents, routing, engineering mode |
 | [profile.json](profile.json) | repos, tracker, prefix, stack command, slash list | repos, ticketSystem, ticketPrefix, slashCommands, uiGlobs |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | attribution for adapted ideas | notices, license |
+| [.github/SECURITY.md](.github/SECURITY.md) | how to report a vulnerability in private | security, vulnerability, report |
 
 ## Contracts (`_shared/`)
 
