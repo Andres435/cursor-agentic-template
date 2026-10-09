@@ -127,7 +127,7 @@ is missing.
      command (`/implement` occupancy is not tracked). Do record the lane mix:
 
      ```powershell
-     .\.cursor\scripts\Set-TicketLanes.ps1 -Ticket <ticket> -Lanes "<fN/sN/dN inline:dN, or off>"
+     .\.cursor\scripts\ticket\Set-TicketLanes.ps1 -Ticket <ticket> -Lanes "<fN/sN/dN inline:dN, or off>"
      ```
 
      Pass `off` when engineering mode was off; never invent a mix.

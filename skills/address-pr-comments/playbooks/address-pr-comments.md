@@ -36,7 +36,7 @@ missing or ambiguous, ask before continuing.
 1. **Load or fetch compact feedback**
    - Reuse `manifest.feedback` unless the user asked to refresh. Otherwise `dispatch`
      `pr-feedback-fetch` once per PR, merge the JSON packets, and record them in one write:
-     `$packet | .\.cursor\scripts\Set-TicketFeedback.ps1 -Ticket <ticket>`. Save later triage and
+     `$packet | .\.cursor\scripts\ticket\Set-TicketFeedback.ps1 -Ticket <ticket>`. Save later triage and
      closed threads the same way (read `manifest.feedback`, change it, write it back).
    - Fetch by tracker: `github-issues` → `gh pr view --comments` / `gh api` scoped to this ticket's
      branches; `ado` → that overlay's PR tools; `none` → ask for the PR URLs.
@@ -63,7 +63,7 @@ missing or ambiguous, ask before continuing.
    - Keep unrelated unstaged/untracked files out of the change set.
    - If a **Fix now** change altered product logic or runtime behavior (not docs-only, not
      reply-only) and `manifest.stackSmoke` is `passed` or `failed`:
-     `.\.cursor\scripts\Set-StackSmoke.ps1 -Ticket <ticket> -Status stale -Notes "<what changed>"`.
+     `.\.cursor\scripts\ticket\Set-StackSmoke.ps1 -Ticket <ticket> -Status stale -Notes "<what changed>"`.
      That swaps Tested → Untested latest changes. `/complete-task` also detects this from the
      work-diff fingerprint if the stamp is still `passed`.
 

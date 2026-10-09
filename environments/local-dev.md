@@ -10,16 +10,15 @@ keywords: local dev, ports, start command, environment, setup
 
 ## Start command
 
-```bash
-# From profile.json stacks.startCommand — update that field, not this file
-npm run dev
-```
+`/start-stack <ticket>` starts `profile.json` `stacks.services`. Update the profile, not this file.
 
-## Ports
+## Services
 
-| Service | URL | Notes |
-|---|---|---|
-| App | http://localhost:3000 | Update if your port differs |
+<!-- gen:ports:start -->
+| Service | Port | URL | Starts after |
+|---|---|---|---|
+| _none_ | | | |
+<!-- gen:ports:end -->
 
 ## Prerequisites
 

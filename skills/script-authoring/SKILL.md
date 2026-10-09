@@ -55,7 +55,7 @@ but do not rely on it:
 - Run only the scoped file: `pwsh -Command "Invoke-Pester <path>.Tests.ps1 -Output Minimal"`, then
   `Invoke-ScriptAnalyzer -Path <script> -Settings PSScriptAnalyzerSettings.psd1` (fix or suppress each rule with a reason).
 - Update every doc the script touches, add `INDEX.md` rows for new docs, and run `scripts/ticket/Assert-DocSync.ps1`.
-- A root `scripts/<Name>.ps1` forwarder only when an existing call site needs the old path.
+- No root `scripts/<Name>.ps1` forwarders (the one left is the bootstrap `Install-UserCursorCommands.ps1`): call sites use the `scripts/<folder>/` path.
 
 ## Delegation
 

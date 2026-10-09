@@ -6,7 +6,9 @@
 .DESCRIPTION
     The rows in this script are the source. USER-MANUAL.md holds the command
     table between gen:commands markers. README.md holds the branch-mode chat
-    counts between gen:chats markers. -Check fails when a marked region differs.
+    counts between gen:chats markers. environments/local-dev.md holds the
+    services table (from profile.json stacks.services) between gen:ports markers;
+    a project that dropped the markers is skipped. -Check fails when a marked region differs.
 
 .PARAMETER Check
     Compare the committed regions to the source and exit 1 on drift.
@@ -73,16 +75,38 @@ function Set-Region {
     return [regex]::Replace($Text, $pattern, $replacement, 1)
 }
 
+# Services table from profile.stacks.services.
+$portLines = New-Object System.Collections.Generic.List[string]
+$portLines.Add('| Service | Port | URL | Starts after |')
+$portLines.Add('|---|---|---|---|')
+$profileFile = Join-Path $Root 'profile.json'
+if (Test-Path -LiteralPath $profileFile) {
+    $stackBlock = (Get-Content -LiteralPath $profileFile -Raw | ConvertFrom-Json).stacks
+    $svcs = @()
+    if ($stackBlock -and $stackBlock.PSObject.Properties['services']) { $svcs = @($stackBlock.services) }
+    foreach ($s in $svcs) {
+        $p = if ($s.PSObject.Properties['port']) { [string]$s.port } else { '' }
+        $u = if ($s.PSObject.Properties['url']) { [string]$s.url } else { '' }
+        $d = if ($s.PSObject.Properties['dependsOn']) { (@($s.dependsOn) -join ', ') } else { '' }
+        $portLines.Add("| $($s.name) | $p | $u | $d |")
+    }
+    if ($svcs.Count -eq 0) { $portLines.Add('| _none_ | | | |') }
+}
+$portsTable = ($portLines -join "`n")
+
 $targets = @(
     @{ File = 'USER-MANUAL.md'; Name = 'commands'; Body = $commandTable }
     @{ File = 'README.md'; Name = 'chats'; Body = $chatCounts }
+    @{ File = 'environments/local-dev.md'; Name = 'ports'; Body = $portsTable; Optional = $true }
 )
 
 $failed = $false
 $utf8 = New-Object System.Text.UTF8Encoding $false
 foreach ($target in $targets) {
     $path = Join-Path $Root $target.File
+    if ($target.ContainsKey('Optional') -and -not (Test-Path -LiteralPath $path)) { continue }
     $text = [IO.File]::ReadAllText($path)
+    if ($target.ContainsKey('Optional') -and $text -notmatch "gen:$($target.Name):start") { continue }
     $current = Get-Region $text $target.Name
     $expected = $target.Body.Replace("`r`n", "`n").TrimEnd()
     $actual = $current.Replace("`r`n", "`n").TrimEnd()

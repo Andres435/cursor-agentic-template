@@ -16,7 +16,7 @@ Parse the user's invocation for an optional **branch token** (e.g. `review-chang
 
 - **No token** → working-tree mode. Review ticket paths from `Select-TicketStagePaths.ps1`
   (staged, unstaged, and untracked), then stage the clean ones. The ticket key comes from the
-  workspace folder name, else `.\.cursor\scripts\Get-TicketFromBranch.ps1 -Json` (the repos'
+  workspace folder name, else `.\.cursor\scripts\ticket\Get-TicketFromBranch.ps1 -Json` (the repos'
   current branches; confirm a `closed-manifest` result, ask when `ticket` is null).
 - **Token is the current branch of any affected repo** → still working-tree mode, even when the
   index is empty, with that token as the ticket key. Say so in Scope: `origin/<token>` does not
@@ -37,7 +37,7 @@ Parse the user's invocation for an optional **branch token** (e.g. `review-chang
 2. Resolve each repo's path:
 
    ```powershell
-   .\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket <ticket> -Json
+   .\.cursor\scripts\ticket\Resolve-TicketRoot.ps1 -Ticket <ticket> -Json
    ```
 
    Use each `repos[].path` from that JSON (canonical clone in branch mode, worktree path only when
@@ -47,7 +47,7 @@ Parse the user's invocation for an optional **branch token** (e.g. `review-chang
 4. Read optional stack smoke (does not change the review target):
 
    ```powershell
-   .\.cursor\scripts\Get-StackSmoke.ps1 -Ticket <ticket> -Json
+   .\.cursor\scripts\ticket\Get-StackSmoke.ps1 -Ticket <ticket> -Json
    ```
 
    Use `label` / `effective` in Notes and the Confidence **Stack smoke** row. A missing stamp is
@@ -61,7 +61,7 @@ For each selected repo (working-tree mode):
 1. List paths. Do not stage yet.
 
    ```powershell
-   .\.cursor\scripts\Select-TicketStagePaths.ps1 -RepoPath <resolved path> -Json
+   .\.cursor\scripts\ticket\Select-TicketStagePaths.ps1 -RepoPath <resolved path> -Json
    ```
 
    `candidates` are the review target. `denied` paths (secret-shaped names, and secret-shaped
@@ -129,8 +129,8 @@ Follow [../../../_shared/severity-and-output.md](../../../_shared/severity-and-o
    Working-tree mode: stage and unstage (Discover step 4) so the index is the clean candidate set, then stamp.
 
    ```powershell
-   .\.cursor\scripts\Set-ReviewReady.ps1 -Ticket <ticket> -Mode staged -Verdicts '{"Repo":"Ready"}' -Findings '{"Repo":["Major: <one line>"]}'
-   .\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase review
+   .\.cursor\scripts\ticket\Set-ReviewReady.ps1 -Ticket <ticket> -Mode staged -Verdicts '{"Repo":"Ready"}' -Findings '{"Repo":["Major: <one line>"]}'
+   .\.cursor\scripts\ticket\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase review
    ```
 
    `-Mode staged` for working-tree reviews; `-Mode pre-merge` for a pre-merge review

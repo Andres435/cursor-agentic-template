@@ -136,7 +136,7 @@ Each adapter maps tiers to real models: [Cursor](adapters/cursor/model-usage.md)
 
 ## Local apps
 
-One stack at a time. `/start-stack <ticket>` runs `profile.stacks.startCommand`. When it fails with
+One stack at a time. `/start-stack <ticket>` starts `profile.stacks.services`, in `dependsOn` order. When it fails with
 "another ticket owns the stack", "port in use", or leftover processes, run `/stop-stack`, then
 `/start-stack <ticket>` once. If it still fails, fix the machine yourself; do not ask the agent to
 inspect ports.

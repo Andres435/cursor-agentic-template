@@ -19,7 +19,7 @@ Get-Content profile.json -Raw | ConvertFrom-Json
 ```
 
 Pass if it parses without error and contains: `id`, `ticketPrefix`, `ticketSystem`, `defaultMode`,
-`repos`, `stacks.startCommand`. Fail with: `profile.json missing required key '<key>' — see
+`repos`, `stacks`. Fail with: `profile.json missing required key '<key>' — see
 README.md and CUSTOMIZE.md`.
 
 Also run the full schema gate:
@@ -57,14 +57,23 @@ Warn (not fail) when it has lines: `hook errors — scripts/.hook-errors.log has
 Pass if exit 0. Fail with: `Assert-TicketArtifacts failed on fixture — check fixture files in
 scripts/ticket/fixtures/plans/`.
 
-### 4. Stack start command
+### 4. Stack services
 
-Read `stacks.startCommand` from `profile.json`.
+Read `stacks` from `profile.json`. `scripts/ticket/Assert-AgenticFlow.ps1` runs the same checks
+(shape from `scripts/ticket/profile.schema.json`, then `Get-StackProfileFindings` in
+`scripts/lib/StackServices.ps1`).
 
-- Missing or `off` → `[PASS] stack disabled`.
-- A path that exists → `[PASS]`.
-- A path that does not exist → `[FAIL] profile.stacks.startCommand points at a missing file`.
-- Anything else (such as `npm run dev`) → `[PASS] shell command`. Do not require a file.
+- `services` empty → `[PASS] no local stack`.
+- Each service has a unique non-empty `name` and a non-empty `command`.
+- `cwd` (default `.`, relative to this repo) exists.
+- `port` is an integer 1-65535 and no two services share one.
+- `dependsOn` and every `presets` entry name real services; no `dependsOn` cycle.
+- `ready` is `{ "port": true }` (needs `port`) or `{ "url": "..." }`, with optional `timeoutSec`.
+- `env` values are strings. A literal value that matches a pattern in
+  `secret-patterns.json` beside the gate fails (use `${env:NAME}`). Skip this check when that file is absent.
+- `[FAIL]` on any of the above, quoting the service and field.
+- `[WARN] stacks.startCommand is retired` when the old field is still set (anything but `off`):
+  the launcher runs it as one service named `app`. Move it into `services`.
 
 ### 5. Lane probe (optional)
 
@@ -129,7 +138,7 @@ and fix a hook that keeps logging errors.
 [PASS] profile.json — id: customize-me, ticketPrefix: TICKET-, 1 repo
 [PASS] hooks — closeout-guard OK; session-context OK; commit-guard OK
 [PASS] artifact gate — WI00001 start/close pass
-[PASS] stacks.startCommand — shell command or existing file
+[PASS] stacks.services — 2 service(s), 1 preset(s), no cycles
 [PASS] workflow epoch — 1a2b3c4d, 2 close(s), re-rate after 3
 [PASS] installed overlay — CLAUDE.md and .mcp.json current
 ```

@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "profile.json stacks block",
+  "description": "Shape of profile.stacks. Assert-AgenticFlow validates it with Test-Json, then runs the cross-field checks (unique names, ports, dependsOn, presets) in scripts/lib/StackServices.ps1.",
+  "type": "object",
+  "properties": {
+    "default": { "type": "string" },
+    "presets": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    },
+    "startCommand": { "type": "string" },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "command"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "command": { "type": "string", "minLength": 1 },
+          "cwd": { "type": "string" },
+          "setup": { "type": "string" },
+          "stop": { "type": "string" },
+          "env": { "type": "object", "additionalProperties": { "type": "string" } },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "url": { "type": "string" },
+          "ready": {
+            "type": "object",
+            "properties": {
+              "port": { "type": "boolean" },
+              "url": { "type": "string", "minLength": 1 },
+              "timeoutSec": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          },
+          "dependsOn": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

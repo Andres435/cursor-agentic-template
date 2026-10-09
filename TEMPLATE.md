@@ -12,6 +12,7 @@ What is **core** (stable across products) vs **overlay** (per project).
 | `scripts/ticket/` | Artifact gate, epoch, ledger, review stamp, verify receipt, stack smoke, lanes, measured Ctx%, doc claims and doc-sync (`doc-claims.psd1`: a project appends its own claims) |
 | `scripts/machine/` | Machine init, user-level slash links, git hooks, Claude overlay |
 | `scripts/runtime/Set-ActiveStack.ps1` | One stack owner file |
+| `scripts/runtime/Start-TicketStack.ps1`, `Stop-TicketStack.ps1`, `Swap-TicketStack.ps1` + `scripts/lib/StackServices.ps1` | Start, stop and swap any stack from `profile.stacks.services` (presets, `dependsOn`, `ready`, process-tree stop). `scripts/ticket/profile.schema.json` and Assert-AgenticFlow validate the block. No root `scripts/*.ps1` forwarders: every script is called by its folder path |
 | `hooks/core/` + `hooks.json` | Shared hook logic; IDE bridges live under `adapters/`. `hook-log.js` writes swallowed errors to `scripts/.hook-errors.log` |
 | `hooks/git-hooks/` | pre-commit (no user-local `plans/`) and pre-push (Assert-AgenticFlow) |
 | `hooks/tests/` | Hook smoke tests |
@@ -60,3 +61,4 @@ The newest product workflow state this template has absorbed. Start the next por
 |---|---|---|---|
 | tmo-agentic-workspace `main` | `d570d37` (plus the prep-pr path fix in its PR #18) | 2026-10-08 | product evals (`evals/`, `Assert-EvalArtifacts`, `plugin-eval.yml`), product NuGet credential code, the source's tech-debt list and its own doc claims |
 | tmo-agentic-workspace `workflow/close-shippable-tech-debt` | `9062ac6` | 2026-10-08 | product evals, product launchers, the tech-debt list, and `Custom.StoryPointsActual`. Brought hours, the manifest schema, generated docs, the PR nudge, and the analyzer warning gate |
+| tmo-agentic-workspace `workflow/apply-review-findings` | `c5d2253` + uncommitted (fill in its merge sha) | 2026-10-09 | product evals and their `expect.json` cases, the TMO NuGet PAT fix, the TMO home-anchored script path rule, and the `Template-Port` trailer check (source-only). Brought the shared secret patterns, the commit secret scan and `secrets` gate check, the Cursor matcher fix and its test, `..` normalization in the script path guard, `persist-credentials: false`, and the `workflow-change` skill |

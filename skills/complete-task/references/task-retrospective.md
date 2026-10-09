@@ -92,7 +92,7 @@ ask which to apply. Never apply them all silently.
 Rules that do not bend:
 
 - **A fix that can be a check should be a check, not another sentence.** If the answer is "the agent
-  forgot X", prefer a gate in `scripts/Assert-TicketArtifacts.ps1` over more prose.
+  forgot X", prefer a gate in `scripts/ticket/Assert-TicketArtifacts.ps1` over more prose.
 - Durable only. Never put ticket-specific facts (an unstaged Web.config, an unrelated PR) into a card,
   a rule, or the index.
 - Never edit rules, skills, or environment cards **beyond the one bullet the user chose**, and never
@@ -103,7 +103,7 @@ Rules that do not bend:
 One row per closed ticket, written by the script so the format cannot drift:
 
 ```powershell
-.\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close   # report-context
+.\.cursor\scripts\ticket\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close   # report-context
 .\.cursor\scripts\ticket\Update-TicketLedger.ps1 -Ticket <ticket> -Type <bug|feature|spike|refactor> `
   -Hours <n> -Points <n> -Efficiency <1-5> -Contextualization <1-5> -CostTokens <1-5> `
   -Pr <number>

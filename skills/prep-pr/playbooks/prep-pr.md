@@ -32,7 +32,7 @@ Read `.cursor/plans/WI<number>-manifest.json` (if present) and use its `affected
 authoritative repo list. Resolve where to run `git` — do not assume either tree:
 
 ```powershell
-.\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket WI<number> -Json
+.\.cursor\scripts\ticket\Resolve-TicketRoot.ps1 -Ticket WI<number> -Json
 ```
 
 Run every `git` command in the `repos[].path` it returns (the canonical clone in `branch` mode, the
@@ -90,7 +90,7 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
 6. **Create PR**:
    - Do not commit, push, create a PR, link a PR, or write the tracker without approval. In
      execute-approved-package mode, do not rebuild the package; execute only the approved actions.
-   - **Before the first commit:** run `.\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase prepush`.
+   - **Before the first commit:** run `.\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase prepush`.
      On `FAIL`, commit nothing and report what it names (a missing verify receipt, a stale or
      open-Major review stamp, a frontend Drive not confirmed). The push hook runs the same check
      on a branch that names the ticket, so skipping it here only moves the failure to the push.

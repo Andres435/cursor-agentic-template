@@ -2,10 +2,18 @@
 "use strict";
 
 // Git pre-commit (core.hooksPath = hooks/git-hooks, set by scripts/machine/Install-GitPushHook.ps1).
-// The IDE-neutral last line: refuses a commit that stages a user-local plans/ file.
+// The IDE-neutral last line: refuses a commit that adds a token-shaped secret, or that stages
+// a user-local plans/ file.
 
 const { workflowRoot, stagedUserPlans } = require("../core/git-target.js");
 const { PLANS_RULE } = require("../core/commit-guard.js");
+const { scanRepo, describe } = require("../core/secret-scan.js");
+
+const hits = scanRepo(process.cwd(), false);
+if (hits.length) {
+  process.stderr.write(describe(hits) + "\n");
+  process.exit(1);
+}
 
 const root = workflowRoot(process.cwd());
 const staged = root ? stagedUserPlans(root) : [];

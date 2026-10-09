@@ -87,9 +87,7 @@ function detectTicketFromBranches(profile, reposRoot, plansDir) {
 }
 
 function resolveScript() {
-  const nextToScripts = path.join(REPO_ROOT, "scripts", "Resolve-TicketRoot.ps1");
-  const ticketFolder = path.join(REPO_ROOT, "scripts", "ticket", "Resolve-TicketRoot.ps1");
-  return fs.existsSync(nextToScripts) ? nextToScripts : ticketFolder;
+  return path.join(REPO_ROOT, "scripts", "ticket", "Resolve-TicketRoot.ps1");
 }
 
 function parsesAsJson(text) {

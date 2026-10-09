@@ -77,7 +77,7 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
 
 0. **Load `profile.json` (one Read).** If `id` is `customize-me` (or `displayName` is still
    `My project`), run `/onboard` and stop. Otherwise treat `repos`, `ticketSystem`, `ticketPrefix`,
-   `specialists`, `stacks.startCommand`, `baseBranchDefault`, and `worktreeSupported` as already decided.
+   `specialists`, `stacks.services`, `baseBranchDefault`, and `worktreeSupported` as already decided.
 
 1. **Fetch ticket context** → `manifest.ticket`
    - Per [../references/ticket-intake-generic.md](../references/ticket-intake-generic.md) for
@@ -151,7 +151,7 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - Write the **exact approved text**. Persist even in branch mode — `/complete-task` and a resumed
      `/implement` are new chats that read the file. A later change: re-approve and overwrite.
 
-8. **Gate** — `.\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start`.
+8. **Gate** — `.\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start`.
    `FAIL` = not finished: write the missing piece and re-run. If step 5 started a runtime script,
    wait for it now (not in investigate mode); it never starts the app or a browser. In branch mode,
    confirm every affected repo is on `<ticket>`. Worktree detail:
@@ -171,8 +171,8 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
     - **Branch:** startup line, the `implement.md` step 6 summary, then:
 
       ```powershell
-      .\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase start
-      .\.cursor\scripts\Set-TicketLanes.ps1 -Ticket <ticket> -Lanes "<fN/sN/dN inline:dN, or off>"
+      .\.cursor\scripts\ticket\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase start
+      .\.cursor\scripts\ticket\Set-TicketLanes.ps1 -Ticket <ticket> -Lanes "<fN/sN/dN inline:dN, or off>"
       ```
 
       `-Lanes off` without engineering mode; otherwise count fast/standard/deep dispatches and deep

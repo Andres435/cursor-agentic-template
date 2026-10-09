@@ -19,10 +19,10 @@ Humans: [../USER-MANUAL.md](../USER-MANUAL.md). Agents: obey this slice; do not 
 
 ## Stack (local dev server)
 
-- Start/stop/swap **only** via the scripts declared in `profile.stacks` (`startCommand`, and the
-  stop/swap launchers).
+- Start/stop/swap **only** via `scripts/runtime/Start-TicketStack.ps1`, `Stop-TicketStack.ps1` and
+  `Swap-TicketStack.ps1`; they read `profile.stacks.services`.
 - On start failure whose message is port-in-use or another ticket owning the stack:
-  1. Stop all stacks with the stop script's force/all switch.
+  1. Run `scripts/runtime/Stop-TicketStack.ps1 -Force`.
   2. Run the **same** start command **once**.
   3. If it still fails: **stop**. Quote `[FAIL]` / `[SKIP]` lines. Do not diagnose.
 - **Forbidden:** probing ports or processes, attaching to server processes, rebuilding to free a
@@ -53,9 +53,9 @@ Humans: [../USER-MANUAL.md](../USER-MANUAL.md). Agents: obey this slice; do not 
 ## Stack smoke (optional, never a gate)
 
 After a browser pass or when the user says they tested, **ask once** whether smoke testing passed.
-Stamp `scripts/Set-StackSmoke.ps1 -Ticket <ticket> -Status passed|failed` **only after they
+Stamp `scripts/ticket/Set-StackSmoke.ps1 -Ticket <ticket> -Status passed|failed` **only after they
 approve**; never from the agent's own judgment. Review and closeout read it with
-`scripts/Get-StackSmoke.ps1` to cite "Tested" vs "untested latest changes". It never blocks a merge
+`scripts/ticket/Get-StackSmoke.ps1` to cite "Tested" vs "untested latest changes". It never blocks a merge
 or the close gate. Do not invent a fake-data harness to produce a pass.
 
 ## General guardrail

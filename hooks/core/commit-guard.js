@@ -4,6 +4,7 @@
  * Decision for a shell command that runs git add or git commit. Names no IDE; the
  * Cursor and Claude hooks translate { action, reason } into their own contracts.
  *
+ *   deny  a commit in any repo that adds a token-shaped secret (secret-scan.js).
  *   deny  git add -f of a user-local plans/ file, or a commit with one staged, in a
  *         workflow repo clone. Ticket manifests, plans and the ledger never enter git.
  *   ask   a commit in a product repo whose message has no work-item id.
@@ -14,6 +15,7 @@ const fs = require("fs");
 const path = require("path");
 const { gitCalls, workflowRoot, stagedUserPlans, unquote } = require("./git-target.js");
 const { detectTicket, loadProfile } = require("./session-context.js");
+const { scanRepo, describe: describeSecrets } = require("./secret-scan.js");
 
 const PLANS_RULE =
   "plans/ ticket files (manifests, plans, feedback, ledger) are user-local and never committed. " +
@@ -65,6 +67,15 @@ function decide(event) {
 
   const commits = gitCalls(command, cwd, "commit");
   if (!commits.length) return { action: "allow" };
+
+  // Secrets: any repo, not just this one. A git add in the same command or commit -a means
+  // unstaged edits are about to be recorded too.
+  const addsFirst = gitCalls(command, cwd, "add").length > 0;
+  for (const call of commits) {
+    const all = /(?:^|\s)(?:-[a-zA-Z]*a[a-zA-Z]*|--all)(?=\s|$)/.test(String(call.args || ""));
+    const hits = scanRepo(call.dir, addsFirst || all);
+    if (hits.length) return { action: "deny", reason: describeSecrets(hits) };
+  }
 
   for (const call of commits) {
     const root = workflowRoot(call.dir);

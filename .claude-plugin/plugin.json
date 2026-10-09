@@ -34,7 +34,8 @@
     "./skills/tdd-red-green-refactor",
     "./skills/ticket-context-load",
     "./skills/ticket-router",
-    "./skills/ticket-workflow"
+    "./skills/ticket-workflow",
+    "./skills/workflow-change"
   ],
   "hooks": "./adapters/claude/hooks/hooks.json"
 }

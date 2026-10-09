@@ -34,8 +34,10 @@
   "adrIndex": null,
   "integrations": [],
   "stacks": {
-    "default": "dev",
-    "startCommand": "npm run dev",
+    "default": "all",
+    "presets": {
+      "all": []
+    },
     "services": []
   },
   "epochRerateAfter": 3,
