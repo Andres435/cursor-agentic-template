@@ -490,7 +490,7 @@ $sorted = $rows | Sort-Object @{ Expression = { if ($_.Closed) { $_.Closed } els
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine('# Ticket ledger')
 [void]$sb.AppendLine('')
-[void]$sb.AppendLine('One row per closed ticket. Written by `scripts/Update-TicketLedger.ps1` at')
+[void]$sb.AppendLine('One row per closed ticket. Written by `scripts/ticket/Update-TicketLedger.ps1` at')
 [void]$sb.AppendLine('`/complete-task` -- do not hand-edit, the script owns this format.')
 [void]$sb.AppendLine('')
 [void]$sb.AppendLine('This replaces the per-ticket `WI<n>-closeout.md` files. Durable *lessons* live in')

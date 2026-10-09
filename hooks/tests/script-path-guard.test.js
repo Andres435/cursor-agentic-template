@@ -43,6 +43,8 @@ check("write: script under source\\repos is allowed", () => assert.strictEqual(d
 check("write: forward-slash repo path is allowed", () => assert.strictEqual(decideWrite("C:/Users/a/source/repos/t/x.ps1"), null));
 check("write: non-script in temp is allowed", () => assert.strictEqual(decideWrite(TEMP + String.raw`\notes.md`), null));
 check("write: relative path is allowed", () => assert.strictEqual(decideWrite("scripts/x.ps1"), null));
+check("write: .. out of source\\repos is denied", () =>
+  assert(decideWrite(REPO + String.raw`\..\..\..\AppData\Local\Temp\x.ps1`)));
 
 check("run: pwsh -File in temp is denied", () => assert(decideRun('pwsh -File "' + TEMP + String.raw`\x.ps1"`)));
 check("run: python in /tmp is denied", () => assert(decideRun("python /tmp/x.py")));

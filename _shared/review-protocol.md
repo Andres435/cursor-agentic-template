@@ -39,7 +39,7 @@ than skipping silently.
 - **Security** — the diff must not open a gap the previous code did not have. Parameterized queries, no secrets, no private data in logs, and authorization on sensitive endpoints. Same bar as [../rules/security.mdc](../rules/security.mdc).
 - **Performance / CI** — unbounded queries, N+1, and a missing pipeline gate ([performance-ci.md](performance-ci.md)).
 - **Tests** — new behavior has focused tests; bug fixes have regression tests or a clear reason tests
-  are not practical. For UI/auth/host-bound diffs, cite `scripts/Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes) instead of a generic "needs a runtime test" finding. Missing smoke is residual risk, not a Blocker.
+  are not practical. For UI/auth/host-bound diffs, cite `scripts/ticket/Get-StackSmoke.ps1` (Never tested / Tested / Untested latest changes) instead of a generic "needs a runtime test" finding. Missing smoke is residual risk, not a Blocker.
 - **Database alignment** — when schema changes, verify all affected migration/query paths stay aligned.
 
 **Overlay:** add project-specific focus areas below (e.g. shared-core guards, parity alignment, schema rules).

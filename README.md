@@ -35,7 +35,7 @@ receipt): [glossary](_shared/glossary.md).
 - **Hooks, written once:** `hooks/core/` holds session context, the commit guard, the push gate,
   the ticket nudge, the closeout guard, and context usage. IDE adapters call it. Swallowed hook
   errors go to `scripts/.hook-errors.log`, and `/doctor` warns when it is not empty.
-- **Stack smoke:** `/start-stack` runs `profile.stacks.startCommand`. A smoke pass (a Drive) you
+- **Stack smoke:** `/start-stack` runs `profile.stacks.services`. A smoke pass (a Drive) you
   ask for is stamped with `Set-StackSmoke.ps1` and shown at review and closeout. It is a close gate
   only when an affected repo has profile layer `frontend` and the change touches a
   `profile.uiGlobs` file type.

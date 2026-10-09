@@ -47,8 +47,8 @@ Dispatch reusable subagent "functions" instead of token-heavy reads in the orche
 - `why-repo` — git blame/log on known files; regressions only (used to work). Skip when it never worked.
 - `branch-setup` — per-repo git prep during start-ticket.
 - `verify-repo` — scoped tests (+ static analysis when configured) per repo at closeout. The parent
-  records each packet with `scripts/Set-VerifyReceipt.ps1`.
-- `review-diff` — staged/pre-merge review per repo. The parent stamps `scripts/Set-ReviewReady.ps1`.
+  records each packet with `scripts/ticket/Set-VerifyReceipt.ps1`.
+- `review-diff` — staged/pre-merge review per repo. The parent stamps `scripts/ticket/Set-ReviewReady.ps1`.
 - `pr-feedback-fetch` — compact PR feedback per ticket.
 - `peer-review-pr` — coworker PR comments; no tracker writes.
 

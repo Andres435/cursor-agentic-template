@@ -77,7 +77,7 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
 
 0. **Load `profile.json` (one Read).** If `id` is `customize-me` (or `displayName` is still
    `My project`), run `/onboard` and stop. Otherwise treat `repos`, `ticketSystem`, `ticketPrefix`,
-   `specialists`, `stacks.startCommand`, `baseBranchDefault`, and `worktreeSupported` as already decided.
+   `specialists`, `stacks.services`, `baseBranchDefault`, and `worktreeSupported` as already decided.
 
 1. **Fetch ticket context** → `manifest.ticket`
    - Per [../references/ticket-intake-generic.md](../references/ticket-intake-generic.md) for
@@ -142,6 +142,11 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - **Open decisions stop the plan.** An unresolved AC, ADR, shared-owner, or extra-repo call →
      `ask-user` and wait. Never draft or persist TBD, "resolve during implement", or an invented
      default. Editing a shared owner is never the default.
+   - **Asked to skip the plan** ("no plan", "just code it", "skip Engineering Decisions"): write a
+     short plan instead of none. Plan Digest, Engineering Decisions (`None — <why>` is enough for a
+     small item), and a tagged Work Plan of only the real steps. Say once why in one line:
+     `/implement`, `/review-changes` and `/complete-task` read the file, and close fails without
+     it. Then persist and gate it like any plan. A "go" with the request is the approval.
    - Revise in the plan-mode conversation; re-emit only the changed section, never the whole plan.
    - Features and refactors: clarify batch and consistency report per `feature-plan.md`; the draft is
      not ready while a list is open unless the user accepts the item as out of scope.
@@ -151,7 +156,7 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - Write the **exact approved text**. Persist even in branch mode — `/complete-task` and a resumed
      `/implement` are new chats that read the file. A later change: re-approve and overwrite.
 
-8. **Gate** — `.\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start`.
+8. **Gate** — `.\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase start`.
    `FAIL` = not finished: write the missing piece and re-run. If step 5 started a runtime script,
    wait for it now (not in investigate mode); it never starts the app or a browser. In branch mode,
    confirm every affected repo is on `<ticket>`. Worktree detail:
@@ -171,8 +176,8 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
     - **Branch:** startup line, the `implement.md` step 6 summary, then:
 
       ```powershell
-      .\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase start
-      .\.cursor\scripts\Set-TicketLanes.ps1 -Ticket <ticket> -Lanes "<fN/sN/dN inline:dN, or off>"
+      .\.cursor\scripts\ticket\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase start
+      .\.cursor\scripts\ticket\Set-TicketLanes.ps1 -Ticket <ticket> -Lanes "<fN/sN/dN inline:dN, or off>"
       ```
 
       `-Lanes off` without engineering mode; otherwise count fast/standard/deep dispatches and deep
@@ -188,4 +193,5 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
   historical or unrelated tickets.
 - Approval is a chat statement, never an IDE button; persist only after it, and in worktree mode never build in this chat.
 - `Assert-TicketArtifacts -Phase start` passes before the final message; prose never overrides a `FAIL`.
+- A user cannot waive the plan, only shrink it (step 6): every ticket leaves a manifest and a plan file.
 - No dev server, browser, or CDP here (`/start-stack`); subagents are read-only; load only Load map and `docSet` rows, at the step that needs them.

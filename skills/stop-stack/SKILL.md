@@ -10,10 +10,12 @@ color: red
 # Stop Stack
 
 Stop the services `Start-TicketStack.ps1` recorded, then release the owner. Do not invent a second stop command.
+Services stop in reverse start order: the whole process tree is killed, then the service's `stop`
+command runs (for example `docker compose down`).
 
 ```powershell
-./scripts/runtime/Stop-TicketStack.ps1
+./scripts/runtime/Stop-TicketStack.ps1 [-Ticket <ticket id>] [-Force]
 ```
 
-Report the exit status. Stopping does not erase a recorded smoke stamp; `Get-StackSmoke.ps1` marks it
+With `-Ticket`, another ticket's stack is refused unless `-Force`. Report the exit status. Stopping does not erase a recorded smoke stamp; `Get-StackSmoke.ps1` marks it
 Untested latest changes if the work changes later.

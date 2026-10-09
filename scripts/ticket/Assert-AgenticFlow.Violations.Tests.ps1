@@ -73,6 +73,7 @@ BeforeAll {
     Add-Text $bad '_shared/glossary.md' '[gone](does-not-exist.md)'                                       # doc-links
     Add-Text $bad 'commands/stray.md' 'Just prose, no pointer to a skill.'                                 # command-shim
     Edit-Text $bad 'profile.json' '"defaultMode": "branch"' '"defaultMode": "sometimes"'                   # profile
+    Edit-Text $bad 'profile.json' '"services": []' '"services": [{"name":"a","command":"x","port":3000,"dependsOn":["ghost"]},{"name":"a","command":"y","port":3000,"cwd":"nowhere"}]'   # profile (stacks)
     Edit-Text $bad 'profile.json' "    `"doctor`",`n" ''                                                    # slash-menu
     Add-Text $bad 'plans/TICKET-99999-impl-prompt.md' 'retired'                                               # retired-artifact
     Add-Text $bad 'plans/TICKET-99998-manifest.json' '{}'                                                       # user-plans
@@ -113,6 +114,10 @@ Describe 'Assert-AgenticFlow on a copy of this repo' {
         @{ Prefix = 'doc-links';        Detail = 'does-not-exist\.md' }
         @{ Prefix = 'command-shim';     Detail = 'commands/stray\.md' }
         @{ Prefix = 'profile';          Detail = "defaultMode 'sometimes'" }
+        @{ Prefix = 'profile';          Detail = 'stacks\.services\[a\] name is not unique' }
+        @{ Prefix = 'profile';          Detail = 'port 3000 is used by a' }
+        @{ Prefix = 'profile';          Detail = "dependsOn unknown service 'ghost'" }
+        @{ Prefix = 'profile';          Detail = "cwd 'nowhere' does not exist" }
         @{ Prefix = 'slash-menu';       Detail = "missing 'doctor'" }
         @{ Prefix = 'retired-artifact'; Detail = 'TICKET-99999-impl-prompt\.md' }
         @{ Prefix = 'user-plans';       Detail = 'TICKET-99998-manifest\.json' }

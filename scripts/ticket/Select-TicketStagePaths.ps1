@@ -53,12 +53,11 @@ function Get-DenyReason {
 # Matched against ADDED lines only (or a whole untracked file), so a placeholder
 # already committed upstream never blocks an unrelated edit to the same file.
 # A launcher that writes a feed token into a tracked NuGet.Config is caught this way.
+# Staging uses every pattern in secret-patterns.json (token and heuristic); the commit
+# hooks use only the token ones. -match is case-insensitive, as it always was here.
 $SecretContentPatterns = @(
-    'ClearTextPassword'
-    '(?i)\bpassword\s*=\s*[^;"''\s<>$%{}]{4,}'
-    '\b[a-z2-7]{52}\b'                            # Azure DevOps PAT (legacy 52-char)
-    '\b[A-Za-z0-9]{76}AZDO[A-Za-z0-9]{4}\b'       # Azure DevOps PAT (84-char)
-    '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+    (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'secret-patterns.json') -Raw |
+        ConvertFrom-Json).patterns | ForEach-Object { $_.pattern }
 )
 
 function Test-SecretText {

@@ -9,7 +9,6 @@
 BeforeAll {
     $script:Verify = Join-Path $PSScriptRoot 'Set-VerifyReceipt.ps1'
     $script:Feedback = Join-Path $PSScriptRoot 'Set-TicketFeedback.ps1'
-    $script:FeedbackForwarder = Join-Path (Split-Path $PSScriptRoot -Parent) 'Set-TicketFeedback.ps1'
     function New-ManifestRoot([string]$Name) {
         $root = Join-Path $TestDrive $Name
         $plans = Join-Path $root 'plans'
@@ -208,17 +207,17 @@ Describe 'Set-TicketFeedback' {
         Test-Path -LiteralPath (Join-Path $root 'plans/WI00020-feedback.md') | Should -BeFalse
     }
 
-    It 'takes -Json through the top-level forwarder with nothing piped in' {
-        $root = New-ManifestRoot 'feedback-forwarder-param'
+    It 'takes -Json through the script with nothing piped in' {
+        $root = New-ManifestRoot 'feedback-param'
         $json = '{ "prs": [], "items": [ { "kind": "thread", "ref": "1", "ask": "Rename it.", "triage": "fix-now" } ] }'
-        & $script:FeedbackForwarder -Ticket WI00020 -Json $json -Root $root
+        & $script:Feedback -Ticket WI00020 -Json $json -Root $root
         (Get-Manifest $root).feedback.items[0].ask | Should -Be 'Rename it.'
     }
 
-    It 'takes piped JSON through the top-level forwarder' {
-        $root = New-ManifestRoot 'feedback-forwarder-pipe'
+    It 'takes piped JSON through the script' {
+        $root = New-ManifestRoot 'feedback-pipe'
         $json = '{ "prs": [], "items": [ { "kind": "thread", "ref": "2", "ask": "Add a test.", "triage": "fix-now" } ] }'
-        $json | & $script:FeedbackForwarder -Ticket WI00020 -Root $root
+        $json | & $script:Feedback -Ticket WI00020 -Root $root
         (Get-Manifest $root).feedback.items[0].ask | Should -Be 'Add a test.'
     }
 

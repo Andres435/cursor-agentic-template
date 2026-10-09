@@ -52,7 +52,7 @@ That avoided reload is the point of branch mode.
    workspace folder name, else the repos' current branches:
 
    ```powershell
-   .\.cursor\scripts\Get-TicketFromBranch.ps1 -Json
+   .\.cursor\scripts\ticket\Get-TicketFromBranch.ps1 -Json
    ```
 
    Use its `ticket` when `reason` is `open-manifest` or `branch`; confirm with the user when it is
@@ -61,7 +61,7 @@ That avoided reload is the point of branch mode.
 2. **Resolve the mode and root.** Do not assume either.
 
    ```powershell
-   .\.cursor\scripts\Resolve-TicketRoot.ps1 -Ticket <ticket> -Json
+   .\.cursor\scripts\ticket\Resolve-TicketRoot.ps1 -Ticket <ticket> -Json
    ```
 
    - **`mode: branch`** — work happens in `profile.repos[].path`. That is the normal case.
@@ -74,7 +74,7 @@ That avoided reload is the point of branch mode.
    included:
 
    ```powershell
-   .\.cursor\scripts\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase implement
+   .\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase implement
    ```
 
    `-Phase implement` is the load-time gate because it checks only what must already exist (manifest

@@ -122,9 +122,28 @@ if (-not (Test-Path -LiteralPath $profilePath)) {
         if (($keys -contains 'repos') -and -not @($prof.repos).Count) {
             Fail "profile: repos array is empty"
         }
-        if ($keys -notcontains 'stacks' -or
-            $prof.stacks.PSObject.Properties.Name -notcontains 'startCommand') {
-            Fail "profile: stacks.startCommand is missing"
+        if ($keys -notcontains 'stacks' -or $null -eq $prof.stacks) {
+            Fail "profile: stacks is missing"
+        } else {
+            # Shape via profile.schema.json (same Test-Json mechanism as manifest.schema.json),
+            # then the cross-field checks the schema cannot express.
+            . (Join-Path $PSScriptRoot '../lib/StackServices.ps1')
+            $stacksSchema = Join-Path $PSScriptRoot 'profile.schema.json'
+            $stacksJson = $prof.stacks | ConvertTo-Json -Depth 8
+            $shapeError = $null
+            $shapeOk = $false
+            try {
+                $shapeOk = Test-Json -Json $stacksJson -SchemaFile $stacksSchema -ErrorAction Stop
+            } catch {
+                $shapeError = $_.Exception.Message
+            }
+            if (-not $shapeOk) {
+                if (-not $shapeError) { $shapeError = 'does not match profile.schema.json' }
+                Fail "profile: stacks schema -- $shapeError"
+            }
+            $findings = Get-StackProfileFindings -Stack $prof.stacks -Root $Root -SecretPatternsPath (Join-Path $PSScriptRoot 'secret-patterns.json')
+            foreach ($msg in $findings.Violations) { Fail $msg }
+            foreach ($msg in $findings.Warnings) { Write-Host "[WARN] $msg" }
         }
     } catch {
         Fail "profile: profile.json is not valid JSON -- $($_.Exception.Message)"
@@ -161,6 +180,43 @@ try {
     }
 } finally {
     $ErrorActionPreference = $prevEap
+}
+
+# ---- 4c. No secrets in tracked files ----------------------------------------
+# The token patterns from scripts/ticket/secret-patterns.json, the same set the commit
+# hooks use (hooks/core/secret-scan.js). A line containing secret-scan:allow is exempt.
+# Findings name the file, line and pattern, never the matched text.
+$secretFile = Join-Path (Join-Path (Join-Path $Root 'scripts') 'ticket') 'secret-patterns.json'
+if (-not (Test-Path -LiteralPath $secretFile)) {
+    Fail "secrets: scripts/ticket/secret-patterns.json is missing"
+} else {
+    $tokenPatterns = @((Get-Content -LiteralPath $secretFile -Raw | ConvertFrom-Json).patterns |
+        Where-Object { $_.kind -eq 'token' } | ForEach-Object {
+            $opts = if ($_.PSObject.Properties.Name -contains 'ignoreCase' -and $_.ignoreCase) { 'IgnoreCase' } else { 'None' }
+            [pscustomobject]@{ Name = $_.name; Regex = [regex]::new($_.pattern, $opts) }
+        })
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $tracked = @(& git -C $Root ls-files 2>$null)
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+    foreach ($rel in $tracked) {
+        $full = Join-Path $Root $rel
+        if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
+        if ((Get-Item -LiteralPath $full -Force).Length -gt 1MB) { continue }  # -Force: dotfiles are hidden on Linux
+        $text = [IO.File]::ReadAllText($full)
+        if ($text.IndexOf([char]0) -ge 0) { continue }  # binary
+        $lineNo = 0
+        foreach ($line in ($text -split "`r?`n")) {
+            $lineNo++
+            if ($line.Contains('secret-scan:allow')) { continue }
+            foreach ($p in $tokenPatterns) {
+                if ($p.Regex.IsMatch($line)) { Fail "secrets: ${rel}:$lineNo matches $($p.Name) -- remove it, or mark a false positive with secret-scan:allow" }
+            }
+        }
+    }
 }
 
 # ---- 5. No hardcoded worktree paths in skills/** and commands/*.md --

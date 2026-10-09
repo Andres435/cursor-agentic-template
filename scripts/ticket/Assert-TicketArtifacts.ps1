@@ -469,7 +469,7 @@ function Test-AdrIndex {
 <#
     Replaces the per-ticket WI<n>-closeout.md check. A full closeout page is now
     written only when the retrospective earns one, but every closed ticket must
-    leave exactly one ledger row -- written by scripts/Update-TicketLedger.ps1.
+    leave exactly one ledger row -- written by scripts/ticket/Update-TicketLedger.ps1.
 #>
 # Context percents are optional: a measured value, or blank. A blank is honest; an
 # invented number is not, so only a present-but-malformed value fails.
@@ -852,7 +852,7 @@ function Test-CloseWork {
 function Test-LedgerRow {
     $ledger = Join-Path $PlansDir 'ticket-ledger.md'
     if (-not (Test-Path -LiteralPath $ledger)) {
-        $missing.Add("plans/ticket-ledger.md -- run scripts/Update-TicketLedger.ps1 -Ticket $Key ...")
+        $missing.Add("plans/ticket-ledger.md -- run scripts/ticket/Update-TicketLedger.ps1 -Ticket $Key ...")
         return
     }
     $rows = @(Get-Content -LiteralPath $ledger | Where-Object { $_ -match "^\|\s*$Key\s*\|" })
@@ -860,7 +860,7 @@ function Test-LedgerRow {
         $found.Add("plans/ticket-ledger.md ($Key row)")
     }
     elseif ($rows.Count -eq 0) {
-        $missing.Add("plans/ticket-ledger.md -- no row for $Key; run scripts/Update-TicketLedger.ps1 -Ticket $Key ...")
+        $missing.Add("plans/ticket-ledger.md -- no row for $Key; run scripts/ticket/Update-TicketLedger.ps1 -Ticket $Key ...")
     }
     else {
         $missing.Add("plans/ticket-ledger.md -- $($rows.Count) rows for $Key; expected exactly one")

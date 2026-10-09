@@ -13,6 +13,7 @@
  *   run    a shell command that names a .ps1/.py by an absolute or env-rooted path
  */
 
+const path = require("path");
 const SCRIPT = /\.(?:ps1|py)$/i;
 // Commands that only read, list or delete a path never execute it.
 const INERT = /^\s*(?:rm|del|erase|ls|dir|cat|type|head|tail|stat|Remove-Item|Get-ChildItem|Get-Content|Test-Path|Get-Item)\b/i;
@@ -37,9 +38,15 @@ function allowedPattern() {
   }
 }
 
+/** `..` collapsed, so repos\..\..\Temp\x.ps1 is judged by where it really points. */
+function normalize(p) {
+  const s = String(p || "").replace(/^\/([A-Za-z])\//, "$1:/"); // Git Bash /c/... -> C:/...
+  return /^[A-Za-z]:/.test(s) ? path.win32.normalize(s) : path.posix.normalize(s);
+}
+
 function outsideAllowed(p) {
   const allowed = allowedPattern();
-  return allowed ? !allowed.test(String(p || "")) : false;
+  return allowed ? !allowed.test(normalize(p)) : false;
 }
 
 function decideWrite(filePath) {

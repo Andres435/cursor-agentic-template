@@ -1,92 +1,76 @@
 #Requires -Version 7
 <#
 .SYNOPSIS
-    Starts the local stack described in profile.json.
+    Starts the local stack described in profile.json stacks.services.
 
 .DESCRIPTION
-    Prefer stacks.services (one object per app: name, command, cwd, port, url).
-    /start-new-project writes that list. When it is empty, run stacks.startCommand
-    unless that command is this script.
+    Each service: name, command (long-running), cwd, setup, stop, env, port, url, ready,
+    dependsOn. Services start in dependsOn order; the launcher waits for a service's ready
+    probe before starting the next. -Preset picks a subset (stacks.presets). An old profile
+    with only stacks.startCommand runs as one implicit service named "app" and prints a
+    migration warning. Writes scripts/runtime/.stack-services.state.json for Stop-TicketStack.ps1.
 
 .PARAMETER Ticket
     Ticket id. Recorded as the stack owner when supplied.
+
+.PARAMETER Preset
+    Name from stacks.presets. Default: stacks.default when it names a preset, else every service.
+
+.PARAMETER Setup
+    Also run each service's setup command (install, restore) before starting it.
 
 .PARAMETER Force
     Take the stack owner even when another ticket holds it.
 
 .PARAMETER ProfilePath
     profile.json to read. Defaults to the repo root beside this scripts folder.
+
+.EXAMPLE
+    ./scripts/runtime/Start-TicketStack.ps1 -Ticket TICKET-12 -Preset web -Setup
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [string]$Ticket,
+    [string]$Preset,
+    [switch]$Setup,
     [switch]$Force,
     [string]$ProfilePath
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path (Split-Path $PSScriptRoot -Parent) 'lib/StackServices.ps1')
 
-function Get-ServiceField {
-    param($Service, [string]$Name)
-    $prop = $Service.PSObject.Properties[$Name]
-    if (-not $prop) { return $null }
-    return $prop.Value
-}
-
-function Test-LocalPortListening {
-    param([int]$Port)
-    if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) { return $false }
-    $listeners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-    return $listeners.Count -gt 0
-}
-
-if (-not $ProfilePath) {
-    $ProfilePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'profile.json'
-}
+$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+if (-not $ProfilePath) { $ProfilePath = Join-Path $repoRoot 'profile.json' }
 if (-not (Test-Path -LiteralPath $ProfilePath)) {
     Write-Error "profile.json not found at $ProfilePath."
     exit 1
 }
-
 $profileJson = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
-$stack = $profileJson.stacks
+$stack = Get-StackField $profileJson 'stacks'
 if (-not $stack) {
     Write-Error 'profile.json does not define stacks.'
     exit 1
 }
 
-$services = @()
-if ($stack.PSObject.Properties.Name -contains 'services' -and $stack.services) {
-    $services = @($stack.services)
+$list = Get-StackServiceList -Stack $stack
+if ($list.Services.Count -eq 0) {
+    Write-Error 'Stack is disabled or has no services. Fill profile.stacks.services (see CUSTOMIZE.md, Stack recipes).'
+    exit 1
 }
-$startCommand = $null
-if ($stack.PSObject.Properties.Name -contains 'startCommand') {
-    $startCommand = [string]$stack.startCommand
-}
+if ($list.Warning) { Write-Host "[WARN] $($list.Warning)" -ForegroundColor Yellow }
 
-$self = $PSCommandPath
-$pointsAtSelf = $startCommand -and (
-    $startCommand -eq './scripts/runtime/Start-TicketStack.ps1' -or
-    $startCommand -eq '.\scripts\runtime\Start-TicketStack.ps1' -or
-    ((Test-Path -LiteralPath $startCommand) -and ((Resolve-Path -LiteralPath $startCommand).Path -eq $self))
-)
-
-if ($services.Count -eq 0) {
-    if (-not $startCommand -or $startCommand -eq 'off' -or $pointsAtSelf) {
-        Write-Error 'Stack is disabled or has no services. Fill profile.stacks.services (see CUSTOMIZE.md).'
-        exit 1
-    }
-    Write-Host "[START] Ticket: $Ticket | Command: $startCommand"
-    if ($PSCmdlet.ShouldProcess($startCommand, 'Execute start command')) {
-        Invoke-Expression $startCommand
-    }
-    exit 0
+try {
+    $ordered = @(Resolve-StackSelection -Stack $stack -Services $list.Services -Preset $Preset)
+} catch {
+    Write-Error $_.Exception.Message
+    exit 1
 }
 
 if ($Ticket) {
     $owner = Join-Path $PSScriptRoot 'Set-ActiveStack.ps1'
-    $ownerArgs = @('-File', $owner, '-Ticket', $Ticket)
+    $ownerArgs = @('-NoProfile', '-File', $owner, '-Ticket', $Ticket)
     if ($Force) { $ownerArgs += '-Force' }
     if ($PSCmdlet.ShouldProcess($Ticket, 'Claim stack owner')) {
         & pwsh @ownerArgs
@@ -94,53 +78,13 @@ if ($Ticket) {
     }
 }
 
-$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$started = @()
-$step = 0
-foreach ($service in $services) {
-    $step++
-    $name = Get-ServiceField $service 'name'
-    if (-not $name) { $name = "service-$step" }
-    $command = Get-ServiceField $service 'command'
-    if (-not $command) {
-        Write-Error "stacks.services[$($step - 1)] ($name) is missing command."
-        exit 1
-    }
-    $cwd = Get-ServiceField $service 'cwd'
-    if (-not $cwd) { $cwd = '.' }
-    if (-not [System.IO.Path]::IsPathRooted($cwd)) {
-        $cwd = Join-Path $repoRoot $cwd
-    }
-    $portValue = Get-ServiceField $service 'port'
-    $url = Get-ServiceField $service 'url'
-
-    if ($portValue -and (Test-LocalPortListening -Port ([int]$portValue))) {
-        Write-Host "[SKIP] $name already listening on port $portValue"
-        continue
-    }
-
-    $target = "$name : $command"
-    Write-Host "[START] $step. $target"
-    if ($url) { Write-Host "        $url" }
-    if (-not $PSCmdlet.ShouldProcess($target, 'Start service')) { continue }
-    if (-not (Test-Path -LiteralPath $cwd)) {
-        Write-Error "Working directory not found for ${name}: $cwd"
-        exit 1
-    }
-    $proc = Start-Process -FilePath 'pwsh' -WorkingDirectory $cwd -PassThru -ArgumentList @(
-        '-NoProfile', '-Command', [string]$command
-    )
-    $started += [pscustomobject]@{
-        name = [string]$name
-        processId = $proc.Id
-        port = $portValue
-        url  = $url
-    }
-}
-
-if ($PSCmdlet.ShouldProcess('stack state', 'Write')) {
-    $statePath = Join-Path $PSScriptRoot '.stack-services.state.json'
-    $started | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $statePath -Encoding utf8
+$statePath = Join-Path $PSScriptRoot '.stack-services.state.json'
+try {
+    $started = @(Start-StackServices -Services $ordered -RepoRoot $repoRoot -StatePath $statePath -Setup:$Setup -Cmdlet $PSCmdlet)
+} catch {
+    Write-Host "[FAIL] $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host '       Services already started are recorded; run Stop-TicketStack.ps1 to clean up.'
+    exit 1
 }
 
 Write-Host "[PASS] Started $($started.Count) service(s)."

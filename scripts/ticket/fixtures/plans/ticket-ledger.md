@@ -1,6 +1,6 @@
 # Ticket ledger
 
-One row per closed ticket. Written by `scripts/Update-TicketLedger.ps1` at
+One row per closed ticket. Written by `scripts/ticket/Update-TicketLedger.ps1` at
 `/complete-task` -- do not hand-edit, the script owns this format.
 
 This replaces the per-ticket `WI<n>-closeout.md` files. Durable *lessons* live in

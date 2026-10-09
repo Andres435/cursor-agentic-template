@@ -27,7 +27,7 @@ result, so its own context window stays lean (the subagent burns its own window 
   Never inherit the chat model. A slice too large for its tier is split, not upsized.
 - Always pass: the **ticket id**, the **resolved path** for the target repo, and the exact
   question/scope. Subagents do not see the parent conversation. Get the path from
-  `scripts/Resolve-TicketRoot.ps1 -Ticket <ticket> -Json` — it returns `repos[].path` for the
+  `scripts/ticket/Resolve-TicketRoot.ps1 -Ticket <ticket> -Json` — it returns `repos[].path` for the
   ticket's mode (canonical clone in branch mode; the worktree path only when `mode` is worktree).
   Never construct a worktree path by hand. `peer-review-pr` uses sibling clones from
   [profile.json](../profile.json), not `Resolve-TicketRoot`.
@@ -103,7 +103,7 @@ result, so its own context window stays lean (the subagent burns its own window 
   sonar: OK | ERROR(condition) | skipped(not enrolled) | skipped(no key)
   evidence: <.trx or saved test output path>   # not for not-run
   ```
-- **Parent records it:** the subagent stays read-only. The parent runs `scripts/Set-VerifyReceipt.ps1`
+- **Parent records it:** the subagent stays read-only. The parent runs `scripts/ticket/Set-VerifyReceipt.ps1`
   per packet with `-Evidence <evidence>` (`OK`→`ok`, `ERROR`→`error`, `skipped(...)`→`not-run`; `not-run` tests pass `-Reason`). `Assert-TicketArtifacts -Phase close` reads it.
 
 ## `review-diff(repo) -> findings`

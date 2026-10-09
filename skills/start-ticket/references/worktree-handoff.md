@@ -31,7 +31,7 @@ background at step 5 and is awaited after the start gate. It confirms each workt
 
 ## Final message (step 10)
 
-1. `.\.cursor\scripts\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase start` — this plan chat only;
+1. `.\.cursor\scripts\ticket\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase start` — this plan chat only;
    the `/implement` chat is not recorded.
 2. The worktree startup message from `ticket-plan-output.md` (loaded at step 6): startup line, then
    the approved Work Plan with its `[low]|[med]|[high]` tags.

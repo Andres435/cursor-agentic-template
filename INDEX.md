@@ -75,6 +75,7 @@ One row per doc. Search here before Grep. Add your overlay docs to the last tabl
 | [skills/architect/SKILL.md](skills/architect/SKILL.md) | design across a module or repo boundary | architect, design lanes |
 | [skills/architect/references/design-lane-prompt.md](skills/architect/references/design-lane-prompt.md) · [design-red-flags.md](skills/architect/references/design-red-flags.md) | architect lane prompt and red flags | design lane, red flags |
 | [agents/script-engineer.md](agents/script-engineer.md) | creating or changing a .ps1/.py script | script, PowerShell, Pester, PSScriptAnalyzer |
+| [skills/workflow-change/SKILL.md](skills/workflow-change/SKILL.md) | changing this workflow repo itself: gate run, upstream decision, TD cleanup, plugin refresh | workflow change, maintainer, edit skill, add gate, plugin refresh |
 | [skills/script-authoring/SKILL.md](skills/script-authoring/SKILL.md) | before writing any script: where it may live, standards, tests | script, ps1, tmp, scratch, Requires, StrictMode, Pester |
 | [_shared/agentic-proof.md](_shared/agentic-proof.md) | the commit trailer that carries verify/review proof out of the local manifest; what may leave the machine; pipeline step | agentic proof, Agentic-Proof trailer, fingerprint, PR pipeline, server-side |
 | [skills/blast-radius/SKILL.md](skills/blast-radius/SKILL.md) | what a shared change could break | blast radius, shared module, public API |

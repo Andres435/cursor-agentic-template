@@ -42,6 +42,7 @@ Chat 1 — Plan and build
   /start-ticket <ticket> bug|feature|spike|refactor
   Deep tier drafts the plan. Question it; it revises only the section you asked about.
   Say "approved" in chat. Approval is that statement, never an IDE button.
+  Asking it to skip the plan gets a short plan instead: the later chats and close read that file.
   It writes the plan, then builds in this same chat. Each Work Plan step's [low]|[med]|[high]
   tag sets its tier.
   /start-stack <ticket>   when you need the local apps
@@ -136,7 +137,7 @@ Each adapter maps tiers to real models: [Cursor](adapters/cursor/model-usage.md)
 
 ## Local apps
 
-One stack at a time. `/start-stack <ticket>` runs `profile.stacks.startCommand`. When it fails with
+One stack at a time. `/start-stack <ticket>` starts `profile.stacks.services`, in `dependsOn` order. When it fails with
 "another ticket owns the stack", "port in use", or leftover processes, run `/stop-stack`, then
 `/start-stack <ticket>` once. If it still fails, fix the machine yourself; do not ask the agent to
 inspect ports.
