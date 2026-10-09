@@ -48,4 +48,17 @@ Describe 'Get-SessionHours' {
         $out.hours | Should -Be 6
         $out.points | Should -Be 3
     }
+
+    It '-Preview counts a still-open span up to now; without it an unclosed ticket has no hours' {
+        $root = Join-Path $TestDrive 'preview'
+        New-Item -ItemType Directory -Path (Join-Path $root 'plans') -Force | Out-Null
+        $manifest = @{ workType = 'bug'; mode = 'branch'; timezone = 'UTC'; startedAtUtc = '2026-10-05T22:00:00Z' }
+        $path = Join-Path $root 'plans\WI00044-manifest.json'
+        $manifest | ConvertTo-Json | Set-Content -LiteralPath $path -Encoding utf8
+        $plain = & $script:Script -Ticket WI00044 -Root $root -Json | ConvertFrom-Json
+        $plain.hours | Should -Be 0
+        $preview = & $script:Script -Ticket WI00044 -Root $root -Json -Preview | ConvertFrom-Json
+        $preview.hours | Should -BeGreaterThan 0
+        (Get-Content -LiteralPath $path -Raw) | Should -Not -Match 'completedAtUtc'
+    }
 }

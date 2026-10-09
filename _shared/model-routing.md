@@ -66,8 +66,8 @@ the user. On the fast tier it says once that classification and review are weake
 
 ## Dispatch rules
 
-1. **Explicit model.** Every dispatch passes `model` from the adapter. Omitting it inherits the
-   orchestrator — the defect this contract exists to prevent.
+1. **Explicit model.** Every dispatch passes `model` from the adapter, and the tier's effort when the
+   adapter maps one. Omitting `model` inherits the orchestrator — the defect this contract exists to prevent.
 2. **Lanes.** A lane is one dispatched subagent run. An implement lane covers one contiguous run of
    Work Plan steps with the same tag and the same repo path. Steps stay in plan order; one writer per repo path at a time.
 3. **Lean packet.** Inline the step text. Pass the ticket id, the repo path from

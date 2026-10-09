@@ -20,6 +20,10 @@
 .PARAMETER Json
     Emit hours, points, days, and holidays as JSON.
 
+.PARAMETER Preview
+    Count a span that has started but not closed (no completedAtUtc, or a reopen with no
+    reclosedAtUtc) up to now, without writing. For the approval package before close;
+    Close-Ticket.ps1 stamps the close and computes the real value.
 .PARAMETER BeginSpan
     Open a pr-feedback span at the current UTC time.
 
@@ -35,6 +39,7 @@ param(
     [Parameter(Mandatory)][string]$Ticket,
     [string]$Root,
     [switch]$Json,
+    [switch]$Preview,
     [ValidateSet('pr-feedback')][string]$BeginSpan,
     [ValidateSet('pr-feedback')][string]$EndSpan
 )
@@ -156,6 +161,17 @@ if ($EndSpan) {
     $spans = Get-SpanList $manifest
 }
 
+if ($Preview) {
+    $nowIso = [DateTime]::UtcNow.ToString('o')
+    $startedAt = Get-Prop $manifest 'startedAtUtc'
+    if ($startedAt -and -not (Get-Prop $manifest 'completedAtUtc')) {
+        $spans.Add([pscustomobject]@{ kind = 'original'; startedAtUtc = [string]$startedAt; endedAtUtc = $nowIso })
+    }
+    $reopenedAt = Get-Prop $manifest 'reopenedAtUtc'
+    if ($reopenedAt -and -not (Get-Prop $manifest 'reclosedAtUtc')) {
+        $spans.Add([pscustomobject]@{ kind = 'reopen'; startedAtUtc = [string]$reopenedAt; endedAtUtc = $nowIso })
+    }
+}
 Add-DerivedSpan $spans $manifest 'original' 'startedAtUtc' 'completedAtUtc'
 Add-DerivedSpan $spans $manifest 'reopen' 'reopenedAtUtc' 'reclosedAtUtc'
 

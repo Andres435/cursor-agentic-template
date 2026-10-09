@@ -16,7 +16,8 @@ Skills, playbooks, and agents name a **verb**, never an IDE tool. Each adapter u
   start building before that. In worktree mode the planning chat never builds.
 - **`dispatch(function, tier)`** — run a [subagent function](subagent-functions.md) or Work Plan
   lane on the tier's model ([model-routing.md](model-routing.md)). The adapter maps the role to its
-  subagent type and the tier to a model, and declares `deepLane: inline | dispatch`.
+  subagent type and the tier to a model (and an effort, where the IDE has one), and declares
+  `deepLane: inline | dispatch`.
 - **`report-context`** — record this chat's context occupancy:
   `Set-TicketCtxPct.ps1 -Ticket WI<n> -Phase <start|review|close>`. Omit `-Percent` to use the
   value the IDE hook measured. Pass `-Percent` only when you can read a real number. Never invent
@@ -31,7 +32,7 @@ Skills, playbooks, and agents name a **verb**, never an IDE tool. Each adapter u
 | `ask-user` | `AskQuestion` | `AskUserQuestion` | ask in chat and stop |
 | `enter-plan` | `SwitchMode` `target_mode_id: plan` | `EnterPlanMode` | plan mode |
 | `exit-plan` | `SwitchMode` back to Agent; never Plan mode's native Build | `ExitPlanMode` after the chat approval (it is the approval step itself) | leave plan mode |
-| `dispatch` | `Task` (`subagent_type`, `model`) | `Agent` (`subagent_type`, `model`) | `spawn_agent` (`model`) |
+| `dispatch` | `Task` (`subagent_type`, `model`) | `Agent` (`subagent_type`, `model`, `effort`) | `spawn_agent` (`model`, `reasoning_effort`) |
 | `report-context` | hook-measured, or the context-window indicator | hook-measured | blank (no Codex hook) |
 | `rename-chat` | `cursor-app-control` `rename_chat` | not supported | not supported |
 

@@ -128,3 +128,7 @@ Add this folder as a Codex plugin marketplace and install `agentic`:
 | Commit blocked on a `plans/` path | Intended: plans and the ledger are user-local. `git rm --cached` the file |
 | Every slash command shows twice in Cursor | A `.cursor` folder and a plugin copy of this folder both load. Keep one |
 | Close gate says the review no longer matches | Something was committed after the review. Run `/review-changes` again, then close |
+
+Optional: to add another vendor's CLI as a panel lane, copy `user/external-lanes.example.json` to
+`user/external-lanes.local.json` ([adapters/README.md](adapters/README.md#external-lanes-optional)).
+

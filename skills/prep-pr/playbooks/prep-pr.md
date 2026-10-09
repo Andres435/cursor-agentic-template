@@ -102,8 +102,8 @@ ticket worktree in `worktree` mode). If `rootExists` is false, stop and report i
    - **Close the ticket.** When this chat ran `/complete-task`, return to its step 6 (retrospective,
      ledger row, `-Phase close`). When `/prep-pr` runs in a fresh chat, nobody else will: run
      [../../complete-task/references/task-retrospective.md](../../complete-task/references/task-retrospective.md)
-     here, then `Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase close`, exactly as
-     complete-task step 6 does. A ticket with a PR and no ledger row is a close that never ran.
+     here (its section 4 ends with one `Close-Ticket.ps1` call: close stamp, ledger row, `-Phase close`
+     gate), exactly as complete-task step 6 does. A ticket with a PR and no ledger row is a close that never ran.
 
 ## Cross-Repo PR Matrix
 

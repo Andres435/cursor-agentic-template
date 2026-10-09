@@ -100,16 +100,18 @@ Rules that do not bend:
 
 ## 4. Write the ledger row (always)
 
-One row per closed ticket, written by the script so the format cannot drift:
+One call closes the ticket, after the user approved the package and gave the scores above. It stamps
+`completedAtUtc` (`reclosedAtUtc` after a reopen), computes hours and points, records `report-context`,
+writes the ledger row, and runs the close gate, stopping at the first `[FAIL] close step N (<name>)`:
 
 ```powershell
-.\.cursor\scripts\ticket\Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close   # report-context
-.\.cursor\scripts\ticket\Update-TicketLedger.ps1 -Ticket <ticket> -Type <bug|feature|spike|refactor> `
-  -Hours <n> -Points <n> -Efficiency <1-5> -Contextualization <1-5> -CostTokens <1-5> `
-  -Pr <number>
+.\.cursor\scripts\ticket\Close-Ticket.ps1 -Ticket <ticket> `
+  -Efficiency <1-5> -Contextualization <1-5> -CostTokens <1-5> -Pr <number>
 ```
 
-**Context percents:** omit `-ContextPct`, `-ContextPctStart` and `-ContextPctReview`; the ledger
+`-WhatIf` lists the steps and writes nothing. Type comes from the manifest; omit `-Pr` if none.
+
+**Context percents:** `Close-Ticket.ps1` never passes `-ContextPct`, `-ContextPctStart` or `-ContextPctReview`; the ledger
 copies `ctxPct.close` / `.start` / `.review` from the manifest, which `report-context` filled with the
 hook-measured value. `Lanes` is copied from `manifest.lanes`. Pass a number only when you can
 actually read one; **never estimate**. A value the agent typed shows as `~NN`. `-Phase close` accepts
@@ -125,13 +127,8 @@ The row records the workflow `Epoch` it closed under. If `scripts/ticket/Assert-
 prints `[INFO] re-rate`, say so in one line and offer a re-rating of that epoch's rows; after the
 user rates, run `Update-TicketLedger.ps1 -MarkRated`.
 
-Then confirm the close artifacts (run **after** the ledger row; the close gate also requires a
-passing verify receipt per affected repo and a review stamp that still matches the committed work —
-a spike skips both):
-
-```powershell
-.\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase close
-```
+The call ends with `Assert-TicketArtifacts.ps1 -Phase close` (verify receipt and review stamp
+included; a spike skips both); there is no separate confirm step.
 
 ## Closeout file shape (only when chosen)
 

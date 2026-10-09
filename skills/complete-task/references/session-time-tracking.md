@@ -52,15 +52,17 @@ the close back to it. Nothing creates that file any more.
 ### Write rules
 
 1. **First `/start-ticket`** (manifest has no `startedAtUtc`): write `startedAtUtc` = now; set `completedAtUtc`, `reopenedAtUtc`, and `reclosedAtUtc` to `null`.
-2. **First `/complete-task`**: set `completedAtUtc` = now. Do not touch reopen fields.
+2. **First `/complete-task`**: `Close-Ticket.ps1` sets `completedAtUtc` = now, after approval. Do not touch reopen fields.
 3. **Reopen `/start-ticket`** when `completedAtUtc` is already set: set `reopenedAtUtc` = now; set `reclosedAtUtc` = `null`. **Do not** overwrite `startedAtUtc` or `completedAtUtc`.
-4. **Reclose `/complete-task`** when `reopenedAtUtc` is set: set `reclosedAtUtc` = now. **Do not** overwrite `completedAtUtc`.
+4. **Reclose `/complete-task`** when `reopenedAtUtc` is set: `Close-Ticket.ps1` sets `reclosedAtUtc` = now. **Do not** overwrite `completedAtUtc`.
 5. Never replace the original `[startedAtUtc, completedAtUtc]` pair with a single span that includes idle days between close and reopen.
 
 ## Time Calculation (complete-task / prep-pr)
 
-Run `scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket>` after setting the close timestamp
-(`completedAtUtc` or `reclosedAtUtc`). Use its hours and point bucket. Do not recompute them.
+Run `scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket> -Preview` for the approval package:
+`-Preview` counts the still-open span up to now and writes nothing. `Close-Ticket.ps1` stamps the
+close (`completedAtUtc` or `reclosedAtUtc`) and runs it again for the ledger. Use its hours and
+point bucket. Do not recompute them.
 `/address-pr-comments` opens and closes a `pr-feedback` span with `-BeginSpan` and `-EndSpan`.
 The script does not write a tracker field. Write the point bucket only when the tracker has one,
 and never for a spike.

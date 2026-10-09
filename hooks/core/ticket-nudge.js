@@ -41,7 +41,7 @@ function nudgesFor(prompt, verbs) {
   const bits = [];
   if (command === "complete-task" || command === "prep-pr") {
     bits.push(
-      "Hours come from the manifest's startedAtUtc/completedAtUtc (legacy tickets: plans/WI-session.json) -- do not ask the user. The retrospective ASKS three questions and only writes what the user picks; the one unconditional output is a ledger row via scripts/ticket/Update-TicketLedger.ps1. Do not write a WI-closeout.md unless a finding earns a page. Run Assert-TicketArtifacts -Phase close only after the ledger row, never at chat start."
+      "Hours come from the manifest's startedAtUtc/completedAtUtc (legacy tickets: plans/WI-session.json) -- do not ask the user. The retrospective ASKS three questions and only writes what the user picks; the one unconditional output is a ledger row, written by scripts/ticket/Close-Ticket.ps1 after approval (it stamps the close, runs report-context, and ends with the -Phase close gate). Do not write a WI-closeout.md unless a finding earns a page. Never run the close gate at chat start."
     );
   }
   if (command === "start-ticket") {

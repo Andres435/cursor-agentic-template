@@ -21,6 +21,8 @@ Read and execute that playbook now. Do not ask for confirmation before reading i
 
 Use only when the user explicitly invokes it. Prefer a **new chat**. Skips `review-diff` when a prior
 `/review-changes` stamp (**Ready** or **No change**) still matches the work in the repo, by the same check close runs (`Get-ReviewSkip.ps1`).
+After approval, the retrospective closes with one call: `Close-Ticket.ps1` (stamp, hours, `report-context`, ledger row, close gate).
+
 Records a stack smoke pass (`Set-StackSmoke.ps1` / `Get-StackSmoke.ps1`: Never tested /
 Tested / Untested latest changes); it is required to close when an affected repo has profile layer
 `frontend` and the change touches a `uiGlobs` file type (a user-confirmed Drive), optional otherwise. A spike with no branch and no staged
