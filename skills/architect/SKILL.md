@@ -50,6 +50,20 @@ write the deep candidate yourself, from the same prompt, before reading that lan
 must stay independent. A lane that reports another model or an automatic choice is discarded, never judged
 ([contract rule 8](../../_shared/model-routing.md#dispatch-rules)).
 
+### Opt-in panel (external lanes)
+
+Only when the user asks for a panel (`--panel` or "with panel"): list the configured external
+lanes with `scripts/ticket/Invoke-ExternalLane.ps1 -List`. None configured → skip silently and
+carry on with the two internal lanes. Otherwise, **after** the internal lanes have returned, write
+the same lane prompt (the design-lane prompt plus the problem, grounding, and acceptance criteria)
+to a file under `tmp/` and run each entry:
+`scripts/ticket/Invoke-ExternalLane.ps1 -Name <name> -PromptFile tmp/<file> -Json`.
+An `ok` result is one more candidate named `ext:<name>`; screen and judge it in Phase C exactly like
+the others. A `dropout` (or `refused`) is one reported line and the panel carries on. The script
+already discards a reply that is not from the entry's family
+([contract rule 8](../../_shared/model-routing.md#dispatch-rules)). Without the request, nothing
+here runs. Setup: [../../adapters/README.md](../../adapters/README.md#external-lanes-optional).
+
 ## Phase C — Screen and choose
 
 1. Screen both candidates against [references/design-red-flags.md](references/design-red-flags.md).

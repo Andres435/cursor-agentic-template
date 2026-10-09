@@ -31,5 +31,6 @@ scripts/.hook-errors.log
 tmp/
 *.local.json
 *.local.md
+user/external-lanes.local.json
 scripts/*.log
 testResults.xml

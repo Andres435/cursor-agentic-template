@@ -77,10 +77,11 @@ spike's story-point or timebox field.
 
 4. **Session time and tracker readiness**
    - Follow [../references/session-time-tracking.md](../references/session-time-tracking.md).
-   - Stamp `completedAtUtc` on the manifest on first close; when `reopenedAtUtc` is set, stamp
-     `reclosedAtUtc` instead and never overwrite `completedAtUtc`. Then run
-     `./scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket>` and use its hours and point bucket.
-     Do not recompute them. Do not ask the user for hours unless the timestamps are missing.
+   - Run `./scripts/ticket/Get-SessionHours.ps1 -Ticket <ticket> -Preview` and use its hours and
+     point bucket for the approval package. Do not recompute them, and do not edit the manifest's
+     timestamps: `Close-Ticket.ps1` (step 6) stamps `completedAtUtc` (or `reclosedAtUtc` after a
+     reopen, never overwriting `completedAtUtc`) once the user approves. Do not ask the user for
+     hours unless the timestamps are missing.
      For a spike, hours stay local and the point bucket is not written to the tracker.
    - Prepare commit messages, PR title/body, and tracker field updates **if**
      `profile.ticketSystem` is not `none`. PR title: `<ticket>: <title>`. Commit messages summarize
@@ -106,19 +107,16 @@ spike's story-point or timebox field.
 
 6. **Task retrospective**
    - After the approval package, and after any approved `prep-pr` actions, run
-     [../references/task-retrospective.md](../references/task-retrospective.md). Record this chat's
-     occupancy with `report-context` (`Set-TicketCtxPct.ps1 -Ticket <ticket> -Phase close`; omit
-     `-Percent` to use the measured value). The ledger script copies `Ctx%`, `CtxS%`, and `CtxR%`
-     from the manifest, so do not pass `-ContextPct`. Never estimate — a blank is honest
-     ([harness-verbs](../../../_shared/harness-verbs.md)).
+     [../references/task-retrospective.md](../references/task-retrospective.md). It scores the session,
+     asks the three questions, then closes with one call, `Close-Ticket.ps1` (close stamp, hours,
+     `report-context`, ledger row, `-Phase close` gate; see its section 4). Never estimate context —
+     a blank is honest ([harness-verbs](../../../_shared/harness-verbs.md)).
    - It **asks three questions** (did the plan hold · any agentic-flow friction · anything durable),
      proposes actions for the answers, and lets the user choose. The only unconditional output is one
-     ledger row via `Update-TicketLedger.ps1`; a full closeout page only when a finding earns one.
-   - After the ledger row is written, confirm the close artifacts:
-     `.\.cursor\scripts\ticket\Assert-TicketArtifacts.ps1 -Ticket <ticket> -Phase close`.
-     On `FAIL`, write the missing timestamp/row and re-run. A missing receipt, or a review that no
-     longer matches the committed work, goes back to step 1 or 2 — see
-     [../../../_shared/ticket-artifacts.md](../../../_shared/ticket-artifacts.md). Do not run this
+     ledger row, written by `Close-Ticket.ps1`; a full closeout page only when a finding earns one.
+   - On `[FAIL] close step N`, fix what it names and re-run `Close-Ticket.ps1`. A missing receipt, or a
+     review that no longer matches the committed work, goes back to step 1 or 2 — see
+     [../../../_shared/ticket-artifacts.md](../../../_shared/ticket-artifacts.md). Do not run the close
      gate at chat start; the load-time gate is `-Phase implement`.
    - The retrospective is always the final step. Nothing else runs after it unless the user starts a new request.
 

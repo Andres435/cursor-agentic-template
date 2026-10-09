@@ -26,6 +26,11 @@ decide. Do not restate a gate's rules here; run it and fix what it reports.
    - Pester over `./scripts` and the node hook tests ([hooks/tests/README.md](../../hooks/tests/README.md)).
    - A doc-sync failure means the doc that describes the change was not touched: fix that doc,
      or add `Docs-Unaffected: <ruleId>: <why>` only when no doc states the changed fact.
+   - **Evals, only when agent behavior can change** (a start-ticket, ticket-router, complete-task or
+     review playbook, a reviewer agent, `rules/security.mdc`, a plan shape doc, a gate).
+     If the project has eval cases, run `scripts/ticket/Select-EvalCases.ps1` to pick only the
+     cases the change affects, say its estimated cost, then run the command it prints
+     ([evals/README.md](../../evals/README.md#run-only-what-a-change-affects)). No cases: skip.
 5. **Upstream.** This repo came from a template ([TEMPLATE.md](../../TEMPLATE.md)). A change that
    works for any project (gates, hooks, lifecycle skills) is worth offering back to the template;
    a project-only change (your stack, ticket system, specialists) stays here. Say which in the PR.

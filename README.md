@@ -69,7 +69,7 @@ Pin engineering mode for ad-hoc work, or for a long chat.
 |---|---|---|
 | [skills/](skills/) | One folder per skill: `SKILL.md`, `playbooks/`, `references/` | Core (add your own beside them) |
 | [_shared/](_shared/) | Contracts: artifacts, plan output, tiers, verbs, output budgets | Core |
-| [scripts/ticket/](scripts/ticket/) | Artifact gate, receipts, review stamp, ledger, epoch | Core |
+| [scripts/ticket/](scripts/ticket/) | Artifact gate, receipts, review stamp, ledger, epoch, one-call close (`Close-Ticket.ps1`), external lanes, eval selection | Core |
 | [scripts/machine/](scripts/machine/) | Machine bootstrap, slash links, git hooks, Claude overlay | Core |
 | [hooks/core/](hooks/core/) + `hooks.json` | Hook logic. `hooks/git-hooks/` holds pre-commit and pre-push | Core |
 | [adapters/](adapters/README.md) | Per-IDE tier maps and hook bridges | Core |

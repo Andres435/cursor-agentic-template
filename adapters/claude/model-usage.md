@@ -11,12 +11,12 @@ verbs in [../../_shared/harness-verbs.md](../../_shared/harness-verbs.md). This 
 
 ## Tiers
 
-| Tier | `Agent` `model` | Used for |
-|---|---|---|
-| `fast` | `haiku` | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
-| `standard` | `sonnet` | `[med]` steps; review-diff, peer-review-pr |
-| `deep` | `opus` | plans, `[high]` steps, second-opinion reviewer, architect deep lane, blast-radius |
-| `frontier` | `fable` | only when the user asks for it in chat |
+| Tier | `Agent` `model` | `effort` | Used for |
+|---|---|---|---|
+| `fast` | `haiku` | `low` | `[low]` steps; explore-repo, why-repo, branch-setup, pr-feedback-fetch, verify-repo |
+| `standard` | `sonnet` | `medium` | `[med]` steps; review-diff, peer-review-pr |
+| `deep` | `opus` | `high` | plans, `[high]` steps, second-opinion reviewer, architect deep lane, blast-radius |
+| `frontier` | `fable` | unset | only when the user asks for it in chat |
 
 **`deepLane: dispatch`** — deep and `[high]` go to an `opus` lane; inline when this chat already runs on `opus`.
 
@@ -24,7 +24,7 @@ verbs in [../../_shared/harness-verbs.md](../../_shared/harness-verbs.md). This 
   `Agent` `model` parameter beats agent frontmatter, which beats the `CLAUDE_CODE_SUBAGENT_MODEL`
   env var (set it to `sonnet`), which beats this chat's model. Still pass it, and
   discard a lane whose first-line `model:` names a substitute (a blocked model falls back silently).
-- `Agent` has no effort parameter; effort-pinned lanes are deferred.
+- Every `Agent` call also passes `effort` from the tier (frontier: leave it unset).
 - Planner lane (engineering mode, orchestrator not on `opus`): the built-in `Plan` agent with
   `model: "opus"`; send revisions back to the same agent with `SendMessage`.
 - Engineering mode: `/agentic:engineering-mode`, or select the **agentic:Engineering mode** output style
@@ -40,7 +40,7 @@ Verb → tool map: [harness-verbs](../../_shared/harness-verbs.md).
 
 | Shared doc says | Do this in Claude Code |
 |---|---|
-| `dispatch(function, tier)` | `Agent` with the role's tier model from the table above — never omit `model` |
+| `dispatch(function, tier)` | `Agent` with the role's tier `model` and `effort` from the table above — never omit `model` |
 | Ask the user to pick a model | Skip — this runtime has no Auto picker; deep is `opus` |
 | `frontier` tier | `fable` only on explicit user request |
 | Pin engineering mode | **agentic:Engineering mode** output style |
@@ -61,7 +61,7 @@ Verb → tool map: [harness-verbs](../../_shared/harness-verbs.md).
 | script create/update | plugin agent `agentic:script-engineer` | standard | Not a subagent-function; see `skills/script-authoring`. |
 
 One `Agent` call per independent repo/area, batched in a single message so they run concurrently.
-**Pass `model` from the Tier column** — an omitted `model` inherits this chat's model. All other
+**Pass `model` and `effort` from the Tier column** — an omitted `model` inherits this chat's model. All other
 contract details in `subagent-functions.md` apply unchanged.
 
 Approval gates are unchanged: no commit, push, PR, or tracker State write except

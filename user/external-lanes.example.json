@@ -1,0 +1,10 @@
+[
+  {
+    "_comment": "UNTESTED example. Copy to user/external-lanes.local.json (gitignored) and adjust. command is an argv array run with no shell; the prompt arrives on stdin. readOnly must be true or the lane is refused. The reply's first line must be 'model: <x>' with <x> starting with family, or the lane drops out.",
+    "name": "codex",
+    "family": "gpt",
+    "command": ["codex", "exec", "--sandbox", "read-only", "--model", "<model>", "-"],
+    "readOnly": true,
+    "timeoutSec": 600
+  }
+]

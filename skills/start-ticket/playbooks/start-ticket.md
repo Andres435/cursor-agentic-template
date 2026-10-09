@@ -146,7 +146,8 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
      short plan instead of none. Plan Digest, Engineering Decisions (`None — <why>` is enough for a
      small item), and a tagged Work Plan of only the real steps. Say once why in one line:
      `/implement`, `/review-changes` and `/complete-task` read the file, and close fails without
-     it. Then persist and gate it like any plan. A "go" with the request is the approval.
+     it. Then persist and gate it like any plan. A "go" with the request is the approval. A short
+     plan never skips step 3: the manifest still comes from ticket-router, in its documented shape.
    - Revise in the plan-mode conversation; re-emit only the changed section, never the whole plan.
    - Features and refactors: clarify batch and consistency report per `feature-plan.md`; the draft is
      not ready while a list is open unless the user accepts the item as out of scope.

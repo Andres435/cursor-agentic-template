@@ -12,6 +12,17 @@ and `deepLane`. Verbs: [../_shared/harness-verbs.md](../_shared/harness-verbs.md
 
 Hook logic lives once in [`../hooks/core/`](../hooks/core/). `cursor/hooks/` and `claude/hooks/` are thin adapters over it.
 
+## External lanes (optional)
+
+A user can add another vendor's read-only CLI as an extra lane for the architect panel and the
+review second opinion. Copy [../user/external-lanes.example.json](../user/external-lanes.example.json) to
+`user/external-lanes.local.json` (gitignored) and edit it: each entry has a `name`, `family`, an argv
+`command`, `readOnly: true`, and an optional `timeoutSec`. [Invoke-ExternalLane.ps1](../scripts/ticket/Invoke-ExternalLane.ps1)
+runs it with the prompt on stdin and accepts the reply only when its first line is `model: <x>` and
+`<x>` starts with the entry's `family`; anything else is a one-line dropout, never a substitute
+model ([rule 8](../_shared/model-routing.md#dispatch-rules)). Nothing runs unless the user asks for a panel
+(`--panel` or "with panel"). The shipped Codex entry is an untested example.
+
 ## Open a ticket worktree
 
 A worktree ticket's chat must be rooted at the ticket worktree: the `root` that

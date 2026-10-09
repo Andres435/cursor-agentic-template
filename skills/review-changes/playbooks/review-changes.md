@@ -107,6 +107,15 @@ to pick a model; do not name one. Never keep a lane that reports an automatic ch
 Merge by `file:line` and tag each finding `both` or `one`. A `both` finding stands; a `one` finding
 gets your judgment before it is reported. The report shape below is unchanged.
 
+**External lanes (opt-in).** Only when the user asks for a panel (`--panel` or "with panel") and
+`scripts/ticket/Invoke-ExternalLane.ps1 -List` names an entry; otherwise skip silently. After the
+internal lanes return, write the review packet (the same one the lanes got) to a file under `tmp/` and
+run `Invoke-ExternalLane.ps1 -Name <name> -PromptFile tmp/<file> -Json` per entry. Its findings are a
+third source, tagged `ext:<name>`, merged by `file:line` and judged like a `one` finding. A `dropout`
+or `refused` is one reported line, never a retry on another model
+([contract rule 8](../../../_shared/model-routing.md#dispatch-rules)). Setup:
+[../../../adapters/README.md](../../../adapters/README.md#external-lanes-optional).
+
 ## Output
 
 Follow [../../../_shared/review-protocol.md](../../../_shared/review-protocol.md) for rule sources and focus areas.  

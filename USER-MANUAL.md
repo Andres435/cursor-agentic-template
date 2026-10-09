@@ -56,7 +56,8 @@ Chat 3 — Close
   You review the approval package.
   /prep-pr                only after you approve
   Then three short questions (did the plan hold? any friction? anything durable?). It writes only
-  what you pick. One ledger row is the only automatic output.
+  what you pick. One ledger row is the only automatic output; the close itself (timestamp, hours,
+  ledger row, close gate) is one script call, Close-Ticket.ps1, after you approve.
 ```
 
 Later PR feedback: new chat, `/address-pr-comments <ticket>`. A coworker's PR: `/peer-review <id>`.
