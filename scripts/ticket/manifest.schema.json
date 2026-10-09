@@ -13,7 +13,14 @@
     "reopenedAtUtc": { "type": ["string", "null"] },
     "reclosedAtUtc": { "type": ["string", "null"] },
     "timezone": { "type": ["string", "null"] },
-    "affectedRepos": { "type": "array" },
+    "affectedRepos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["repo"],
+        "properties": { "repo": { "type": "string", "minLength": 1 }, "local": { "type": "boolean" } }
+      }
+    },
     "docSet": { "type": "array", "items": { "type": "string" } },
     "parallelPlan": {
       "type": ["object", "null"],

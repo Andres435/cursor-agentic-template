@@ -42,6 +42,7 @@ Chat 1 — Plan and build
   /start-ticket <ticket> bug|feature|spike|refactor
   Deep tier drafts the plan. Question it; it revises only the section you asked about.
   Say "approved" in chat. Approval is that statement, never an IDE button.
+  Asking it to skip the plan gets a short plan instead: the later chats and close read that file.
   It writes the plan, then builds in this same chat. Each Work Plan step's [low]|[med]|[high]
   tag sets its tier.
   /start-stack <ticket>   when you need the local apps

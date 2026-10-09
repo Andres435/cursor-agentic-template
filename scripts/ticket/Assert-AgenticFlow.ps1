@@ -205,7 +205,7 @@ if (-not (Test-Path -LiteralPath $secretFile)) {
     foreach ($rel in $tracked) {
         $full = Join-Path $Root $rel
         if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
-        if ((Get-Item -LiteralPath $full).Length -gt 1MB) { continue }
+        if ((Get-Item -LiteralPath $full -Force).Length -gt 1MB) { continue }  # -Force: dotfiles are hidden on Linux
         $text = [IO.File]::ReadAllText($full)
         if ($text.IndexOf([char]0) -ge 0) { continue }  # binary
         $lineNo = 0

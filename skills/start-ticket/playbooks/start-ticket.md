@@ -142,6 +142,11 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
    - **Open decisions stop the plan.** An unresolved AC, ADR, shared-owner, or extra-repo call →
      `ask-user` and wait. Never draft or persist TBD, "resolve during implement", or an invented
      default. Editing a shared owner is never the default.
+   - **Asked to skip the plan** ("no plan", "just code it", "skip Engineering Decisions"): write a
+     short plan instead of none. Plan Digest, Engineering Decisions (`None — <why>` is enough for a
+     small item), and a tagged Work Plan of only the real steps. Say once why in one line:
+     `/implement`, `/review-changes` and `/complete-task` read the file, and close fails without
+     it. Then persist and gate it like any plan. A "go" with the request is the approval.
    - Revise in the plan-mode conversation; re-emit only the changed section, never the whole plan.
    - Features and refactors: clarify batch and consistency report per `feature-plan.md`; the draft is
      not ready while a list is open unless the user accepts the item as out of scope.
@@ -188,4 +193,5 @@ commands resolve the mode with `Resolve-TicketRoot.ps1`.
   historical or unrelated tickets.
 - Approval is a chat statement, never an IDE button; persist only after it, and in worktree mode never build in this chat.
 - `Assert-TicketArtifacts -Phase start` passes before the final message; prose never overrides a `FAIL`.
+- A user cannot waive the plan, only shrink it (step 6): every ticket leaves a manifest and a plan file.
 - No dev server, browser, or CDP here (`/start-stack`); subagents are read-only; load only Load map and `docSet` rows, at the step that needs them.
